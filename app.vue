@@ -1,11 +1,9 @@
 <template>
-  <div>
-    <h1>Hello {{ t("welcome") }}</h1>
-    <NuxtRouteAnnouncer />
-    <NuxtWelcome />
-  </div>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>
 
 <script setup>
-const { t } = useI18n();
+// Используем системный лейаут и страницы
 </script>
