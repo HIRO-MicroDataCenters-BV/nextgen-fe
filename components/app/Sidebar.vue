@@ -86,7 +86,7 @@ const { menu, version, user } = useMenu();
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>{{ t("title.secondary_menu") }}</SidebarGroupLabel>
+        <SidebarGroupLabel>{{ t("subtitle.data_products") }}</SidebarGroupLabel>
         <SidebarMenu>
           <template v-for="item in menu.secondary" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">

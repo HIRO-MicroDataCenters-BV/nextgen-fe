@@ -9,8 +9,8 @@ export default defineI18nConfig(() => {
         general: {
           project_name: "NextGen UI",
         },
-        title: {
-          secondary_menu: "Secondary Menu",
+        subtitle: {
+          data_products: "Data Products",
         },
         menu: {
           home: "Home",
