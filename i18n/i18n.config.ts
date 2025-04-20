@@ -4,12 +4,19 @@ export default defineI18nConfig(() => {
     locale: "en",
     messages: {
       en: {
+        title: {
+          marketplace: "Marketplace",
+          my_catalog: "My Catalog",
+          settings: "Settings",
+          home: "Login",
+        },
         welcome: "Welcome11",
         nextgen: "NextGen",
         general: {
           project_name: "NextGen UI",
         },
         subtitle: {
+          marketplace: "Decentralised search across all institutional catalogs",
           data_products: "Data Products",
         },
         menu: {
@@ -25,25 +32,20 @@ export default defineI18nConfig(() => {
           marketplace: "Marketplace",
         },
         pages: {
-          home: {
-            title: "Home Page",
+          login: {
             description: "Welcome to NextGen UI",
-            login_title: "Вход в систему",
-            login_subtitle: "Введите свои данные для входа",
+            login_title: "Login Page",
+            login_subtitle: "Enter your data to login",
             email: "Email",
-            email_placeholder: "Введите ваш email",
-            password: "Пароль",
-            password_placeholder: "Введите ваш пароль",
-            remember_me: "Запомнить меня",
-            forgot_password: "Забыли пароль?",
-            login_button: "Войти",
-            welcome_message: "Добро пожаловать в NextGen UI",
+            email_placeholder: "Enter your email",
+            password: "Password",
+            password_placeholder: "Enter your password",
+            remember_me: "Remember me",
+            forgot_password: "Forgot password?",
+            login_button: "Login",
+            welcome_message: "Welcome to NextGen UI",
             welcome_description:
-              "Инновационная платформа для управления вашими проектами и ресурсами",
-          },
-          marketplace: {
-            title: "Marketplace",
-            description: "Explore our marketplace",
+              "NextGen UI is a modern and innovative platform for managing your projects and resources",
           },
         },
       },

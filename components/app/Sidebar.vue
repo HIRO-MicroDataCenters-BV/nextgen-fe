@@ -141,15 +141,10 @@ const { menu, version, user } = useMenu();
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-      <!-- Пользовательский блок -->
-      <div class="p-3 mb-2 border-b border-sidebar-border">
+      <div class="mb-2 border-b border-sidebar-border">
         <div class="flex items-center space-x-3">
           <div class="flex-shrink-0">
-            <img
-              :src="user.avatar"
-              class="size-10 rounded-full"
-              alt="User avatar"
-            />
+            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium truncate">{{ user.name }}</p>
@@ -160,7 +155,6 @@ const { menu, version, user } = useMenu();
         </div>
       </div>
 
-      <!-- Меню футера -->
       <SidebarMenu>
         <SidebarMenuItem v-for="item in menu.footer" :key="item.key">
           <SidebarMenuButton :tooltip="item.title">
