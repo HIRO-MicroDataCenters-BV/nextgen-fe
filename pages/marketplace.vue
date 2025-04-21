@@ -14,7 +14,7 @@
 
 <script setup>
 const { t } = useI18n();
-import { SidebarTrigger } from "@/components/ui/sidebar";
+const dayjs = useDayjs();
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
 
@@ -35,8 +35,8 @@ const columns = [
     cell: ({ row }) => row.getValue("description"),
   },
   {
-    id: "lastupdate",
-    cell: ({ row }) => row.getValue("last_update"),
+    id: "last_update",
+    cell: ({ row }) => dayjs(row.getValue("last_update")).format("DD/MM/YYYY"),
   },
 ];
 

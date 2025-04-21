@@ -13,6 +13,7 @@ export default defineNuxtConfig({
     "shadcn-nuxt",
     "@nuxtjs/i18n",
     "nuxt-zod-i18n",
+    "dayjs-nuxt",
   ],
   icon: {
     serverBundle: {

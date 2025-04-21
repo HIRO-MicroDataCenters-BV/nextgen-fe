@@ -40,7 +40,7 @@ export default defineI18nConfig(() => {
           name: "Name",
           biobank: "Biobank",
           description: "Description",
-          lastupdate: "Last Update",
+          last_update: "Last Update",
         },
         label: {
           filters: "Filters",
