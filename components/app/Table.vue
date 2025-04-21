@@ -376,6 +376,21 @@ onMounted(() => {
         {{ t("hint.data_products") }}
       </div>
       <div class="space-x-2">
+        <span class="mx-2">
+          {{ t("hint.page") }} {{ table.getState().pagination.pageIndex + 1 }}
+          {{ t("hint.of") }}
+          {{ Math.ceil(totalItems / props.pageSize) || 1 }}
+        </span>
+
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="!table.getCanPreviousPage()"
+          @click="table.previousPage()"
+        >
+          <Icon name="lucide:chevrons-left" />
+        </Button>
+
         <Button
           variant="outline"
           size="sm"
@@ -383,21 +398,23 @@ onMounted(() => {
           @click="table.previousPage()"
         >
           <Icon name="lucide:chevron-left" />
-          <span>{{ t("action.previous") }}</span>
         </Button>
-        <span class="mx-2">
-          {{ t("hint.page") }} {{ table.getState().pagination.pageIndex + 1 }}
-          {{ t("hint.of") }}
-          {{ Math.ceil(totalItems / props.pageSize) || 1 }}
-        </span>
+
         <Button
           variant="outline"
           size="sm"
           :disabled="!table.getCanNextPage()"
           @click="table.nextPage()"
         >
-          <span>{{ t("action.next") }}</span>
           <Icon name="lucide:chevron-right" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          :disabled="!table.getCanNextPage()"
+          @click="table.nextPage()"
+        >
+          <Icon name="lucide:chevrons-right" />
         </Button>
       </div>
     </div>
