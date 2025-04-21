@@ -25,6 +25,7 @@ import type {
   DataItem,
 } from "~/types/table.types";
 import DialogDataset from "./DialogDataset.vue";
+import TablePagination from "./table/Pagination.vue";
 
 const props = defineProps({
   title: String,
@@ -363,61 +364,21 @@ onMounted(() => {
       </Table>
     </div>
 
-    <div
-      class="flex items-center justify-end space-x-2 py-4 bg-sidebar-background sticky bottom-0"
-    >
-      <div class="flex-1 text-sm text-muted-foreground">
-        {{ t("hint.showing") }}
-        {{ currentPage + 1 }}
-        {{ t("hint.to") }}
-        {{ Math.ceil(totalItems / props.pageSize) || 1 }}
-        {{ t("hint.out_of") }}
-        {{ table.getFilteredRowModel().rows.length }}
-        {{ t("hint.data_products") }}
-      </div>
-      <div class="space-x-2">
-        <span class="mx-2">
-          {{ t("hint.page") }} {{ table.getState().pagination.pageIndex + 1 }}
-          {{ t("hint.of") }}
-          {{ Math.ceil(totalItems / props.pageSize) || 1 }}
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="!table.getCanPreviousPage()"
-          @click="table.previousPage()"
-        >
-          <Icon name="lucide:chevrons-left" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="!table.getCanPreviousPage()"
-          @click="table.previousPage()"
-        >
-          <Icon name="lucide:chevron-left" />
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="!table.getCanNextPage()"
-          @click="table.nextPage()"
-        >
-          <Icon name="lucide:chevron-right" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          :disabled="!table.getCanNextPage()"
-          @click="table.nextPage()"
-        >
-          <Icon name="lucide:chevrons-right" />
-        </Button>
-      </div>
-    </div>
+    <TablePagination
+      :current-page="currentPage"
+      :total-pages="Math.ceil(totalItems / props.pageSize)"
+      :total-items="totalItems"
+      :page-size="props.pageSize"
+      :filtered-items-count="table.getFilteredRowModel().rows.length"
+      :can-previous-page="table.getCanPreviousPage()"
+      :can-next-page="table.getCanNextPage()"
+      @previous-page="table.previousPage()"
+      @on-next-page="table.nextPage()"
+      @on-first-page="table.setPageIndex(0)"
+      @on-last-page="
+        table.setPageIndex(Math.ceil(totalItems / props.pageSize) - 1)
+      "
+    />
     <DialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"
