@@ -4,6 +4,11 @@ export default defineI18nConfig(() => {
     locale: "en",
     messages: {
       en: {
+        app: {
+          title: "NextGen UI",
+          description:
+            "NextGen UI is a modern and innovative platform for managing your projects and resources",
+        },
         title: {
           marketplace: "Marketplace",
           my_catalog: "My Catalog",
@@ -30,6 +35,36 @@ export default defineI18nConfig(() => {
         sidebar: {
           home: "Home",
           marketplace: "Marketplace",
+        },
+        column: {
+          name: "Name",
+          biobank: "Biobank",
+          description: "Description",
+          lastupdate: "Last Update",
+        },
+        label: {
+          filters: "Filters",
+        },
+        action: {
+          add_dataset: "Add Dataset",
+          previous: "Previous",
+          next: "Next",
+        },
+        placeholder: {
+          search: "Search...",
+          select_filter: "Select filter",
+        },
+        hint: {
+          in: "In",
+          all: "All",
+          no_results: "No results found",
+          of: "of",
+          rows_selected: "row(s) selected",
+          page: "Page",
+          showing: "Showing",
+          to: "to",
+          data_products: "data products",
+          out_of: "out of",
         },
         pages: {
           login: {
