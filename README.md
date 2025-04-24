@@ -1,4 +1,10 @@
-# Nuxt Minimal Starter
+# NEXT GENERATION TOOLS FOR GENOME-CENTRIC MULTIMODAL DATA INTEGRATION IN PERSONALISED CARDIOVASCULAR MEDICINE
+
+HIRO MICRODATACENTERS B.V. (904044463)
+Netherlands
+EU Contribution: 1 497 000,00 EUR
+
+https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunities/projects-details/43108390/101136962
 
 Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
 
