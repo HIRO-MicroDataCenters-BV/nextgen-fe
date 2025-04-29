@@ -9,7 +9,7 @@
           </p>
         </div>
 
-        <Form @submit="handleLogin" class="space-y-4">
+        <Form class="space-y-4" @submit="handleLogin">
           <FormItem class="space-y-2">
             <FormField v-model="email" name="email">
               <FormLabel for="email">{{ t("pages.login.email") }}</FormLabel>
@@ -61,7 +61,7 @@
           background-image: url('/images/login-background.svg');
           opacity: 0.7;
         "
-      ></div>
+      />
       <div
         class="relative z-10 flex flex-col justify-center items-center h-full text-white p-8"
       >
@@ -76,7 +76,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { Form, FormField, FormItem, FormLabel } from "@/components/ui/form";
 definePageMeta({
   layout: "auth",

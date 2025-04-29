@@ -4,6 +4,6 @@
   </div>
 </template>
 
-<script setup>
-// Пустой лейаут без сайдбара для страницы авторизации
+<script setup lang="ts">
+// Empty layout without sidebar for the auth pages
 </script>
