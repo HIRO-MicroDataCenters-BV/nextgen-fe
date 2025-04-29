@@ -12,36 +12,15 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-const props = defineProps({
-  currentPage: {
-    type: Number,
-    required: true,
-  },
-  totalPages: {
-    type: Number,
-    required: true,
-  },
-  totalItems: {
-    type: Number,
-    required: true,
-  },
-  filteredItemsCount: {
-    type: Number,
-    required: true,
-  },
-  canPreviousPage: {
-    type: Boolean,
-    required: true,
-  },
-  canNextPage: {
-    type: Boolean,
-    required: true,
-  },
-  pageSize: {
-    type: Number,
-    required: true,
-  },
-});
+const props = defineProps<{
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  filteredItemsCount: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
+  pageSize: number;
+}>();
 
 const emit = defineEmits([
   "onPreviousPage",
