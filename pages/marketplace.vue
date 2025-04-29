@@ -6,17 +6,18 @@
     <AppTable
       :title="'marketplace'"
       :columns="columns"
-      :dataSource="fetchTableData"
-      :pageSize="10"
+      :data-source="fetchTableData"
+      :page-size="10"
     />
   </AppContent>
 </template>
 
-<script setup>
-const { t } = useI18n();
-const dayjs = useDayjs();
+<script setup lang="ts">
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
+
+const { t } = useI18n();
+const dayjs = useDayjs();
 
 const mock = useMock();
 

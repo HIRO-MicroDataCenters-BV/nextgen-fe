@@ -27,18 +27,14 @@ import type {
 import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
 
-const props = defineProps({
-  title: String,
-  dataSource: {
-    type: Function as PropType<(params: unknown) => Promise<TableDataResponse>>,
-    required: true,
-  },
-  columns: Array as PropType<TableColumn[]>,
-  pageSize: {
-    type: Number,
-    default: 10,
-  },
-});
+interface TableProps {
+  title?: string;
+  dataSource: (params: unknown) => Promise<TableDataResponse>;
+  columns?: TableColumn[];
+  pageSize?: number;
+}
+
+const { title, dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
 
 const mock = useMock();
 
@@ -48,9 +44,9 @@ const totalItems = ref(0);
 
 const hasTableFilters = ref(true);
 const fetchData = async () => {
-  const { data: tableData, pagination } = await props.dataSource({
+  const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
-    limit: props.pageSize,
+    limit: pageSize,
     ...(searchValue.value &&
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
@@ -100,10 +96,10 @@ const getColumns = (list: TableColumn[]) => {
   });
 };
 
-const columns = ref(getColumns(props.columns ?? []));
+const mappedColumns = ref(getColumns(columns ?? []));
 const table = useVueTable({
   data,
-  columns: columns.value,
+  columns: mappedColumns.value,
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   getSortedRowModel: getSortedRowModel(),
@@ -132,7 +128,7 @@ const table = useVueTable({
   initialState: {
     pagination: {
       pageIndex: currentPage.value,
-      pageSize: props.pageSize,
+      pageSize,
     },
   },
   onPaginationChange: (updater) => {
@@ -158,7 +154,7 @@ const table = useVueTable({
     get pagination() {
       return {
         pageIndex: currentPage.value,
-        pageSize: props.pageSize,
+        pageSize,
       };
     },
   },
@@ -271,7 +267,7 @@ watch(
 );
 
 watch(
-  () => props.pageSize,
+  () => pageSize,
   (newPageSize) => {
     table.setPageSize(newPageSize);
     currentPage.value = 0;
@@ -316,7 +312,7 @@ onMounted(() => {
             </span>
           </div>
         </div>
-        <div class="flex gap-2"></div>
+        <div class="flex gap-2"/>
       </div>
     </div>
     <!-- end table filters -->
@@ -356,7 +352,7 @@ onMounted(() => {
           </template>
 
           <TableRow v-else>
-            <TableCell :colspan="columns.length" class="h-24 text-center">
+            <TableCell :colspan="mappedColumns.length" class="h-24 text-center">
               {{ t("hint.no_results") }}
             </TableCell>
           </TableRow>
@@ -366,9 +362,9 @@ onMounted(() => {
 
     <TablePagination
       :current-page="currentPage"
-      :total-pages="Math.ceil(totalItems / props.pageSize)"
+      :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
-      :page-size="props.pageSize"
+      :page-size="pageSize"
       :filtered-items-count="table.getFilteredRowModel().rows.length"
       :can-previous-page="table.getCanPreviousPage()"
       :can-next-page="table.getCanNextPage()"
@@ -376,7 +372,7 @@ onMounted(() => {
       @on-next-page="table.nextPage()"
       @on-first-page="table.setPageIndex(0)"
       @on-last-page="
-        table.setPageIndex(Math.ceil(totalItems / props.pageSize) - 1)
+        table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)
       "
     />
     <DialogDataset

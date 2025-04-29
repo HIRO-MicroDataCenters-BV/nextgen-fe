@@ -1,10 +1,7 @@
 <script setup lang="ts">
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-});
+const { open = false } = defineProps<{
+  open?: boolean;
+}>();
 
 const emit = defineEmits(["on-close"]);
 
