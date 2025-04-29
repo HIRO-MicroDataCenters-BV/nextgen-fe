@@ -1,5 +1,5 @@
-<script setup>
-const props = defineProps({
+<script setup lang="ts">
+defineProps({
   title: {
     type: String,
     required: true,
@@ -23,6 +23,6 @@ const props = defineProps({
     </p>
   </div>
   <div class="content-slot">
-    <slot></slot>
+    <slot/>
   </div>
 </template>

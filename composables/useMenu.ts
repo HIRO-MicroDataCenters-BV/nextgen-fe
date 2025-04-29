@@ -28,17 +28,17 @@ export function useMenu() {
   const { t } = useI18n();
   const route = useRoute();
 
-  // Версия приложения
+  // App version
   const version = ref("v1.0.0");
 
-  // Пользовательский профиль
+  // User profile
   const userProfile = ref<UserProfile>({
     name: "John Doe",
     email: "john.doe@example.com",
-    avatar: "/images/logo.svg", // Временно используем логотип как аватар
+    avatar: "/images/logo.svg", // Temporary avatar image
   });
 
-  // Структура меню
+  // Menu structure
   const menuItems = ref<MenuStructure>({
     main: [
       {
@@ -71,7 +71,7 @@ export function useMenu() {
     footer: [],
   });
 
-  // Обновление активного состояния при изменении маршрута
+  // Update active state of menu items based on the current route
   const updateActiveState = () => {
     menuItems.value.main.forEach((item) => {
       if (item.url === "#" && item.items.length > 0) {
@@ -94,7 +94,7 @@ export function useMenu() {
     });
   };
 
-  // Экспортируемые данные и методы
+  // Exporting data and methods
   return {
     menu: computed(() => menuItems.value),
     user: computed(() => userProfile.value),

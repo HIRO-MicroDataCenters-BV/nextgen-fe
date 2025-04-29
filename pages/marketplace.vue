@@ -20,7 +20,7 @@ import AppTable from "@/components/app/Table.vue";
 
 const mock = useMock();
 
-// Определение колонок для таблицы
+// Defining columns for the table
 const columns = [
   {
     id: "name",
@@ -40,18 +40,18 @@ const columns = [
   },
 ];
 
-// Функция для получения данных из mock
+// Function to fetch data for the table from the mock data
 const fetchTableData = async (params) => {
-  // Используем данные из mock.ts
+  // Importing mock data
   const mockData = mock.value.data;
 
-  // Имитация пагинации
+  // Imitation of pagination
   const page = params.page || 1;
   const limit = params.limit || 10;
   const start = (page - 1) * limit;
   const end = start + limit;
 
-  // Фильтрация данных, если есть параметры поиска
+  // Filtering data based on the search parameters
   let filteredData = [...mockData];
   if (params.name) {
     filteredData = filteredData.filter((item) =>
@@ -83,7 +83,7 @@ const fetchTableData = async (params) => {
     );
   }
 
-  // Возвращаем данные в формате, ожидаемом компонентом Table
+  // Returning the data in the format expected by the Table component
   return {
     data: filteredData.slice(start, end),
     pagination: {
