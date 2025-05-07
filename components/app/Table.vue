@@ -26,6 +26,8 @@ import type {
 } from "~/types/table.types";
 import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
+import { filters } from "~/constants";
+import TableFilter from "~/components/app/TableFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -296,7 +298,7 @@ onMounted(() => {
       <!-- table filters -->
 
       <div class="flex gap-2 items-center">
-        <div class="flex-auto flex">
+        <div class="flex-auto flex  flex-wrap gap-2">
           <div class="flex gap-2 relative max-w-sm items-center">
             <Input
               v-model="searchValue"
@@ -311,8 +313,10 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
+          <template v-for="filter in filters" :key="filter.key">
+            <TableFilter :filter="filter" />
+          </template>
         </div>
-        <div class="flex gap-2"/>
       </div>
     </div>
     <!-- end table filters -->
