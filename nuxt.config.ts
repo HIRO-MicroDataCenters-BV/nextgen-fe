@@ -14,6 +14,7 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "nuxt-zod-i18n",
     "dayjs-nuxt",
+    "@nuxtjs/color-mode",
   ],
   icon: {
     serverBundle: {
@@ -25,6 +26,14 @@ export default defineNuxtConfig({
         dir: "./assets/icons",
       },
     ],
+  },
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    classPrefix: '',
+    classSuffix: '',
+    storage: 'localStorage',
+    storageKey: 'nuxt-color-mode'
   },
   shadcn: {
     prefix: "",

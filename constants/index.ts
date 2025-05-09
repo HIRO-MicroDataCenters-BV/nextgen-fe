@@ -2,6 +2,20 @@ export const filters = [
   {
     key: "sociodemographic",
     label: "Sociodemographic",
+    items: [
+      {
+        key: "gender",
+        label: "Gender",
+      },
+      {
+        key: "age",
+        label: "Age",
+      },
+      {
+        key: "race",
+        label: "Race",
+      },
+    ],
   },
   {
     key: "comorbidities",

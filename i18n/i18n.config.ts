@@ -49,6 +49,7 @@ export default defineI18nConfig(() => {
           add_dataset: "Add Dataset",
           previous: "Previous",
           next: "Next",
+          clear_filters: "Clear Filters",
         },
         placeholder: {
           search: "Search...",
@@ -65,6 +66,7 @@ export default defineI18nConfig(() => {
           to: "to",
           data_products: "data products",
           out_of: "out of",
+          no_found: "No found",
         },
         pages: {
           login: {
