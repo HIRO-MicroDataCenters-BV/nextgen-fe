@@ -23,6 +23,11 @@ export default defineI18nConfig(() => {
         subtitle: {
           marketplace: "Decentralised search across all institutional catalogs",
           data_products: "Data Products",
+          available_biobanks: "Available Biobanks",
+        },
+        text: {
+          available_biobank_description:
+            "Currently available institutional data products from our partners.",
         },
         menu: {
           home: "Home",
@@ -50,6 +55,7 @@ export default defineI18nConfig(() => {
           previous: "Previous",
           next: "Next",
           clear_filters: "Clear Filters",
+          available_biobanks: "Available Biobanks",
         },
         placeholder: {
           search: "Search...",
