@@ -182,33 +182,7 @@ const applySearchFilter = () => {
   };
   columnFilters.value.push(searchFilter as unknown as SearchFilter);
 };
-/*
-const updateUrlParams = () => {
-  if (isUpdatingFromState.value) return;
 
-  const query: Record<string, string> = {};
-  if (columnFilters.value.length > 0) {
-    query.filters = encodeURIComponent(JSON.stringify(columnFilters.value));
-  }
-
-  if (Object.keys(columnVisibility.value).length > 0) {
-    query.visibility = encodeURIComponent(
-      JSON.stringify(columnVisibility.value),
-    );
-  }
-
-  if (currentPage.value > 0) {
-    query.page = currentPage.value.toString();
-  }
-  isUpdatingFromState.value = true;
-  router.replace({ query }).then(() => {
-    setTimeout(() => {
-      isUpdatingFromState.value = false;
-    }, 100);
-    fetchData();
-  });
-};
-*/
 watch(
   () => route.query,
   (newQuery) => {
@@ -279,13 +253,7 @@ watch(
 
 onMounted(() => {
   fetchData();
-  /*
-  setTimeout(() => {
-    if (Object.keys(route.query).length === 0) {
-      updateUrlParams();
-    }
-  }, 50);
-  */
+
 });
 </script>
 
@@ -313,8 +281,8 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
-          <template v-for="filter in filters" :key="filter.key">
-            <TableFilter :filter="filter" />
+          <template v-for="item in filters" :key="item.key">
+            <TableFilter :id="item.key" :label="item.label" :items="item.items" />
           </template>
         </div>
       </div>
