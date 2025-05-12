@@ -18,19 +18,37 @@ import AppTable from "@/components/app/Table.vue";
 
 const { t } = useI18n();
 const dayjs = useDayjs();
+const { page, setPage } = useApp();
+
+setPage({
+  section: 'marketplace',
+});
+
+const baseUrl = page.value.section;
 
 const mock = useMock();
 
+
 // Defining columns for the table
 const columns = [
+  {
+    id: "id",
+    cell: ({ row }) => row.getValue("id"),
+  },
   {
     id: "name",
     cell: ({ row }) => row.getValue("name"),
   },
   {
     id: "biobank",
-    cell: ({ row }) => row.getValue("biobank"),
+    cell: ({ row }) =>
+      h(
+        'a',
+        { href: `${baseUrl}/${row.getValue('id')}` },
+        row.getValue('biobank'),
+      ),
   },
+  
   {
     id: "description",
     cell: ({ row }) => row.getValue("description"),

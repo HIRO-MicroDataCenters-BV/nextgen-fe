@@ -46,9 +46,15 @@ export default defineI18nConfig(() => {
           biobank: "Biobank",
           description: "Description",
           last_update: "Last Update",
+          id: "ID",
         },
         label: {
           filters: "Filters",
+          theme: "Theme",
+          creator: "Creator",
+          license: "License",
+          issued: "Issued",
+          last_update: "Last Update",
         },
         action: {
           add_dataset: "Add Dataset",

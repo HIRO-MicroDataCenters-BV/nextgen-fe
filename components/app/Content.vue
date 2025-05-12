@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/command'
 
 const { t } = useI18n();
-const { title, description = ""} = defineProps<{
+const { title, description = "", showAvailableBiobanks = true } = defineProps<{
   title: string;
   description?: string;
+  showAvailableBiobanks?: boolean;
 }>();
 
 const availableBiobanks = ref([
@@ -64,7 +65,7 @@ const availableBiobanks = ref([
       {{ description }}
     </p>
     </div>
-    <div>
+    <div v-if="showAvailableBiobanks">
       <Popover>
         <PopoverTrigger>
           <Button variant="secondary">{{ t('action.available_biobanks') }}</Button>
