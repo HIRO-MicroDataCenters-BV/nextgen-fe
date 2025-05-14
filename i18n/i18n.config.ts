@@ -114,7 +114,17 @@ export default defineI18nConfig(() => {
               "NextGen UI is a modern and innovative platform for managing your projects and resources",
           },
         },
+        validation: {
+          required: "This field is required",
+          email: "This field must be a valid email address",
+          password: "This field must be at least 8 characters long",
+          confirm_password: "This field must match the password",
+          required_min_length: "This field must be at least {min} characters long",
+          required_max_length: "This field must be at most {max} characters long",
+          required_date: "This field must be a valid date",
+        },
       },
+      
     },
   };
 });

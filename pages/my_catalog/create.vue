@@ -135,8 +135,8 @@ const licenseOptions = ref([
 ]);
 
 const formSchemaDefinition = z.object({
-  dataProductName: z.string().min(3, { message: t('validation.required_min_3') }),
-  creator: z.string().min(2, { message: t('validation.required_min_2') }),
+  dataProductName: z.string().min(3, { message: t('validation.required_min_length') }),
+  creator: z.string().min(2, { message: t('validation.required_min_length') }),
   license: z.string({ required_error: t('validation.required') }),
   issued: z.date({ required_error: t('validation.required_date') }),
 });

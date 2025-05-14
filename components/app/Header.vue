@@ -11,6 +11,9 @@
       </p>
     </div>
     <div class="flex items-center space-x-2">
+      <!-- Button Groups: Use v-if / v-else-if for mutually exclusive sets -->
+      
+      <!-- Marketplace Page Buttons -->
       <Popover v-if="isMarketplacePage">
         <PopoverTrigger as-child>
           <Button variant="secondary">{{ t('action.available_biobanks') }}</Button>
@@ -35,12 +38,14 @@
         </PopoverContent>
       </Popover>
 
-      <Button v-if="isMyCatalogIndexPage" @click="navigateToCreateCatalogItem">
+      <!-- My Catalog Index Page Button -->
+      <Button v-else-if="isMyCatalogIndexPage" @click="navigateToCreateCatalogItem">
         <Icon name="lucide:plus" class="mr-2 h-4 w-4" />
         {{ t('action.create_new') }}
       </Button>
 
-      <template v-if="isMyCatalogFormPage">
+      <!-- My Catalog Form Page (Create/Edit) Buttons -->
+      <template v-else-if="isMyCatalogFormPage">
         <Button variant="outline" @click="onDiscardClick">
           {{ t('action.discard') }}
         </Button>
@@ -49,6 +54,9 @@
           {{ t('action.save_changes') }}
         </Button>
       </template>
+      
+      <!-- Optional: v-else for any other case, or leave empty if no buttons for other pages -->
+
     </div>
   </div>
 </template>
@@ -77,7 +85,8 @@ const router = useRouter();
 const emit = defineEmits(['save-form', 'discard-form']);
 
 const isMarketplacePage = computed(() => route.path.startsWith('/marketplace'));
-const isMyCatalogIndexPage = computed(() => route.path === '/my_catalog');
+// Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
+const isMyCatalogIndexPage = computed(() => route.path === '/my_catalog'); 
 const isMyCatalogCreatePage = computed(() => route.path === '/my_catalog/create');
 const isMyCatalogEditPage = computed(() => 
   route.path.startsWith('/my_catalog/') && route.params.id && route.path.endsWith('/edit')
@@ -89,15 +98,15 @@ const currentPageTitle = computed(() => {
   if (isMyCatalogEditPage.value) return t('header_title.edit_catalog_item_details', 'Edit Details');
   if (isMyCatalogIndexPage.value) return t('title.my_catalog', 'My Catalog');
   if (isMarketplacePage.value) return t('title.marketplace', 'Marketplace');
-  return ''; // Default or error title
+  return '';
 });
 
 const currentPageDescription = computed(() => {
   if (isMyCatalogCreatePage.value) return t('header_subtitle.new_metadata_details', 'New metadata details.');
   if (isMyCatalogEditPage.value) return t('header_subtitle.change_metadata_details', 'Change metadata details.');
-  if (isMyCatalogIndexPage.value) return t('subtitle.my_catalog', 'Manage your data products.'); // Or your preferred subtitle for index
-  if (isMarketplacePage.value) return t('subtitle.marketplace_description', 'Explore available biobanks.'); // Example subtitle
-  return ''; // Default or error description
+  if (isMyCatalogIndexPage.value) return t('subtitle.my_catalog', 'Manage your data products.');
+  if (isMarketplacePage.value) return t('subtitle.marketplace_description', 'Explore available biobanks.');
+  return '';
 });
 
 const navigateToCreateCatalogItem = () => {

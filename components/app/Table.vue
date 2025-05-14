@@ -227,7 +227,6 @@ watch(
         table.setPageIndex(0);
       }
     } catch (error) {
-      console.error("Error parsing query parameters:", error);
       columnFilters.value = [];
       columnVisibility.value = {};
       currentPage.value = 0;
