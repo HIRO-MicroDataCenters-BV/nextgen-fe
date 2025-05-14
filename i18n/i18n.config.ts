@@ -83,6 +83,8 @@ export default defineI18nConfig(() => {
           select_filter: "Select filter",
           select_license: "Select license",
           pick_date: "Pick a date",
+          data_product_name: "Enter a data product name",
+          creator: "Enter a creator name",
         },
         hint: {
           in: "In",

@@ -26,8 +26,8 @@ import type {
 } from "~/types/table.types";
 import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
-import { filters } from "~/constants";
-import TableFilter from "~/components/app/TableFilter.vue";
+import { filters as globalFiltersConstant } from "~/constants";
+import TableFilterVue from "~/components/app/TableFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -71,34 +71,33 @@ const router = useRouter();
 */
 
 const columnFilters = ref<ColumnFiltersState>(
-  route.query.filters
-    ? JSON.parse(decodeURIComponent(route.query.filters as string))
+  route.query.filters && typeof route.query.filters === 'string' 
+    ? JSON.parse(decodeURIComponent(route.query.filters))
     : []
 );
 const columnVisibility = ref<VisibilityState>(
-  route.query.visibility
-    ? JSON.parse(decodeURIComponent(route.query.visibility as string))
+  route.query.visibility && typeof route.query.visibility === 'string'
+    ? JSON.parse(decodeURIComponent(route.query.visibility))
     : {}
 );
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
 
 const currentPage = ref<number>(
-  route.query.page ? parseInt(route.query.page as string) : 0
+  route.query.page && typeof route.query.page === 'string' ? parseInt(route.query.page) : 0
 );
 
-const getColumns = (list: TableColumn[]) => {
-  return list.map((item) => {
-    return {
-      id: item.id,
-      accessorKey: item.id,
-      header: t(`column.${item.id}`),
-      cell: item.cell,
-    };
-  });
+const getColumns = (cols: TableColumn[] | undefined) => {
+  if (!cols) return [];
+  return cols.map((item) => ({
+    id: item.id,
+    accessorKey: item.id,
+    header: t(`column.${item.id}`),
+    cell: item.cell,
+  }));
 };
 
-const mappedColumns = ref(getColumns(columns ?? []));
+const mappedColumns = ref(getColumns(columns));
 const table = useVueTable({
   data,
   columns: mappedColumns.value,
@@ -189,13 +188,13 @@ watch(
     if (isUpdatingFromState.value) return;
     isUpdatingFromState.value = true;
     try {
-      if (newQuery.filters) {
+      if (newQuery.filters && typeof newQuery.filters === 'string') {
         columnFilters.value = JSON.parse(
-          decodeURIComponent(newQuery.filters as string)
+          decodeURIComponent(newQuery.filters)
         );
-        const filters = columnFilters.value;
-        if (filters.length > 0) {
-          const searchFilter = filters.find(
+        const currentColumnFilters = columnFilters.value;
+        if (currentColumnFilters.length > 0) {
+          const searchFilter = currentColumnFilters.find(
             (filter) => filter.id === "search"
           ) as SearchFilter | undefined;
           if (searchFilter) {
@@ -211,15 +210,15 @@ watch(
         searchValue.value = "";
         selectedFilterColumn.value = "all";
       }
-      if (newQuery.visibility) {
+      if (newQuery.visibility && typeof newQuery.visibility === 'string') {
         columnVisibility.value = JSON.parse(
-          decodeURIComponent(newQuery.visibility as string)
+          decodeURIComponent(newQuery.visibility)
         );
       } else {
         columnVisibility.value = {};
       }
-      if (newQuery.page) {
-        const pageIndex = parseInt(newQuery.page as string);
+      if (newQuery.page && typeof newQuery.page === 'string') {
+        const pageIndex = parseInt(newQuery.page);
         currentPage.value = pageIndex;
         table.setPageIndex(pageIndex);
       } else {
@@ -280,8 +279,8 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
-          <template v-for="item in filters" :key="item.key">
-            <TableFilter :id="item.key" :label="item.label" :items="item.items" />
+          <template v-for="item in globalFiltersConstant" :key="item.key">
+            <TableFilterVue :id="item.key" :label="item.label" :items="item.items || []" />
           </template>
         </div>
       </div>
