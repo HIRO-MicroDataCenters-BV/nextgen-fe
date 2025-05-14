@@ -24,6 +24,7 @@ export default defineI18nConfig(() => {
           marketplace: "Decentralised search across all institutional catalogs",
           data_products: "Data Products",
           available_biobanks: "Available Biobanks",
+          my_catalog: "Private metadata catalog",
         },
         text: {
           available_biobank_description:
@@ -47,6 +48,7 @@ export default defineI18nConfig(() => {
           description: "Description",
           last_update: "Last Update",
           id: "ID",
+          actions: "Actions",
         },
         label: {
           filters: "Filters",
@@ -55,6 +57,11 @@ export default defineI18nConfig(() => {
           license: "License",
           issued: "Issued",
           last_update: "Last Update",
+          data_product_name: "Data Product Name",
+          description: "Description",
+          biobank: "Biobank",
+          actions: "Actions",
+          issue_date: "Issue Date",
         },
         action: {
           add_dataset: "Add Dataset",
@@ -62,10 +69,20 @@ export default defineI18nConfig(() => {
           next: "Next",
           clear_filters: "Clear Filters",
           available_biobanks: "Available Biobanks",
+          create: "Create",
+          edit: "Edit",
+          delete: "Delete",
+          cancel: "Cancel",
+          update: "Update",
+          save_changes: "Save Changes",
+          discard: "Discard",
+          create_new: "Create New",
         },
         placeholder: {
           search: "Search...",
           select_filter: "Select filter",
+          select_license: "Select license",
+          pick_date: "Pick a date",
         },
         hint: {
           in: "In",
