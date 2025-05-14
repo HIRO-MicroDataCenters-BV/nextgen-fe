@@ -125,6 +125,22 @@ export default defineI18nConfig(() => {
           required_max_length: "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
         },
+        zodI18n: {
+          errors: {
+            required: "This field is required",
+            email: "This field must be a valid email address",
+            password: "This field must be at least 8 characters long",
+            confirm_password: "This field must match the password",
+            required_min_length: "This field must be at least {min} characters long",
+            invalid_type_received_undefined: "Invalid type received",
+            invalid_type_received_null: "Invalid type received",
+            invalid_type_received_number: "Invalid type received",
+            invalid_type_received_string: "Invalid type received",
+            invalid_type_received_boolean: "Invalid type received",
+            invalid_type_received_object: "Invalid type received",
+            invalid_type_received_array: "Invalid type received",
+          },
+        },
       },
       
     },
