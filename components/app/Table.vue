@@ -26,8 +26,8 @@ import type {
 } from "~/types/table.types";
 import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
-import { filters } from "~/constants";
-import TableFilter from "~/components/app/TableFilter.vue";
+import { filters as globalFiltersConstant } from "~/constants";
+import TableFilterVue from "~/components/app/TableFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -36,15 +36,12 @@ interface TableProps {
   pageSize?: number;
 }
 
-const { title, dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
-
-const mock = useMock();
+const { dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
 
 const { t } = useI18n();
 const data = shallowRef<DataItem[]>([]);
 const totalItems = ref(0);
 
-const hasTableFilters = ref(true);
 const fetchData = async () => {
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
@@ -58,10 +55,6 @@ const fetchData = async () => {
   totalItems.value = pagination?.total_items ?? 0;
 };
 
-const toggleTableFilters = () => {
-  hasTableFilters.value = !hasTableFilters.value;
-};
-
 const selectedFilterColumn = ref("all");
 const searchValue = ref("");
 
@@ -71,34 +64,33 @@ const router = useRouter();
 */
 
 const columnFilters = ref<ColumnFiltersState>(
-  route.query.filters
-    ? JSON.parse(decodeURIComponent(route.query.filters as string))
+  route.query.filters && typeof route.query.filters === 'string' 
+    ? JSON.parse(decodeURIComponent(route.query.filters))
     : []
 );
 const columnVisibility = ref<VisibilityState>(
-  route.query.visibility
-    ? JSON.parse(decodeURIComponent(route.query.visibility as string))
+  route.query.visibility && typeof route.query.visibility === 'string'
+    ? JSON.parse(decodeURIComponent(route.query.visibility))
     : {}
 );
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
 
 const currentPage = ref<number>(
-  route.query.page ? parseInt(route.query.page as string) : 0
+  route.query.page && typeof route.query.page === 'string' ? parseInt(route.query.page) : 0
 );
 
-const getColumns = (list: TableColumn[]) => {
-  return list.map((item) => {
-    return {
-      id: item.id,
-      accessorKey: item.id,
-      header: t(`column.${item.id}`),
-      cell: item.cell,
-    };
-  });
+const getColumns = (cols: TableColumn[] | undefined) => {
+  if (!cols) return [];
+  return cols.map((item) => ({
+    id: item.id,
+    accessorKey: item.id,
+    header: t(`column.${item.id}`),
+    cell: item.cell,
+  }));
 };
 
-const mappedColumns = ref(getColumns(columns ?? []));
+const mappedColumns = ref(getColumns(columns));
 const table = useVueTable({
   data,
   columns: mappedColumns.value,
@@ -165,9 +157,6 @@ const table = useVueTable({
 const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 
-const addDataSet = () => {
-  openAddDataset.value = true;
-};
 const applySearchFilter = () => {
   columnFilters.value = columnFilters.value.filter(
     (filter) => filter.id !== "search"
@@ -182,46 +171,20 @@ const applySearchFilter = () => {
   };
   columnFilters.value.push(searchFilter as unknown as SearchFilter);
 };
-/*
-const updateUrlParams = () => {
-  if (isUpdatingFromState.value) return;
 
-  const query: Record<string, string> = {};
-  if (columnFilters.value.length > 0) {
-    query.filters = encodeURIComponent(JSON.stringify(columnFilters.value));
-  }
-
-  if (Object.keys(columnVisibility.value).length > 0) {
-    query.visibility = encodeURIComponent(
-      JSON.stringify(columnVisibility.value),
-    );
-  }
-
-  if (currentPage.value > 0) {
-    query.page = currentPage.value.toString();
-  }
-  isUpdatingFromState.value = true;
-  router.replace({ query }).then(() => {
-    setTimeout(() => {
-      isUpdatingFromState.value = false;
-    }, 100);
-    fetchData();
-  });
-};
-*/
 watch(
   () => route.query,
   (newQuery) => {
     if (isUpdatingFromState.value) return;
     isUpdatingFromState.value = true;
     try {
-      if (newQuery.filters) {
+      if (newQuery.filters && typeof newQuery.filters === 'string') {
         columnFilters.value = JSON.parse(
-          decodeURIComponent(newQuery.filters as string)
+          decodeURIComponent(newQuery.filters)
         );
-        const filters = columnFilters.value;
-        if (filters.length > 0) {
-          const searchFilter = filters.find(
+        const currentColumnFilters = columnFilters.value;
+        if (currentColumnFilters.length > 0) {
+          const searchFilter = currentColumnFilters.find(
             (filter) => filter.id === "search"
           ) as SearchFilter | undefined;
           if (searchFilter) {
@@ -237,27 +200,21 @@ watch(
         searchValue.value = "";
         selectedFilterColumn.value = "all";
       }
-      if (newQuery.visibility) {
+      if (newQuery.visibility && typeof newQuery.visibility === 'string') {
         columnVisibility.value = JSON.parse(
-          decodeURIComponent(newQuery.visibility as string)
+          decodeURIComponent(newQuery.visibility)
         );
       } else {
         columnVisibility.value = {};
       }
-      if (newQuery.page) {
-        const pageIndex = parseInt(newQuery.page as string);
+      if (newQuery.page && typeof newQuery.page === 'string') {
+        const pageIndex = parseInt(newQuery.page);
         currentPage.value = pageIndex;
         table.setPageIndex(pageIndex);
       } else {
         currentPage.value = 0;
         table.setPageIndex(0);
       }
-    } catch (error) {
-      console.error("Error parsing query parameters:", error);
-      columnFilters.value = [];
-      columnVisibility.value = {};
-      currentPage.value = 0;
-      table.setPageIndex(0);
     } finally {
       setTimeout(() => {
         isUpdatingFromState.value = false;
@@ -279,13 +236,7 @@ watch(
 
 onMounted(() => {
   fetchData();
-  /*
-  setTimeout(() => {
-    if (Object.keys(route.query).length === 0) {
-      updateUrlParams();
-    }
-  }, 50);
-  */
+
 });
 </script>
 
@@ -313,8 +264,8 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
-          <template v-for="filter in filters" :key="filter.key">
-            <TableFilter :filter="filter" />
+          <template v-for="item in globalFiltersConstant" :key="item.key">
+            <TableFilterVue :id="item.key" :label="item.label" :items="item.items || []" />
           </template>
         </div>
       </div>

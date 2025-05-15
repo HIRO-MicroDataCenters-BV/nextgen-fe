@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { Button } from "@/components/ui/button";
-
 import {
   Pagination,
-  PaginationEllipsis,
   PaginationFirst,
   PaginationLast,
   PaginationContent,
-  PaginationItem,
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -21,13 +17,6 @@ const props = defineProps<{
   canNextPage: boolean;
   pageSize: number;
 }>();
-
-const emit = defineEmits([
-  "onPreviousPage",
-  "onNextPage",
-  "onFirstPage",
-  "onLastPage",
-]);
 
 const { t } = useI18n();
 
@@ -65,7 +54,7 @@ const totalItems = ref(props.totalItems);
         show-edges
         :default-page="currentPage"
       >
-        <PaginationContent v-slot="{ items }" class="flex items-center gap-1">
+        <PaginationContent class="flex items-center gap-1">
           <PaginationFirst>
             <Icon name="lucide:chevrons-left" />
           </PaginationFirst>

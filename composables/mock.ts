@@ -1,6 +1,4 @@
 export const useMock = () => {
-  const { t } = useI18n();
-
   return useState("mock", () => {
     return {
       data: [

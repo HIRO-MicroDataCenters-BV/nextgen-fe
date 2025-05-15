@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const { t } = useI18n();
-const { menu, version, user } = useMenu();
+const { menu, user } = useMenu();
 </script>
 
 <template>
