@@ -36,15 +36,12 @@ interface TableProps {
   pageSize?: number;
 }
 
-const { title, dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
-
-const mock = useMock();
+const { dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
 
 const { t } = useI18n();
 const data = shallowRef<DataItem[]>([]);
 const totalItems = ref(0);
 
-const hasTableFilters = ref(true);
 const fetchData = async () => {
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
@@ -56,10 +53,6 @@ const fetchData = async () => {
   });
   data.value = tableData ?? [];
   totalItems.value = pagination?.total_items ?? 0;
-};
-
-const toggleTableFilters = () => {
-  hasTableFilters.value = !hasTableFilters.value;
 };
 
 const selectedFilterColumn = ref("all");
@@ -164,9 +157,6 @@ const table = useVueTable({
 const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 
-const addDataSet = () => {
-  openAddDataset.value = true;
-};
 const applySearchFilter = () => {
   columnFilters.value = columnFilters.value.filter(
     (filter) => filter.id !== "search"
@@ -225,11 +215,6 @@ watch(
         currentPage.value = 0;
         table.setPageIndex(0);
       }
-    } catch (error) {
-      columnFilters.value = [];
-      columnVisibility.value = {};
-      currentPage.value = 0;
-      table.setPageIndex(0);
     } finally {
       setTimeout(() => {
         isUpdatingFromState.value = false;

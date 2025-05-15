@@ -65,7 +65,7 @@ const formSchema: FormFieldDefinition[] = [
 
 const formRef = ref();
 
-const onSubmit = (formValues: Record<string, any>) => {
+const onSubmit = (formValues: Record<string, unknown>) => {
   alert('Data Product Created (simulated): ' + JSON.stringify(formValues, null, 2));
   router.push('/my_catalog');
 };

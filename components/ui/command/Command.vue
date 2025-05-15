@@ -7,6 +7,7 @@ import { provideCommandContext } from '.'
 
 const props = withDefaults(defineProps<ListboxRootProps & { class?: HTMLAttributes['class'] }>(), {
   modelValue: '',
+  class: '',
 })
 
 const emits = defineEmits<ListboxRootEmits>()
@@ -65,10 +66,6 @@ function filterItems() {
   }
 
   filterState.filtered.count = itemCount
-}
-
-function handleSelect() {
-  filterState.search = ''
 }
 
 watch(() => filterState.search, () => {

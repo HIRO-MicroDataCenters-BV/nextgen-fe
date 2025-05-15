@@ -18,7 +18,7 @@
                 {{ dayjs(content[item.key]).format('YYYY-MM-DD HH:mm:ss') }}
               </template>
               <template v-if="item.type === 'array'">
-                <span v-for="item in content[item.key]" :key="item" class="rounded-md">{{ item }}</span>
+                <span v-for="field in content[item.key]" :key="field" class="rounded-md">{{ field }}</span>
               </template>
             </TableCell>
           </TableRow>
@@ -31,10 +31,8 @@
   <script lang="ts" setup>
   const { t } = useI18n();
   const dayjs = useDayjs();
-  const route = useRoute();
   //const { fetchDatasets } = useApi();
   const { setPage, page } = useApp();
-  const id = computed(() => parseInt(route.params.id[0]));
   const content = ref();
   const schema = [
     {

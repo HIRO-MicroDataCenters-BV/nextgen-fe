@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
-} from '@/components/ui/command'
-
-const { t } = useI18n();
-const { title, description = "", showAvailableBiobanks = true } = defineProps<{
+const props = defineProps<{
   title: string;
   description?: string;
   showAvailableBiobanks?: boolean;
 }>();
+
+const { title, description = "", showAvailableBiobanks = true } = props;
 </script>
 
 <template>

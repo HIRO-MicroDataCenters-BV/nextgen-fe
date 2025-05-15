@@ -74,22 +74,22 @@ const columns = [
   {
     id: "name",
     header: () => t('label.data_product_name'),
-    cell: ({ row }: { row: { getValue: (key: string) => any } }) => row.getValue("name"),
+    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("name"),
   },
   {
     id: "biobank", // Or perhaps 'type' if that's more accurate from mock data
     header: () => t('label.biobank'),
-    cell: ({ row }: { row: { getValue: (key: string) => any } }) => row.getValue("biobank"),
+    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("biobank"),
   },
   {
     id: "description",
     header: () => t('label.description'),
-    cell: ({ row }: { row: { getValue: (key: string) => any } }) => row.getValue("description"),
+    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("description"),
   },
   {
     id: "last_update",
     header: () => t('label.last_updated'),
-    cell: ({ row }: { row: { getValue: (key: string) => any } }) => dayjs(row.getValue("last_update")).format("DD/MM/YYYY"),
+    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => dayjs(row.getValue("last_update")).format("DD/MM/YYYY"),
   },
   {
     id: "actions",

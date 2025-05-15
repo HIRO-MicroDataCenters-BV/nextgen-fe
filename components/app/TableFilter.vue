@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useFilter } from 'reka-ui';
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { cn } from '@/lib/utils';
@@ -7,25 +6,23 @@ import { cn } from '@/lib/utils';
 const { t } = useI18n();
 const props = withDefaults(
   defineProps<{
-    id: string,
-    label: string,
-    items: {key: string, label: string}[],
-    column?: any
+    id?: string,
+    label?: string,
+    items?: {key: string, label: string}[],
+    column?: unknown
   }>(),
   {
-    id: "",
-    label: "",
+    id: '',
+    label: '',
     items: () => [],
+    column: undefined,
   }
 );
 
-const id = ref(props.id);
 const label = ref(props.label);
 const items = ref(props.items);
-const values = ref<string[]>([]);
-const open = ref(false);
-const q = ref('');
 const selectedValues = ref<string[]>([]);
+const q = ref('');
 
 const handleSelect = (option: { key: string, label: string }) => {
   const isSelected = selectedValues.value.includes(option.label);
@@ -78,7 +75,7 @@ const handleSelect = (option: { key: string, label: string }) => {
     </PopoverTrigger>
     <PopoverContent class="w-[200px] p-0" align="start">
       <Command>
-        <CommandInput :placeholder="t('placeholder.search')" v-model="q" />
+        <CommandInput v-model="q" :placeholder="t('placeholder.search')" />
         <CommandList>
           <CommandEmpty/>
           <CommandGroup>

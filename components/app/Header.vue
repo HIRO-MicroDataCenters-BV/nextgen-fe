@@ -28,7 +28,7 @@
               <CommandGroup>
                 <CommandItem v-for="item in availableBiobanks" :key="item.key" :value="item" class="p-0">
                   <Button :href="item.url" class="flex p-2 w-full flex gap-2 text-left items-start justify-start" variant="ghost">
-                    <span><img :src="`/images/icons/${item.icon}.png`" /></span>
+                    <span><img :src="`/images/icons/${item.icon}.png`" ></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>

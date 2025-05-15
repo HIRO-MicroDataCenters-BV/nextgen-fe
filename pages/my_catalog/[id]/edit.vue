@@ -16,7 +16,7 @@
     </div>
     <div v-else class="text-center py-10">
        <p>{{ t('status.item_not_found') }}</p>
-       <Button @click="goBackToCatalog" class="mt-4">{{ t('action.back_to_catalog') }}</Button>
+       <Button class="mt-4" @click="goBackToCatalog">{{ t('action.back_to_catalog') }}</Button>
     </div>
   </AppContent>
 </template>
@@ -34,7 +34,7 @@ const route = useRoute();
 const router = useRouter();
 
 const loading = ref(true);
-const initialValues = ref<Record<string, any> | null>(null);
+const initialValues = ref<Record<string, unknown> | null>(null);
 
 const licenseOptions = [
   { value: 'cc_by', label: 'Creative Commons BY' },
@@ -87,7 +87,7 @@ const formSchema: FormFieldDefinition[] = [
 
 const formRef = ref();
 
-const mockFetchCatalogItem = async (id: string): Promise<Record<string, any> | null> => {
+const mockFetchCatalogItem = async (id: string): Promise<Record<string, unknown> | null> => {
   await new Promise(resolve => setTimeout(resolve, 500));
   const MOCK_DATA_SOURCE = [
     { id: '1', dataProductName: 'Genomic Data Set Alpha', creator: 'Dr. Scientist', license: 'cc_by', issued: new Date(2023, 0, 15), lastUpdated: new Date(2023, 5, 10) },
@@ -115,7 +115,7 @@ onMounted(async () => {
   loading.value = false;
 });
 
-const onSubmit = (formValues: Record<string, any>) => {
+const onSubmit = (formValues: Record<string, unknown>) => {
   const itemId = route.params.id as string;
   alert(`Data Product ${itemId} Updated (simulated): ` + JSON.stringify(formValues, null, 2));
   router.push('/my_catalog');

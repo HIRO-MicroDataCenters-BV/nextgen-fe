@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, toRefs } from 'vue';
+import { computed, watch, toRefs } from 'vue';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   FormControl,
-  FormField as VeeFormField, // Renamed to avoid conflict with local FormField type
+  FormField as VeeFormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -42,12 +42,12 @@ export interface FormFieldDefinition {
   options?: FormFieldOption[];
   validation?: z.ZodTypeAny;
   disabled?: boolean;
-  props?: Record<string, any>; // For additional props like 'rows' for textarea
+  props?: Record<string, unknown>; // For additional props like 'rows' for textarea
 }
 
 export interface AppFormProps {
   formSchema: FormFieldDefinition[];
-  initialValues?: Record<string, any>;
+  initialValues?: Record<string, unknown>;
   // onSubmitHandler: (values: Record<string, any>) => Promise<void> | void;
   // onCancelHandler?: () => void;
 }
@@ -81,7 +81,7 @@ const dynamicSchema = computed(() => {
           shape[field.name] = z.date().optional().nullable(); // Allow null for dates
           break;
         default:
-          shape[field.name] = z.any().optional();
+          shape[field.name] = z.unknown().optional();
       }
     }
   });
@@ -125,22 +125,7 @@ defineExpose({
   meta // Expose meta for validity checks etc.
 });
 
-const getFieldComponent = (type: FormFieldDefinition['type']) => {
-  switch (type) {
-    case 'text':
-      return Input;
-    case 'select':
-      return Select;
-    case 'date':
-      return Calendar; // The calendar itself is the field, wrapped by Popover
-    case 'textarea':
-      return 'textarea'; // Special handling for Textarea as it's not a custom component here
-    default:
-      return Input;
-  }
-};
-
-const getFormattedDate = (date: any) => {
+const getFormattedDate = (date: unknown) => {
   if (!date) return null;
   if (date instanceof Date) return df.format(date);
   if (typeof date === 'string') {
@@ -152,9 +137,9 @@ const getFormattedDate = (date: any) => {
 </script>
 
 <template>
-  <form @submit.prevent="onSubmit" class="space-y-6">
+  <form class="space-y-6" @submit.prevent="onSubmit">
     <template v-for="field in formSchema" :key="field.name">
-      <VeeFormField v-slot="{ componentField, value: fieldValue, errors }" :name="field.name">
+      <VeeFormField v-slot="{ componentField, value: fieldValue }" :name="field.name">
         <FormItem>
           <FormLabel :for="field.name">{{ field.label }}</FormLabel>
 
