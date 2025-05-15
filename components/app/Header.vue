@@ -50,7 +50,6 @@
           {{ t('action.discard') }}
         </Button>
         <Button @click="onSaveClick">
-          <Icon name="lucide:save" class="mr-2 h-4 w-4" />
           {{ t('action.save_changes') }}
         </Button>
       </template>

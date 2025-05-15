@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed, watch, toRefs } from 'vue';
-import { useForm } from 'vee-validate';
-import { toTypedSchema } from '@vee-validate/zod';
-import * as z from 'zod';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { computed, watch, toRefs } from "vue";
+import { useForm } from "vee-validate";
+import { toTypedSchema } from "@vee-validate/zod";
+import * as z from "zod";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   FormControl,
   FormField as VeeFormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from '@/components/ui/form';
+} from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -20,13 +20,22 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { TagsInput } from "@/components/ui/tags-input";
+import {
+  TagsInputItem,
+  TagsInputItemText,
+  TagsInputItemDelete,
+  TagsInputInput,
+} from "@/components/ui/tags-input";
 // import { Icon } from '#components'; // Assuming Icon is globally available or auto-imported
 
 export interface FormFieldOption {
@@ -36,54 +45,64 @@ export interface FormFieldOption {
 
 export interface FormFieldDefinition {
   name: string;
-  label: string; // Can be an i18n key
-  type: 'text' | 'select' | 'date' | 'textarea';
-  placeholder?: string; // Can be an i18n key
+  label: string;
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags";
+  placeholder?: string;
   options?: FormFieldOption[];
   validation?: z.ZodTypeAny;
   disabled?: boolean;
-  props?: Record<string, unknown>; // For additional props like 'rows' for textarea
+  props?: Record<string, unknown>;
+}
+
+export interface FormGroupDefinition {
+  label: string;
+  fields: FormFieldDefinition[];
 }
 
 export interface AppFormProps {
-  formSchema: FormFieldDefinition[];
+  formSchema: FormGroupDefinition[];
   initialValues?: Record<string, unknown>;
-  // onSubmitHandler: (values: Record<string, any>) => Promise<void> | void;
-  // onCancelHandler?: () => void;
 }
 
 const props = defineProps<AppFormProps>();
-const emit = defineEmits(['submit', 'cancel', 'update:values']);
+const emit = defineEmits(["submit", "cancel", "update:values"]);
 
 const { formSchema, initialValues } = toRefs(props);
 
 const { t } = useI18n();
 const dayjs = useDayjs();
-const df = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
+const df = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 
-// Dynamically create Zod schema
+// Build dynamic Zod schema for all fields in all groups
 const dynamicSchema = computed(() => {
   const shape: Record<string, z.ZodTypeAny> = {};
-  formSchema.value.forEach(field => {
-    if (field.validation) {
-      shape[field.name] = field.validation;
-    } else {
-      // Provide a default validation if none is specified
-      switch (field.type) {
-        case 'text':
-        case 'textarea':
-          shape[field.name] = z.string().optional();
-          break;
-        case 'select':
-          shape[field.name] = z.string().optional();
-          break;
-        case 'date':
-          shape[field.name] = z.date().optional().nullable(); // Allow null for dates
-          break;
-        default:
-          shape[field.name] = z.unknown().optional();
+  formSchema.value.forEach((group) => {
+    group.fields.forEach((field) => {
+      if (field.validation) {
+        shape[field.name] = field.validation;
+      } else {
+        switch (field.type) {
+          case "text":
+          case "textarea":
+            shape[field.name] = z.string().optional();
+            break;
+          case "select":
+            shape[field.name] = z.string().optional();
+            break;
+          case "date":
+            shape[field.name] = z.date().optional().nullable();
+            break;
+          case "checkbox":
+            shape[field.name] = z.boolean().optional();
+            break;
+          case "tags":
+            shape[field.name] = z.array(z.string()).optional();
+            break;
+          default:
+            shape[field.name] = z.unknown().optional();
+        }
       }
-    }
+    });
   });
   return z.object(shape);
 });
@@ -95,40 +114,45 @@ const { handleSubmit, values, setValues, meta, resetForm } = useForm({
   initialValues: initialValues?.value || {},
 });
 
-watch(initialValues, (newValues) => {
-  if (newValues) {
-    resetForm({ values: newValues });
-  }
-}, { deep: true, immediate: true });
+watch(
+  initialValues,
+  (newValues) => {
+    if (newValues) {
+      resetForm({ values: newValues });
+    }
+  },
+  { deep: true, immediate: true }
+);
 
-watch(values, (newValues) => {
-  emit('update:values', newValues);
-}, { deep: true });
-
+watch(
+  values,
+  (newValues) => {
+    emit("update:values", newValues);
+  },
+  { deep: true }
+);
 
 const onSubmit = handleSubmit((formData) => {
-  emit('submit', formData);
+  emit("submit", formData);
 });
 
 const onCancel = () => {
-  // resetForm({ values: initialValues?.value || {} }); // Reset to initial or empty
-  emit('cancel');
+  emit("cancel");
 };
 
-// Expose methods to be called by parent (e.g., from AppHeader events)
 defineExpose({
   submit: onSubmit,
   cancel: onCancel,
   resetForm,
   setValues,
-  values, // Expose current form values
-  meta // Expose meta for validity checks etc.
+  values,
+  meta,
 });
 
 const getFormattedDate = (date: unknown) => {
   if (!date) return null;
   if (date instanceof Date) return df.format(date);
-  if (typeof date === 'string') {
+  if (typeof date === "string") {
     const parsed = dayjs(date);
     return parsed.isValid() ? df.format(parsed.toDate()) : null;
   }
@@ -137,86 +161,164 @@ const getFormattedDate = (date: unknown) => {
 </script>
 
 <template>
-  <form class="space-y-6" @submit.prevent="onSubmit">
-    <template v-for="field in formSchema" :key="field.name">
-      <VeeFormField v-slot="{ componentField, value: fieldValue }" :name="field.name">
-        <FormItem>
-          <FormLabel :for="field.name">{{ field.label }}</FormLabel>
-
-          <!-- Text Input -->
-          <template v-if="field.type === 'text'">
-            <FormControl>
-              <Input
-                :id="field.name"
-                type="text"
-                :placeholder="field.placeholder"
-                v-bind="componentField"
-                :disabled="field.disabled"
-              />
-            </FormControl>
-          </template>
-
-          <!-- Textarea -->
-          <template v-else-if="field.type === 'textarea'">
-            <FormControl>
-              <Textarea
-                :id="field.name"
-                :placeholder="field.placeholder"
-                v-bind="componentField"
-                :disabled="field.disabled"
-                :rows="field.props?.rows || 3"
-              />
-            </FormControl>
-          </template>
-
-          <!-- Select Input -->
-          <template v-else-if="field.type === 'select' && field.options">
-            <Select v-bind="componentField" :disabled="field.disabled" class="w-full">
-              <FormControl>
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="field.placeholder || t('placeholder.select_option')" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem v-for="option in field.options" :key="option.value" :value="option.value">
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </template>
-
-          <!-- Date Picker Input -->
-          <template v-else-if="field.type === 'date'">
-            <Popover>
-              <PopoverTrigger as-child>
-                <FormControl>
-                  <Button
-                    :id="field.name"
-                    variant="outline"
-                    :class="cn(
-                      'w-full justify-start text-left font-normal',
-                      !fieldValue && 'text-muted-foreground',
-                      field.disabled && 'cursor-not-allowed opacity-50'
-                    )"
-                    type="button"
-                    :disabled="field.disabled"
+  <form @submit.prevent="onSubmit" class="space-y-10">
+    <template v-for="(group, groupIdx) in formSchema" :key="group.label">
+      <div class="w-full">
+        <div class="grid gap-4 grid-cols-2 w-full mb-4">
+          <div class="mb-2">
+            <h3 class="text-lg font-semibold mb-2">
+              {{ t(`fieldset.${group.label}`) }}
+            </h3>
+          </div>
+          <div class="flex flex-col gap-4">
+            <template v-for="field in group.fields" :key="field.name">
+              <FormField
+                v-slot="{ componentField, value: fieldValue }"
+                :name="field.name"
+              >
+                <FormItem>
+                  <FormLabel
+                    v-if="field.type !== 'checkbox'"
+                    :for="field.name"
+                    >{{ field.label }}</FormLabel
                   >
-                    <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
-                    <span>{{ fieldValue ? getFormattedDate(fieldValue) : (field.placeholder || t('placeholder.pick_date')) }}</span>
-                  </Button>
-                </FormControl>
-              </PopoverTrigger>
-              <PopoverContent v-if="!field.disabled" class="w-auto p-0">
-                <Calendar v-bind="componentField" />
-              </PopoverContent>
-            </Popover>
-          </template>
-          <FormMessage />
-        </FormItem>
-      </VeeFormField>
+                  <template v-if="field.type === 'text'">
+                    <FormControl>
+                      <Input
+                        :id="field.name"
+                        type="text"
+                        :placeholder="field.placeholder"
+                        v-bind="componentField"
+                        :disabled="field.disabled"
+                      />
+                    </FormControl>
+                  </template>
+                  <template v-else-if="field.type === 'textarea'">
+                    <FormControl>
+                      <Textarea
+                        :id="field.name"
+                        :placeholder="field.placeholder"
+                        v-bind="componentField"
+                        :disabled="field.disabled"
+                        :rows="field.props?.rows || 3"
+                      />
+                    </FormControl>
+                  </template>
+                  <template
+                    v-else-if="field.type === 'select' && field.options"
+                  >
+                    <Select
+                      v-bind="componentField"
+                      :disabled="field.disabled"
+                      class="w-full"
+                    >
+                      <FormControl>
+                        <SelectTrigger class="w-full">
+                          <SelectValue
+                            :placeholder="
+                              field.placeholder ||
+                              t('placeholder.select_option')
+                            "
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem
+                            v-for="option in field.options"
+                            :key="option.value"
+                            :value="option.value"
+                          >
+                            {{ option.label }}
+                          </SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </template>
+                  <template v-else-if="field.type === 'date'">
+                    <Popover>
+                      <PopoverTrigger as-child>
+                        <FormControl>
+                          <Button
+                            :id="field.name"
+                            variant="outline"
+                            :class="
+                              cn(
+                                'w-full justify-start text-left font-normal',
+                                !fieldValue && 'text-muted-foreground',
+                                field.disabled &&
+                                  'cursor-not-allowed opacity-50'
+                              )
+                            "
+                            type="button"
+                            :disabled="field.disabled"
+                          >
+                            <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
+                            <span>{{
+                              fieldValue
+                                ? getFormattedDate(fieldValue)
+                                : field.placeholder ||
+                                  t("placeholder.pick_date")
+                            }}</span>
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent v-if="!field.disabled" class="w-auto p-0">
+                        <Calendar v-bind="componentField" />
+                      </PopoverContent>
+                    </Popover>
+                  </template>
+                  <template v-else-if="field.type === 'checkbox'">
+                    <FormControl>
+                      <label
+                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      >
+                        <Checkbox
+                          :id="field.name"
+                          v-bind="componentField"
+                          :disabled="field.disabled"
+                          :checked="fieldValue"
+                        />
+                        <span class="ml-2">{{ field.label }}</span>
+                      </label>
+                    </FormControl>
+                  </template>
+                  <template v-else-if="field.type === 'tags'">
+                    <FormControl>
+                      <TagsInput
+                        :id="field.name"
+                        :model-value="componentField.modelValue"
+                        @update:model-value="
+                          componentField['onUpdate:modelValue']
+                        "
+                        :disabled="field.disabled"
+                        :placeholder="field.placeholder"
+                        :delimiter="/[\n,]+/"
+                      >
+                        <TagsInputItem
+                          v-for="tag in componentField.modelValue || []"
+                          :key="tag"
+                          :value="tag"
+                        >
+                          <TagsInputItemText />
+                          <TagsInputItemDelete />
+                        </TagsInputItem>
+                        <TagsInputInput
+                          :placeholder="
+                            field.placeholder || t('placeholder.tags_input')
+                          "
+                        />
+                      </TagsInput>
+                    </FormControl>
+                  </template>
+                  <FormMessage />
+                </FormItem>
+              </FormField>
+            </template>
+          </div>
+        </div>
+        <Separator />
+      </div>
     </template>
-    <!-- Buttons are handled by AppHeader, this component exposes submit/cancel methods -->
   </form>
-</template> 
+</template>

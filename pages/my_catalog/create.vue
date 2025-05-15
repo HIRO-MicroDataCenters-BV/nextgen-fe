@@ -1,10 +1,10 @@
 <template>
   <AppContent :title="t('title.create_catalog_item')" :description="t('subtitle.create_catalog_item_desc')">
-    <div class="max-w-lg px-14 py-6">
+    <div class="px-14 py-6">
       <AppForm
         ref="formRef"
         :form-schema="formSchema"
-        :initial-values="{}"
+        :initial-values="initialValues"
         @submit="onSubmit"
         @cancel="onCancel"
       />
@@ -31,39 +31,60 @@ const licenseOptions = [
   { value: 'proprietary', label: 'Proprietary' },
 ];
 
-const formSchema: FormFieldDefinition[] = [
+const formSchema = [
   {
-    name: 'dataProductName',
-    label: t('label.data_product_name'),
-    type: 'text',
-    placeholder: t('placeholder.data_product_name'),
-    validation: z.string().min(3, { message: t('validation.required_min_length') }),
-  },
-  {
-    name: 'creator',
-    label: t('label.creator'),
-    type: 'text',
-    placeholder: t('placeholder.creator'),
-    validation: z.string().min(2, { message: t('validation.required_min_length') }),
-  },
-  {
-    name: 'license',
-    label: t('label.license'),
-    type: 'select',
-    placeholder: t('placeholder.select_license'),
-    options: licenseOptions,
-    validation: z.string({ required_error: t('validation.required') }),
-  },
-  {
-    name: 'issued',
-    label: t('label.issued_date'),
-    type: 'date',
-    placeholder: t('placeholder.pick_date'),
-    validation: z.date({ required_error: t('validation.required_date') }),
-  },
+    label: 'main',
+    fields: [
+      {
+        name: 'dataProductName',
+        label: t('label.data_product_name'),
+        type: 'text',
+        placeholder: t('placeholder.data_product_name'),
+        validation: z.string().min(3, { message: t('validation.required_min_length') }),
+      },
+      {
+        name: 'creator',
+        label: t('label.creator'),
+        type: 'text',
+        placeholder: t('placeholder.creator'),
+        validation: z.string().min(2, { message: t('validation.required_min_length') }),
+      },
+      {
+        name: 'license',
+        label: t('label.license'),
+        type: 'select',
+        placeholder: t('placeholder.select_license'),
+        options: licenseOptions,
+        validation: z.string({ required_error: t('validation.required') }),
+      },
+      {
+        name: 'issued',
+        label: t('label.issued_date'),
+        type: 'date',
+        placeholder: t('placeholder.pick_date'),
+        validation: z.date({ required_error: t('validation.required_date') }),
+      },
+      {
+        name: 'tags',
+        label: t('label.tags'),
+        type: 'tags',
+        placeholder: t('placeholder.tags_input'),
+        options: [
+          { value: 'foo', label: 'foo' },
+          { value: 'bar', label: 'bar' },
+          { value: 'baz', label: 'baz' }
+        ],
+        validation: z.array(z.string()).optional(),
+      },
+    ]
+  }
 ];
 
 const formRef = ref();
+
+const initialValues = {
+  tags: ['foo', 'bar']
+};
 
 const onSubmit = (formValues: Record<string, unknown>) => {
   alert('Data Product Created (simulated): ' + JSON.stringify(formValues, null, 2));
