@@ -46,7 +46,7 @@ export interface FormFieldOption {
 export interface FormFieldDefinition {
   name: string;
   label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags";
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file";
   placeholder?: string;
   options?: FormFieldOption[];
   validation?: z.ZodTypeAny;
@@ -98,6 +98,9 @@ const dynamicSchema = computed(() => {
           case "tags":
             shape[field.name] = z.array(z.string()).optional();
             break;
+          case "file":
+            shape[field.name] = z.instanceof(FileList).optional();
+            break;
           default:
             shape[field.name] = z.unknown().optional();
         }
@@ -109,10 +112,11 @@ const dynamicSchema = computed(() => {
 
 const typedSchema = computed(() => toTypedSchema(dynamicSchema.value));
 
-const { handleSubmit, values, setValues, meta, resetForm } = useForm({
-  validationSchema: typedSchema,
-  initialValues: initialValues?.value || {},
-});
+const { handleSubmit, values, setValues, meta, resetForm, setFieldValue } =
+  useForm({
+    validationSchema: typedSchema,
+    initialValues: initialValues?.value || {},
+  });
 
 watch(
   initialValues,
@@ -238,33 +242,45 @@ const getFormattedDate = (date: unknown) => {
                   <template v-else-if="field.type === 'date'">
                     <Popover>
                       <PopoverTrigger as-child>
-                        <FormControl>
-                          <Button
-                            :id="field.name"
-                            variant="outline"
-                            :class="
-                              cn(
-                                'w-full justify-start text-left font-normal',
-                                !fieldValue && 'text-muted-foreground',
-                                field.disabled &&
-                                  'cursor-not-allowed opacity-50'
-                              )
-                            "
-                            type="button"
-                            :disabled="field.disabled"
-                          >
-                            <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
-                            <span>{{
-                              fieldValue
-                                ? getFormattedDate(fieldValue)
-                                : field.placeholder ||
-                                  t("placeholder.pick_date")
-                            }}</span>
-                          </Button>
-                        </FormControl>
+                        <Button
+                          :id="field.name"
+                          variant="outline"
+                          :class="
+                            cn(
+                              'w-full justify-start text-left font-normal',
+                              !fieldValue && 'text-muted-foreground',
+                              field.disabled && 'cursor-not-allowed opacity-50'
+                            )
+                          "
+                          type="button"
+                          :disabled="field.disabled"
+                        >
+                          <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
+                          <span>{{
+                            fieldValue
+                              ? getFormattedDate(fieldValue)
+                              : field.placeholder || t("placeholder.pick_date")
+                          }}</span>
+                        </Button>
                       </PopoverTrigger>
                       <PopoverContent v-if="!field.disabled" class="w-auto p-0">
-                        <Calendar v-bind="componentField" />
+                        <FormControl>
+                          <Calendar
+                            initial-focus
+                            :v-model="
+                              fieldValue instanceof Date ? fieldValue : null
+                            "
+                            @update:model-value="
+                              (v) => {
+                                if (v) {
+                                  setFieldValue(field.name, v.toString());
+                                } else {
+                                  setFieldValue(field.name, undefined);
+                                }
+                              }
+                            "
+                          />
+                        </FormControl>
                       </PopoverContent>
                     </Popover>
                   </template>
@@ -309,6 +325,24 @@ const getFormattedDate = (date: unknown) => {
                           "
                         />
                       </TagsInput>
+                    </FormControl>
+                  </template>
+                  <template v-else-if="field.type === 'file'">
+                    <FormControl>
+                      <Input
+                        :id="field.name"
+                        type="file"
+                        :placeholder="field.placeholder"
+                        :multiple="Boolean(field.props?.multiple)"
+                        :accept="String(field.props?.accept || '')"
+                        :disabled="field.disabled"
+                        @change="e => {
+                          const input = e.target as HTMLInputElement;
+                          if (input && componentField['onUpdate:modelValue']) {
+                            componentField['onUpdate:modelValue'](input.files);
+                          }
+                        }"
+                      />
                     </FormControl>
                   </template>
                   <FormMessage />

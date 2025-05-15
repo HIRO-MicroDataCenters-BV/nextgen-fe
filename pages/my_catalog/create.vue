@@ -76,6 +76,17 @@ const formSchema = [
         ],
         validation: z.array(z.string()).optional(),
       },
+      {
+        name: 'fileUpload',
+        label: t('label.file_upload'),
+        type: 'file',
+        placeholder: t('placeholder.file_upload'),
+        props: {
+          multiple: true,
+          accept: 'image/*,application/pdf',
+        },
+        validation: z.any().optional(),
+      },
     ]
   }
 ];
