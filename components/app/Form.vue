@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   FormControl,
-  FormField as VeeFormField,
   FormItem,
   FormLabel,
   FormMessage,
@@ -29,8 +28,8 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { TagsInput } from "@/components/ui/tags-input";
 import {
+  TagsInput,
   TagsInputItem,
   TagsInputItemText,
   TagsInputItemDelete,
@@ -165,8 +164,8 @@ const getFormattedDate = (date: unknown) => {
 </script>
 
 <template>
-  <form @submit.prevent="onSubmit" class="space-y-10">
-    <template v-for="(group, groupIdx) in formSchema" :key="group.label">
+  <form class="space-y-10" @submit.prevent="onSubmit">
+    <template v-for="group in formSchema" :key="group.label">
       <div class="w-full">
         <div class="grid gap-4 grid-cols-2 w-full mb-4">
           <div class="mb-2">
@@ -304,12 +303,12 @@ const getFormattedDate = (date: unknown) => {
                       <TagsInput
                         :id="field.name"
                         :model-value="componentField.modelValue"
-                        @update:model-value="
-                          componentField['onUpdate:modelValue']
-                        "
                         :disabled="field.disabled"
                         :placeholder="field.placeholder"
                         :delimiter="/[\n,]+/"
+                        @update:model-value="
+                          componentField['onUpdate:modelValue']
+                        "
                       >
                         <TagsInputItem
                           v-for="tag in componentField.modelValue || []"
@@ -336,7 +335,7 @@ const getFormattedDate = (date: unknown) => {
                         :multiple="Boolean(field.props?.multiple)"
                         :accept="String(field.props?.accept || '')"
                         :disabled="field.disabled"
-                        @change="e => {
+                        @change="(e: Event) => {
                           const input = e.target as HTMLInputElement;
                           if (input && componentField['onUpdate:modelValue']) {
                             componentField['onUpdate:modelValue'](input.files);

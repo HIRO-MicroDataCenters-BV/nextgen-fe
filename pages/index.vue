@@ -3,7 +3,7 @@
     <div class="w-full md:w-1/2 flex items-center justify-center bg-background p-8">
       <div class="w-full max-w-md space-y-6 bg-white/90 rounded-2xl shadow-xl p-8 border border-gray-100">
         <div class="flex flex-col items-center mb-8">
-          <img src="/favicon-310x310.png" alt="Logo" class="w-20 h-20 mb-4 rounded-xl shadow-md" />
+          <img src="/favicon-310x310.png" alt="Logo" class="w-20 h-20 mb-4 rounded-xl shadow-md" >
           <h1 class="text-3xl font-bold text-primary mb-2">{{ t('app.title') }}</h1>
         </div>
 
