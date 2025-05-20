@@ -24,3 +24,17 @@ export interface SearchFilter {
   value: string | number;
   column?: string;
 }
+
+export interface DropdownMenuItem {
+  key: string;
+  label: string;
+  children?: DropdownMenuItem[];
+  type?: "checkbox" | "select";
+}
+
+export interface TableDropdownFilterProps {
+  id?: string;
+  label?: string;
+  items?: DropdownMenuItem[];
+  column?: unknown;
+}

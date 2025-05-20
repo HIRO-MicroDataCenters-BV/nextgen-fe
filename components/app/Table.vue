@@ -28,6 +28,7 @@ import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
 import { filters as globalFiltersConstant } from "~/constants";
 import TableFilterVue from "~/components/app/TableFilter.vue";
+import TableDropdownFilter from "~/components/app/TableDropdownFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -64,12 +65,12 @@ const router = useRouter();
 */
 
 const columnFilters = ref<ColumnFiltersState>(
-  route.query.filters && typeof route.query.filters === 'string' 
+  route.query.filters && typeof route.query.filters === "string"
     ? JSON.parse(decodeURIComponent(route.query.filters))
     : []
 );
 const columnVisibility = ref<VisibilityState>(
-  route.query.visibility && typeof route.query.visibility === 'string'
+  route.query.visibility && typeof route.query.visibility === "string"
     ? JSON.parse(decodeURIComponent(route.query.visibility))
     : {}
 );
@@ -77,7 +78,9 @@ const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
 
 const currentPage = ref<number>(
-  route.query.page && typeof route.query.page === 'string' ? parseInt(route.query.page) : 0
+  route.query.page && typeof route.query.page === "string"
+    ? parseInt(route.query.page)
+    : 0
 );
 
 const getColumns = (cols: TableColumn[] | undefined) => {
@@ -178,10 +181,8 @@ watch(
     if (isUpdatingFromState.value) return;
     isUpdatingFromState.value = true;
     try {
-      if (newQuery.filters && typeof newQuery.filters === 'string') {
-        columnFilters.value = JSON.parse(
-          decodeURIComponent(newQuery.filters)
-        );
+      if (newQuery.filters && typeof newQuery.filters === "string") {
+        columnFilters.value = JSON.parse(decodeURIComponent(newQuery.filters));
         const currentColumnFilters = columnFilters.value;
         if (currentColumnFilters.length > 0) {
           const searchFilter = currentColumnFilters.find(
@@ -200,14 +201,14 @@ watch(
         searchValue.value = "";
         selectedFilterColumn.value = "all";
       }
-      if (newQuery.visibility && typeof newQuery.visibility === 'string') {
+      if (newQuery.visibility && typeof newQuery.visibility === "string") {
         columnVisibility.value = JSON.parse(
           decodeURIComponent(newQuery.visibility)
         );
       } else {
         columnVisibility.value = {};
       }
-      if (newQuery.page && typeof newQuery.page === 'string') {
+      if (newQuery.page && typeof newQuery.page === "string") {
         const pageIndex = parseInt(newQuery.page);
         currentPage.value = pageIndex;
         table.setPageIndex(pageIndex);
@@ -236,8 +237,50 @@ watch(
 
 onMounted(() => {
   fetchData();
-
 });
+
+const filterItems = ref<DropdownMenuItem[]>([
+  {
+    key: "sociodemographic",
+    children: [
+      {
+        key: "simple",
+        type: "checkbox",
+        value: "simple",
+      },
+      {
+        key: "advanced",
+        children: [
+          {
+            key: "red",
+            type: "checkbox",
+            value: "red",
+          },
+          {
+            key: "green",
+            type: "checkbox",
+            value: "green",
+          },
+          {
+            key: "blue",
+            children: [
+              {
+                key: "red",
+                type: "checkbox",
+                value: "red",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: "measurements",
+    type: "checkbox",
+    value: "measurements",
+  },
+]);
 </script>
 
 <template>
@@ -249,7 +292,7 @@ onMounted(() => {
       <!-- table filters -->
 
       <div class="flex gap-2 items-center">
-        <div class="flex-auto flex  flex-wrap gap-2">
+        <div class="flex-auto flex flex-wrap gap-2">
           <div class="flex gap-2 relative max-w-sm items-center">
             <Input
               v-model="searchValue"
@@ -264,9 +307,12 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
-          <template v-for="item in globalFiltersConstant" :key="item.key">
-            <TableFilterVue :id="item.key" :label="item.label" :items="item.items || []" />
-          </template>
+
+          <TableDropdownFilter
+            id="filter"
+            label="Filter"
+            :items="filterItems"
+          />
         </div>
       </div>
     </div>
@@ -326,9 +372,7 @@ onMounted(() => {
       @previous-page="table.previousPage()"
       @on-next-page="table.nextPage()"
       @on-first-page="table.setPageIndex(0)"
-      @on-last-page="
-        table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)
-      "
+      @on-last-page="table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)"
     />
     <DialogDataset
       :open="openAddDataset"
