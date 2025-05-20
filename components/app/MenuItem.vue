@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { h } from "vue";
 import { useI18n } from "vue-i18n";
 import type { DropdownMenuItem } from "@/types/table.types";
 import {
@@ -9,7 +8,6 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
-
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -21,17 +19,9 @@ const emit = defineEmits<{
   (e: "update:selected", key: string): void;
 }>();
 
-const selectedValues = ref<string[]>(props.selectedValues);
-
-watch(
-  () => selectedValues,
-  (newVal) => {
-    console.log("selectedValues", newVal);
-  },
-  {
-    deep: true,
-  }
-);
+const isSelected = computed(() => {
+  return props.selectedValues.includes(props.item.key);
+});
 </script>
 
 <template>
@@ -46,7 +36,7 @@ watch(
             v-for="child in item.children"
             :key="child.key"
             :item="child"
-            :selected-values="selectedValues"
+            :selected-values="props.selectedValues"
             @update:selected="(key) => emit('update:selected', key)"
           />
         </DropdownMenuSubContent>
@@ -58,14 +48,22 @@ watch(
       :class="item.type === 'checkbox' ? 'flex items-center gap-2' : ''"
     >
       <Label
-        @click.prevent="() => emit('update:selected', item.key)"
         class="font-normal"
+        @click.prevent="() => emit('update:selected', item.key)"
       >
-        <Checkbox
-          v-if="item.type === 'checkbox'"
-          :checked="selectedValues.includes(item.key)"
-        />
-        {{ t(`label.${item.key}`) }}
+        <div
+          :class="
+            cn(
+              ' flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+              isSelected
+                ? 'bg-primary text-primary-foreground'
+                : 'opacity-50 [&_svg]:invisible'
+            )
+          "
+        >
+          <Icon name="lucide:check" :class="cn('h-4 w-4')" />
+        </div>
+        <span>{{ t(`label.${item.key}`) }}</span>
       </Label>
     </DropdownMenuItemComponent>
   </template>

@@ -8,8 +8,6 @@ import type {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem as DropdownMenuItemComponent,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -18,7 +16,6 @@ const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   id: "",
   label: "",
   items: () => [],
-  column: undefined,
 });
 
 const items = ref<DropdownMenuItem[]>(props.items);
@@ -35,18 +32,14 @@ const handleCheckboxChange = (key: string) => {
 const handleRemoveSelected = (key: string) => {
   selectedValues.value = selectedValues.value.filter((v) => v !== key);
 };
-
-const clearSelection = () => {
-  selectedValues.value = [];
-};
 </script>
 
 <template>
   <DropdownMenu>
-    <DropdownMenuTrigger asChild>
+    <DropdownMenuTrigger as-child>
       <Button variant="secondary" role="combobox" class="justify-between px-2">
         <div class="flex items-center gap-2">
-          {{ t("action.filter") }}
+          {{ t(`action.${label}`) }}
         </div>
         <Icon
           name="lucide:chevron-down"
@@ -56,15 +49,16 @@ const clearSelection = () => {
       <div v-if="selectedValues.length > 0" class="flex gap-2">
         <Badge
           v-for="item in selectedValues"
+          :key="item"
           variant="secondary"
           class="rounded-sm px-2 text-sm"
         >
           {{ item }}
           <Button
-            @click="handleRemoveSelected(item)"
             variant="ghost"
             size="icon"
             class="p-0 h-auto w-auto"
+            @click="handleRemoveSelected(item)"
           >
             <Icon name="lucide:x" class="h-2 w-2" />
           </Button>
@@ -79,16 +73,6 @@ const clearSelection = () => {
         :selected-values="selectedValues"
         @update:selected="handleCheckboxChange"
       />
-
-      <template v-if="selectedValues.length > 0">
-        <DropdownMenuSeparator />
-        <DropdownMenuItemComponent
-          class="justify-center text-center"
-          @select="clearSelection"
-        >
-          {{ t("action.clear_filters") }}
-        </DropdownMenuItemComponent>
-      </template>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

@@ -281,6 +281,9 @@ const filterItems = ref<DropdownMenuItem[]>([
     value: "measurements",
   },
 ]);
+
+const _globalFiltersConstant = globalFiltersConstant;
+const _TableFilterVue = TableFilterVue;
 </script>
 
 <template>
@@ -310,7 +313,7 @@ const filterItems = ref<DropdownMenuItem[]>([
 
           <TableDropdownFilter
             id="filter"
-            label="Filter"
+            label="filter"
             :items="filterItems"
           />
         </div>
