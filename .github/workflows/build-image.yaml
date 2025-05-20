@@ -35,8 +35,8 @@ jobs:
         run: |
           cd "${{ github.workspace }}"
           chmod +x ./tools/version.sh
-          ./tools/version.sh "${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}"
-          echo "VERSION_APP=$(cat "./VERSION_APP")" >> $GITHUB_ENV
+          ./tools/version.sh "${{ github.sha }}" "${{ env.DOCKER_IMAGE_NAME }}"
+          echo "VERSION_APP=$(cat "./VERSION")" >> $GITHUB_ENV
           echo "DOCKER_IMAGES=$(cat "./DOCKER_IMAGES")" >> $GITHUB_ENV
           echo "DOCKER_TAGS=$(cat "./VERSION_DOCKER")" >> $GITHUB_ENV
 
@@ -62,7 +62,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           platforms: linux/amd64, linux/arm64
           build-args: |
-            NUXT_PUBLIC_APP_VERSION: ${{ env.APP_VERSION }}
+            NUXT_PUBLIC_APP_VERSION: ${{ env.VERSION_APP }}
 
       - name: Configure Git
         run: |
@@ -70,7 +70,7 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Create a github release
-        run: gh release create "${{ env.APP_VERSION }}"
+        run: gh release create "${{ env.VERSION_APP }}"
         env:
           GH_TOKEN: ${{ github.token }}
 
