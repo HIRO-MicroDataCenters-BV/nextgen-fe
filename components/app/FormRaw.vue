@@ -45,7 +45,7 @@ onMounted(async () => {
       // TODO: Replace with your API call
       const response = await fetch("/api/raw/" + props.id);
       const data = await response.json();
-      setFieldValue("content", data.content);
+      setFieldValue("metadata_content", data.metadata_content);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -69,7 +69,7 @@ defineExpose({
         <FormControl>
           <Textarea
             v-bind="componentField"
-            class="flex-1 resize-none"
+            class="h-[calc(100vh-300px)] resize-none"
             :placeholder="t('placeholder.enter_metadata_content')"
           />
         </FormControl>
@@ -78,3 +78,9 @@ defineExpose({
     </FormField>
   </Form>
 </template>
+
+<style scoped>
+:deep(.form-control) {
+  height: 100%;
+}
+</style>
