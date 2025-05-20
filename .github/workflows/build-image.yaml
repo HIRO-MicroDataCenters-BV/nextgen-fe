@@ -6,7 +6,7 @@ on:
       - main
       - develop
     tags:
-      - '**'
+      - "**"
   workflow_dispatch:
 
 jobs:
@@ -31,6 +31,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Make versions
+        run: |
+          cd "${{ github.workspace }}"
+          chmod +x ./tools/version.sh
+          ./tools/version.sh "${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}"
+          echo "VERSION_APP=$(cat "./VERSION_APP")" >> $GITHUB_ENV
+          echo "DOCKER_IMAGES=$(cat "./DOCKER_IMAGES")" >> $GITHUB_ENV
+          echo "DOCKER_TAGS=$(cat "./VERSION_DOCKER")" >> $GITHUB_ENV
+
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@v3
         with:
@@ -38,19 +47,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Make versions
-        run: |
-          chmod +x ./tools/version.sh
-          ./tools/version.sh "${{ github.sha }}" "${{ env.DOCKER_IMAGE_NAME }}"
-          echo "APP_VERSION=$(cat "./VERSION")" >> $GITHUB_ENV
-          echo "DOCKER_IMAGES=$(cat "./DOCKER_IMAGES")" >> $GITHUB_ENV
-          echo "DOCKER_TAGS=$(cat "./VERSION_DOCKER")" >> $GITHUB_ENV  
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKER_IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}
           tags: ${{ env.DOCKER_TAGS }}
 
       - name: Push docker image with version
