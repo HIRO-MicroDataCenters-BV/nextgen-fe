@@ -9,7 +9,7 @@
       <p>{{ t("status.loading_data") }}</p>
     </div>
     <div v-else-if="!loading && initialValues" class="px-14 py-6">
-      <AppForm
+      <AppFormRaw
         ref="formRef"
         :form-schema="formSchema"
         :initial-values="initialValues"
@@ -195,15 +195,4 @@ const onCancel = () => {
 const goBackToCatalog = () => {
   router.push("/my_catalog");
 };
-
-// Expose methods if a parent/layout needs to call them programmatically
-// defineExpose({ onSubmit, onCancel, submitForm });
-
-// Placeholder for i18n keys from AppHeader that this page might influence:
-/*
-t('header_title.edit_catalog_item_details')
-t('header_subtitle.change_metadata_details')
-t('action.save_changes')
-t('action.discard')
-*/
 </script>

@@ -101,6 +101,7 @@ export default defineI18nConfig(() => {
           has_sex: "Has Sex",
           has_height: "Has Height",
           has_medical_conditions: "Has (Medical Conditions)",
+          metadata_content: "Metadata Content",
         },
         action: {
           add_dataset: "Add Dataset",
@@ -118,6 +119,7 @@ export default defineI18nConfig(() => {
           create_new: "Create New",
           login: "Login",
           filter: "Filter",
+          update_file: "Update File",
         },
         placeholder: {
           search: "Search...",
@@ -128,6 +130,7 @@ export default defineI18nConfig(() => {
           creator: "Enter a creator name",
           email: "Enter your email",
           password: "Enter your password",
+          enter_metadata_content: "Enter metadata content",
         },
         hint: {
           in: "In",

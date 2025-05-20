@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch, toRefs } from "vue";
+import { computed, watch, toRefs, ref, onMounted } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import * as z from "zod";
@@ -59,6 +59,7 @@ export interface FormGroupDefinition {
 }
 
 export interface AppFormProps {
+  id?: string;
   formSchema: FormGroupDefinition[];
   initialValues?: Record<string, unknown>;
 }
@@ -161,6 +162,26 @@ const getFormattedDate = (date: unknown) => {
   }
   return null;
 };
+
+const isLoading = ref(false);
+
+onMounted(async () => {
+  if (props.id) {
+    isLoading.value = true;
+    try {
+      // TODO: Replace with your API call
+      const response = await fetch("/api/form/" + props.id);
+      const data = await response.json();
+      Object.entries(data).forEach(([key, value]) => {
+        setFieldValue(key, value);
+      });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      isLoading.value = false;
+    }
+  }
+});
 </script>
 
 <template>

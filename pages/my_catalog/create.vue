@@ -4,7 +4,7 @@
     :description="t('subtitle.create_catalog_item_desc')"
   >
     <div class="px-14 py-6">
-      <AppForm
+      <AppFormRaw
         ref="formRef"
         :form-schema="formSchema"
         :initial-values="initialValues"
