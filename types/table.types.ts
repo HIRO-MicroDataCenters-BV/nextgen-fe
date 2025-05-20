@@ -2,7 +2,7 @@ import type { Row } from "@tanstack/vue-table";
 
 export interface TableColumn {
   id: string;
-  cell: (props: { row: Row<any> }) => any;
+  cell: (props: { row: Row<unknown> }) => unknown;
 }
 
 export interface TableDataResponse {
@@ -16,7 +16,7 @@ export interface TableDataResponse {
 
 export interface DataItem {
   id: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SearchFilter {
@@ -25,4 +25,16 @@ export interface SearchFilter {
   column?: string;
 }
 
-export interface TableRowType extends Row<any> {}
+export interface DropdownMenuItem {
+  key: string;
+  label: string;
+  children?: DropdownMenuItem[];
+  type?: "checkbox" | "select";
+}
+
+export interface TableDropdownFilterProps {
+  id?: string;
+  label?: string;
+  items?: DropdownMenuItem[];
+  column?: unknown;
+}

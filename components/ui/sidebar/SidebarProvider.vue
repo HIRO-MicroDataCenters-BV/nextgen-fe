@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   defaultOpen: true,
   open: undefined,
+  class: '',
 })
 
 const emits = defineEmits<{

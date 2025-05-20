@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<
 >(), {
   orientation: 'horizontal',
   decorative: true,
+  class: '',
 })
 
 const delegatedProps = reactiveOmit(props, 'class')
