@@ -1,8 +1,6 @@
 import { toast } from "vue-sonner";
 
 export const useToaster = () => {
-  const nuxtApp = useNuxtApp();
-
   return {
     show: (
       type: string,

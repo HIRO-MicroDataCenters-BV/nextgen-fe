@@ -43,7 +43,9 @@
                     class="flex p-2 w-full flex gap-2 text-left items-start justify-start"
                     variant="ghost"
                   >
-                    <span><img :src="`/images/icons/${item.icon}.png`" /></span>
+                    <span
+                      ><img :src="`/images/icons/${item.icon}.png`" alt=""
+                    /></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>

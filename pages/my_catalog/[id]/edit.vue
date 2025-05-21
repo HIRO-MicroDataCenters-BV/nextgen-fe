@@ -31,7 +31,6 @@ import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
 import AppContent from "@/components/app/Content.vue";
-import AppForm from "@/components/app/Form.vue";
 import { Button } from "@/components/ui/button";
 
 const { t } = useI18n();

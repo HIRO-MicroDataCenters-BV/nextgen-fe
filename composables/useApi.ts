@@ -12,7 +12,7 @@ interface SearchFilter {
   };
   "@type": "Filters";
   filters: Array<{
-    [key: string]: any;
+    [key: string]: unknown;
   }>;
 }
 
@@ -22,7 +22,7 @@ interface SearchResponse {
     [key: string]: string;
   };
   "@type": string;
-  results: Array<any>;
+  results: Array<Record<string, unknown>>;
   metadata?: {
     total: number;
     page: number;
@@ -36,9 +36,9 @@ interface SearchResponse {
 }
 
 type JsonLdObject = {
-  "@context": Record<string, any>;
+  "@context": Record<string, unknown>;
   "@type"?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 };
 
 /**
@@ -91,13 +91,11 @@ export const useApi = () => {
     body?: unknown,
     options?: {
       showToast?: boolean;
-      retryCount?: number;
       timeout?: number;
     }
   ) => {
     const isFormData = body instanceof FormData;
     const showToast = options?.showToast !== false;
-    const retryCount = options?.retryCount || 3;
     const timeout = options?.timeout || 30000;
 
     const controller = new AbortController();
@@ -196,7 +194,7 @@ export const useApi = () => {
 
     // Metrics
     getMetrics: async () => {
-      return request<Record<string, any>>(`/metrics`);
+      return request<Record<string, unknown>>(`/metrics`);
     },
 
     // Local search
@@ -218,7 +216,7 @@ export const useApi = () => {
     // Helper method to create a basic filter
     createFilter: (
       context: Record<string, string>,
-      filters: Array<any>
+      filters: Array<Record<string, unknown>>
     ): SearchFilter => {
       return {
         "@context": {

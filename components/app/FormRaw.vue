@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
-import * as z from "zod";
+import type * as z from "zod";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
@@ -16,14 +16,29 @@ import {
 
 const { t } = useI18n();
 
+interface FormField {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  options?: Array<{ label: string; value: string | number }>;
+}
+
+interface FormData {
+  [key: string]: string | number | boolean;
+}
+
 const props = defineProps<{
   id?: string;
   formSchema: z.ZodType;
-  initialValues?: Record<string, any>;
+  initialValues?: Record<string, unknown>;
+  fields: FormField[];
+  initialData: FormData;
+  submitLabel: string;
 }>();
 
 const emit = defineEmits<{
-  (e: "submit", data: Record<string, any>): void;
+  (e: "submit", data: Record<string, unknown>): void;
   (e: "cancel"): void;
 }>();
 
@@ -62,7 +77,7 @@ defineExpose({
 </script>
 
 <template>
-  <Form @submit="onSubmit" class="h-full flex flex-col">
+  <Form class="h-full flex flex-col" @submit="onSubmit">
     <FormField v-slot="{ componentField }" name="metadata_content">
       <FormItem class="flex-1 flex flex-col">
         <FormLabel>{{ t("label.metadata_content") }}</FormLabel>

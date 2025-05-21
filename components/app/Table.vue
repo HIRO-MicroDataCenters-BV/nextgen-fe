@@ -37,7 +37,13 @@ interface TableProps {
   pageSize?: number;
 }
 
-const { dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
+const props = withDefaults(defineProps<TableProps>(), {
+  title: "",
+  columns: () => [],
+  pageSize: 10,
+});
+
+const { dataSource, columns, pageSize } = props;
 
 const { t } = useI18n();
 const data = shallowRef<DataItem[]>([]);
