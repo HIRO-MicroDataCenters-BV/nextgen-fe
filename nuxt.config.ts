@@ -15,6 +15,7 @@ export default defineNuxtConfig({
     "nuxt-zod-i18n",
     "dayjs-nuxt",
     "@nuxtjs/color-mode",
+    "@vueuse/nuxt",
   ],
   icon: {
     serverBundle: {
