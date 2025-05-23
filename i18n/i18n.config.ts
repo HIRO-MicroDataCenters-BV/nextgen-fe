@@ -11,12 +11,15 @@ export default defineI18nConfig(() => {
         },
         status: {
           loading_data: "Loading data...",
+          item_not_found: "Item not found",
         },
         title: {
           marketplace: "Marketplace",
           my_catalog: "My Catalog",
           settings: "Settings",
           home: "Login",
+          create: "Create",
+          edit: "Edit",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -28,6 +31,8 @@ export default defineI18nConfig(() => {
           data_products: "Data Products",
           available_biobanks: "Available Biobanks",
           my_catalog: "Private metadata catalog",
+          new_metadata_details: "New metadata details.",
+          change_metadata_details: "Change metadata details.",
         },
         text: {
           available_biobank_description:
@@ -137,6 +142,7 @@ export default defineI18nConfig(() => {
           update_file: "Update File",
           view: "View",
           upload_file: "Upload File",
+          back_to_catalog: "Back to Catalog",
         },
         placeholder: {
           search: "Search...",

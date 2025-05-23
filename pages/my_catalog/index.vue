@@ -73,6 +73,10 @@ const columns: TableColumn[] = [
     header: () => t("label.actions"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
+      console.log(item);
+      const idArr = item.id.split("/");
+      const id = item.id.includes("/") ? idArr[idArr.length - 1] : item.id;
+      console.log(id);
       return h("div", { class: "flex space-x-2" }, [
         h(
           Button,
@@ -80,7 +84,7 @@ const columns: TableColumn[] = [
             variant: "ghost",
             size: "sm",
             class: "items-center",
-            onClick: () => navigateToEdit(item.id),
+            onClick: () => navigateToEdit(id),
           },
           () => [t("action.edit")]
         ),

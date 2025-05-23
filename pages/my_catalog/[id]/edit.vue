@@ -3,8 +3,6 @@
     :title="t('title.edit_catalog_item')"
     :description="t('subtitle.edit_catalog_item_desc')"
   >
-    <!-- AppHeader is now expected to be in a parent layout and emit 'save-form' and 'discard-form' events -->
-    <!-- This page component should have its onSubmit and onCancel methods triggered by those events -->
     <div v-if="loading" class="flex justify-center items-center h-64">
       <p>{{ t("status.loading_data") }}</p>
     </div>
@@ -30,8 +28,6 @@
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
-import AppContent from "@/components/app/Content.vue";
-import { Button } from "@/components/ui/button";
 
 const { t } = useI18n();
 const route = useRoute();

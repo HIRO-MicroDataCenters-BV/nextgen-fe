@@ -98,27 +98,18 @@ const isMyCatalogFormPage = computed(
 );
 
 const currentPageTitle = computed(() => {
-  if (isMyCatalogCreatePage.value)
-    return t("header_title.create_catalog_item_details", "Create");
-  if (isMyCatalogEditPage.value)
-    return t("header_title.edit_catalog_item_details", "Edit Details");
-  if (isMyCatalogIndexPage.value) return t("title.my_catalog", "My Catalog");
-  if (isMarketplacePage.value) return t("title.marketplace", "Marketplace");
+  if (isMyCatalogCreatePage.value) return t("title.create");
+  if (isMyCatalogEditPage.value) return t("title.edit");
+  if (isMyCatalogIndexPage.value) return t("title.my_catalog");
+  if (isMarketplacePage.value) return t("title.marketplace");
   return "";
 });
 
 const currentPageDescription = computed(() => {
-  if (isMyCatalogCreatePage.value)
-    return t("header_subtitle.new_metadata_details", "New metadata details.");
-  if (isMyCatalogEditPage.value)
-    return t(
-      "header_subtitle.change_metadata_details",
-      "Change metadata details."
-    );
-  if (isMyCatalogIndexPage.value)
-    return t("subtitle.my_catalog", "Manage your data products.");
-  if (isMarketplacePage.value)
-    return t("subtitle.marketplace_description", "Explore available biobanks.");
+  if (isMyCatalogCreatePage.value) return t("subtitle.new_metadata_details");
+  if (isMyCatalogEditPage.value) return t("subtitle.change_metadata_details");
+  if (isMyCatalogIndexPage.value) return t("subtitle.my_catalog");
+  if (isMarketplacePage.value) return t("subtitle.marketplace_description");
   return "";
 });
 

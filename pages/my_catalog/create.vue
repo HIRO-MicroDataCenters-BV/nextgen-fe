@@ -19,8 +19,6 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
-import AppContent from "@/components/app/Content.vue";
-// import AppForm from '~/components/app/Form.vue';
 
 const { t } = useI18n();
 const router = useRouter();
