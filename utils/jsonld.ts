@@ -1,8 +1,17 @@
 import type {
   JsonLdValue,
   JsonLdObject,
+  JsonLdResponse,
+  JsonLdStringValue,
+  JsonLdBooleanValue,
+  JsonLdLongValue,
+  JsonLdLanguageValue,
+  JsonLdPublisher,
+  JsonLdTheme,
+  JsonLdDistribution,
+  DatasetMetadata,
   SearchFilter,
-} from "~/types/api.types";
+} from "~/types/jsonld.types";
 
 /**
  * Extract value from JSON-LD value object
@@ -36,48 +45,99 @@ export function getJsonLdValueByPath(obj: JsonLdObject, path: string): string {
 }
 
 /**
+ * Get language value from JSON-LD object
+ */
+function getLanguageValue(
+  value: JsonLdLanguageValue | JsonLdLanguageValue[] | undefined,
+  preferredLanguage: string = "en"
+): string {
+  if (!value) return "";
+
+  if (Array.isArray(value)) {
+    const preferred = value.find((v) => v["@language"] === preferredLanguage);
+    if (preferred) return preferred["@value"];
+    return value[0]?.["@value"] || "";
+  }
+
+  return value["@value"] || "";
+}
+
+/**
  * Transform JSON-LD dataset to table row format
  */
-export function transformDatasetToTableRow(dataset: JsonLdObject): {
-  id: string;
-  name: string;
-  description: string;
-  biobank: string;
-  last_update: string;
-  issued: string;
-  publisher: string;
-  license: string;
-} {
-  console.log("Transforming dataset:", dataset);
+export function transformDatasetToTableRow(
+  dataset: JsonLdObject
+): DatasetMetadata {
+  // Get themes
+  const themes = Array.isArray(dataset["dcat:theme"])
+    ? dataset["dcat:theme"].map((theme: JsonLdObject) =>
+        getLanguageValue(theme["skos:prefLabel"] as JsonLdLanguageValue)
+      )
+    : dataset["dcat:theme"]
+    ? [
+        getLanguageValue(
+          (dataset["dcat:theme"] as JsonLdObject)[
+            "skos:prefLabel"
+          ] as JsonLdLanguageValue
+        ),
+      ]
+    : [];
 
-  // Helper function to get title in English or first available language
-  const getTitle = (title: any): string => {
-    if (Array.isArray(title)) {
-      const enTitle = title.find((t) => t["@language"] === "en");
-      if (enTitle) return enTitle["@value"];
-      return title[0]?.["@value"] || "";
-    }
-    return getJsonLdValue(title);
-  };
+  // Get distribution info
+  const distribution = dataset["dcat:distribution"]
+    ? {
+        availability: getLanguageValue(
+          (dataset["dcat:distribution"] as JsonLdDistribution)[
+            "dcatap:availability"
+          ]["skos:prefLabel"] as JsonLdLanguageValue
+        ),
+        description: getLanguageValue(
+          (dataset["dcat:distribution"] as JsonLdDistribution)[
+            "dcterms:description"
+          ] as JsonLdLanguageValue
+        ),
+        accessURL: (dataset["dcat:distribution"] as JsonLdDistribution)[
+          "dcat:accessURL"
+        ]["@id"],
+        byteSize: getJsonLdValue(
+          (dataset["dcat:distribution"] as JsonLdDistribution)[
+            "dcat:byteSize"
+          ] as JsonLdLongValue
+        ),
+        format: getJsonLdValue(
+          (dataset["dcat:distribution"] as JsonLdDistribution)[
+            "dcat:format"
+          ] as JsonLdStringValue
+        ),
+      }
+    : null;
 
-  // Helper function to get publisher name
-  const getPublisherName = (publisher: any): string => {
-    if (!publisher) return "";
-    return getJsonLdValueByPath(publisher, "foaf:name");
-  };
-
-  const result = {
+  const result: DatasetMetadata = {
     id: String(dataset["@id"] || ""),
-    name: getTitle(dataset["dcterms:title"]),
-    description: getJsonLdValueByPath(dataset, "dcterms:description"),
+    name: getLanguageValue(dataset["dcterms:title"] as JsonLdLanguageValue),
+    description: getLanguageValue(
+      dataset["dcterms:description"] as JsonLdLanguageValue
+    ),
     biobank: getJsonLdValueByPath(dataset, "dspace:biobank"),
     last_update: getJsonLdValueByPath(dataset, "dcterms:modified"),
     issued: getJsonLdValueByPath(dataset, "dcterms:issued"),
-    publisher: getPublisherName(dataset["dcterms:publisher"]),
+    publisher: getJsonLdValueByPath(
+      dataset["dcterms:publisher"] as JsonLdObject,
+      "foaf:name"
+    ),
     license: getJsonLdValueByPath(dataset, "dcterms:license"),
+    isDeleted:
+      getJsonLdValue(dataset["isDeleted"] as JsonLdBooleanValue) === "true",
+    isShared:
+      getJsonLdValue(dataset["isShared"] as JsonLdBooleanValue) === "true",
+    metadataFilename: getJsonLdValue(
+      dataset["metadataFilename"] as JsonLdStringValue
+    ),
+    keyword: getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue),
+    themes,
+    distribution,
   };
 
-  console.log("Transformed row:", result);
   return result;
 }
 
@@ -85,30 +145,18 @@ export function transformDatasetToTableRow(dataset: JsonLdObject): {
  * Transform search response to table data format
  */
 export function transformSearchResponseToTableData(
-  response: JsonLdObject | null | undefined,
+  response: JsonLdResponse | null | undefined,
   currentPage: number = 1,
   currentLimit: number = 10
 ): {
-  data: Array<{
-    id: string;
-    name: string;
-    description: string;
-    biobank: string;
-    last_update: string;
-    issued: string;
-    publisher: string;
-    license: string;
-  }>;
+  data: DatasetMetadata[];
   pagination: {
     total_items: number;
     page: number;
     limit: number;
   };
 } {
-  console.log("Original response:", JSON.stringify(response, null, 2));
-
   if (!response || !response["@graph"]) {
-    console.log("No response or @graph found");
     return {
       data: [],
       pagination: {
@@ -120,8 +168,7 @@ export function transformSearchResponseToTableData(
   }
 
   // Get the graph array from the response
-  const graph = response["@graph"] as JsonLdObject[];
-  console.log("Graph array length:", graph.length);
+  const graph = response["@graph"];
 
   // Extract datasets from catalogs
   const datasets: JsonLdObject[] = [];
@@ -139,10 +186,7 @@ export function transformSearchResponseToTableData(
     }
   });
 
-  console.log("Extracted datasets:", datasets);
-
   const transformedData = datasets.map(transformDatasetToTableRow);
-  console.log("Transformed data:", transformedData);
 
   return {
     data: transformedData,
