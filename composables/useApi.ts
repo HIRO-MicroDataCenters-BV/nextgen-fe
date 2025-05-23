@@ -155,16 +155,34 @@ export const useApi = () => {
   const prepareSearchFilter = async (
     filter: SearchFilter
   ): Promise<SearchFilter> => {
+    console.log(
+      "Original filter before compaction:",
+      JSON.stringify(filter, null, 2)
+    );
+
     // Compact the filter using the context
     const compacted = (await jsonld.compact(
       filter,
       filter["@context"]
     )) as JsonLdObject;
-    return {
+
+    console.log("Compacted filter:", JSON.stringify(compacted, null, 2));
+
+    // Handle both array and object filters
+    const filters = Array.isArray(compacted.filters)
+      ? compacted.filters
+      : compacted.filters
+      ? [compacted.filters]
+      : [];
+
+    const result: SearchFilter = {
       "@context": filter["@context"],
-      "@type": "Filters",
-      filters: Array.isArray(compacted.filters) ? compacted.filters : [],
+      "@type": "Filters" as const,
+      filters,
     };
+
+    console.log("Final prepared filter:", JSON.stringify(result, null, 2));
+    return result;
   };
 
   return {
@@ -226,6 +244,7 @@ export const useApi = () => {
      */
     searchDecentralized: async (filter: SearchFilter) => {
       const preparedFilter = await prepareSearchFilter(filter);
+      console.log("Prepared filter:", preparedFilter, filter);
       return request<SearchResponse>(
         "search",
         `/search/`,

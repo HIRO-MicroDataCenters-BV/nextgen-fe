@@ -7,6 +7,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Button } from "~/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 
 const props = defineProps<{
   currentPage: number;
@@ -24,6 +32,11 @@ const pageSize = ref(props.pageSize);
 const currentPage = ref(props.currentPage);
 const totalPages = ref(props.totalPages);
 const totalItems = ref(props.totalItems);
+
+defineEmits<{
+  "page-change": [page: number];
+  "page-size-change": [size: number];
+}>();
 </script>
 
 <template>
@@ -53,17 +66,13 @@ const totalItems = ref(props.totalItems);
         :sibling-count="1"
         show-edges
         :default-page="currentPage"
+        @update:page="(page) => $emit('page-change', page - 1)"
       >
         <PaginationContent class="flex items-center gap-1">
-          <PaginationFirst>
-            <Icon name="lucide:chevrons-left" />
-          </PaginationFirst>
-          <PaginationPrevious
-            ><Icon name="lucide:chevron-left"
-          /></PaginationPrevious>
-
-          <PaginationNext><Icon name="lucide:chevron-right" /></PaginationNext>
-          <PaginationLast><Icon name="lucide:chevrons-right" /></PaginationLast>
+          <PaginationFirst @click="$emit('page-change', 0)" />
+          <PaginationPrevious @click="$emit('page-change', currentPage - 1)" />
+          <PaginationNext @click="$emit('page-change', currentPage + 1)" />
+          <PaginationLast @click="$emit('page-change', totalPages - 1)" />
         </PaginationContent>
       </Pagination>
     </div>

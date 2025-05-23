@@ -52,11 +52,18 @@ const totalItems = ref(0);
 const isLoading = ref(true);
 
 const fetchData = async () => {
+  console.log("Fetching data with params:", {
+    page: table.getState().pagination.pageIndex + 1,
+    limit: table.getState().pagination.pageSize,
+    searchValue: searchValue.value,
+    selectedFilterColumn: selectedFilterColumn.value,
+  });
+
   isLoading.value = true;
 
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
-    limit: pageSize,
+    limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
@@ -95,6 +102,20 @@ const currentPage = ref<number>(
     ? parseInt(route.query.page)
     : 0
 );
+
+const handlePageChange = (page: number) => {
+  console.log("Page changed to:", page);
+  currentPage.value = page;
+  table.setPageIndex(page);
+  fetchData();
+};
+
+const handlePageSizeChange = (size: number) => {
+  console.log("Page size changed to:", size);
+  table.setPageSize(size);
+  currentPage.value = 0;
+  fetchData();
+};
 
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];
@@ -138,7 +159,7 @@ const table = useVueTable({
   initialState: {
     pagination: {
       pageIndex: currentPage.value,
-      pageSize,
+      pageSize: pageSize,
     },
   },
   onPaginationChange: (updater) => {
@@ -147,6 +168,7 @@ const table = useVueTable({
         ? updater(table.getState().pagination)
         : updater;
     currentPage.value = newPagination.pageIndex;
+    fetchData();
   },
   state: {
     get columnFilters() {
@@ -254,57 +276,24 @@ onMounted(() => {
 
 const filterItems = ref<DropdownMenuItem[]>([
   {
-    key: "sociodemographic",
-    label: t("filter.sociodemographic"),
+    key: "status",
+    label: t("filter.status"),
     children: [
       {
-        key: "simple",
+        key: "isDeleted",
         type: "checkbox",
-        value: "simple",
-        label: t("filter.simple"),
+        value: "isDeleted",
+        label: t("filter.isDeleted"),
       },
       {
-        key: "advanced",
-        label: t("filter.advanced"),
-        children: [
-          {
-            key: "red",
-            type: "checkbox",
-            value: "red",
-            label: t("filter.red"),
-          },
-          {
-            key: "green",
-            type: "checkbox",
-            value: "green",
-            label: t("filter.green"),
-          },
-          {
-            key: "blue",
-            label: t("filter.blue"),
-            children: [
-              {
-                key: "red",
-                type: "checkbox",
-                value: "red",
-                label: t("filter.red"),
-              },
-            ],
-          },
-        ],
+        key: "isShared",
+        type: "checkbox",
+        value: "isShared",
+        label: t("filter.isShared"),
       },
     ],
   },
-  {
-    key: "measurements",
-    type: "checkbox",
-    value: "measurements",
-    label: t("filter.measurements"),
-  },
 ]);
-
-const _globalFiltersConstant = globalFiltersConstant;
-const _TableFilterVue = TableFilterVue;
 
 const filters = computed<DropdownMenuItem[]>(() => [
   {
@@ -324,18 +313,6 @@ const filters = computed<DropdownMenuItem[]>(() => [
     type: "checkbox",
     value: "description",
     label: t("filter.description"),
-  },
-  {
-    key: "biobank",
-    type: "checkbox",
-    value: "biobank",
-    label: t("filter.biobank"),
-  },
-  {
-    key: "lastupdate",
-    type: "checkbox",
-    value: "lastupdate",
-    label: t("filter.lastupdate"),
   },
 ]);
 </script>
@@ -432,10 +409,8 @@ const filters = computed<DropdownMenuItem[]>(() => [
       :filtered-items-count="table.getFilteredRowModel().rows.length"
       :can-previous-page="table.getCanPreviousPage()"
       :can-next-page="table.getCanNextPage()"
-      @previous-page="table.previousPage()"
-      @on-next-page="table.nextPage()"
-      @on-first-page="table.setPageIndex(0)"
-      @on-last-page="table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
     />
     <DialogDataset
       :open="openAddDataset"

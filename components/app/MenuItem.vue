@@ -28,7 +28,7 @@ const isSelected = computed(() => {
   <template v-if="item.children">
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        {{ t(`label.${item.key}`) }}
+        {{ t(`filter.${item.key}`) }}
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
         <DropdownMenuSubContent>
@@ -63,7 +63,7 @@ const isSelected = computed(() => {
         >
           <Icon name="lucide:check" :class="cn('h-4 w-4')" />
         </div>
-        <span>{{ t(`label.${item.key}`) }}</span>
+        <span>{{ t(`filter.${item.key}`) }}</span>
       </Label>
     </DropdownMenuItemComponent>
   </template>

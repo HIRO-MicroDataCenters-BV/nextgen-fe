@@ -229,7 +229,7 @@ export function createTableSearchFilter(params: {
     params.lastupdate ||
     params.all
   ) {
-    const searchFilter: Record<string, unknown> = {
+    const searchFilter: { "@type": string; [key: string]: unknown } = {
       "@type": "SearchFilter",
     };
 
@@ -252,14 +252,20 @@ export function createTableSearchFilter(params: {
     filter.filters.push(searchFilter);
   }
 
-  // Add pagination
-  const page = params.page || 1;
-  const limit = params.limit || 10;
-  filter.filters.push({
-    "@type": "PaginationFilter",
-    "dspace:page": page,
-    "dspace:pageSize": limit,
-  });
+  // TEMPORARY: Disable pagination
+  const DISABLE_PAGINATION = true;
+
+  if (!DISABLE_PAGINATION) {
+    // Add pagination filter
+    const page = Math.max(1, params.page || 1);
+    const limit = Math.max(1, params.limit || 10);
+
+    filter.filters.push({
+      "@type": "PaginationFilter",
+      "dspace:page": page,
+      "dspace:pageSize": limit,
+    });
+  }
 
   return filter;
 }

@@ -45,6 +45,18 @@ export default defineI18nConfig(() => {
           home: "Home",
           marketplace: "Marketplace",
         },
+        filter: {
+          status: "Status",
+          isDeleted: "Is Deleted",
+          isShared: "Is Shared",
+          hasAge: "Has Age",
+          hasSex: "Has Sex",
+          hasHeight: "Has Height",
+          hasMedicalConditions: "Has Medical Conditions",
+          hasMetadata: "Has Metadata",
+          hasDistribution: "Has Distribution",
+          hasSeries: "Has Series",
+        },
         column: {
           name: "Name",
           biobank: "Biobank",

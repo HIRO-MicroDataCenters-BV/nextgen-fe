@@ -94,11 +94,6 @@ const columns: TableColumn[] = [
     cell: ({ row }) => row.getValue("name") as string,
   },
   {
-    id: "biobank",
-    header: () => t("label.biobank"),
-    cell: ({ row }) => row.getValue("biobank") as string,
-  },
-  {
     id: "description",
     header: () => t("label.description"),
     cell: ({ row }) => row.getValue("description") as string,
@@ -134,12 +129,10 @@ const columns: TableColumn[] = [
           {
             variant: "ghost",
             size: "sm",
+            class: "items-center",
             onClick: () => navigateToEdit(item.id),
           },
-          () => [
-            h("Icon", { name: "lucide:file-edit", class: "mr-1 h-4 w-4" }),
-            t("action.edit"),
-          ]
+          () => [t("action.edit")]
         ),
       ]);
     },
@@ -155,27 +148,36 @@ const fetchTableData = async (
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
 
+  console.log("Received params in fetchTableData:", params);
+
   try {
+    // Ensure we have valid pagination parameters
+    const page = Math.max(1, params.page || 1);
+    const limit = Math.max(1, params.limit || 10);
+
+    console.log("Using pagination params:", { page, limit });
+
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
       biobank: params.biobank,
       lastupdate: params.lastupdate,
       all: params.all,
-      page: params.page,
-      limit: params.limit,
+      page,
+      limit,
     });
 
+    console.log("Created search filter:", JSON.stringify(filter, null, 2));
     const response = await api.searchDecentralized(filter);
+    console.log("API response:", response);
 
-    const tableData = transformSearchResponseToTableData(
-      response,
-      params.page,
-      params.limit
-    );
+    const tableData = transformSearchResponseToTableData(response, page, limit);
+
+    console.log("Transformed table data:", tableData);
 
     return tableData;
   } catch (error) {
+    console.error("Error fetching table data:", error);
     return {
       data: [],
       pagination: {
