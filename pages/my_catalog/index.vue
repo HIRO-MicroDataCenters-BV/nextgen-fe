@@ -25,6 +25,11 @@ import type {
   JsonLdObject,
 } from "~/types/api.types";
 import type { TableColumn } from "~/types/table.types";
+import {
+  createTableSearchFilter,
+  transformSearchResponseToTableData,
+} from "~/utils/jsonld";
+import { Link } from "#components";
 // import { Icon } from '#components';
 
 const { t } = useI18n();
@@ -62,7 +67,13 @@ interface TableFetchParams {
 }
 
 interface TableDataResponse {
-  data: CatalogItem[];
+  data: Array<{
+    id: string;
+    name: string;
+    description: string;
+    biobank: string;
+    last_update: string;
+  }>;
   pagination: {
     total_items: number;
     page: number;
@@ -94,10 +105,24 @@ const columns: TableColumn[] = [
     cell: ({ row }) => row.getValue("description") as string,
   },
   {
-    id: "last_update",
-    header: () => t("label.last_updated"),
+    id: "issued",
+    header: () => t("label.issued"),
     cell: ({ row }) =>
-      dayjs(row.getValue("last_update") as string).format("DD/MM/YYYY"),
+      dayjs(row.getValue("issued") as string).format("DD/MM/YYYY"),
+  },
+  {
+    id: "license",
+    header: () => t("label.license"),
+    cell: ({ row }) =>
+      h(
+        Button,
+        {
+          onClick: () =>
+            window.open(row.getValue("license") as string, "_blank"),
+          variant: "link",
+        },
+        () => [t("action.view")]
+      ),
   },
   {
     id: "actions",
@@ -131,115 +156,37 @@ const fetchTableData = async (
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
 
-  // Create search filter based on table parameters
-  const filter: SearchFilter = {
-    "@context": {
-      "@vocab": "http://data-space.org/",
-      dcat: "http://www.w3.org/ns/dcat#",
-      med: "http://oca.example.org/123/",
-    },
-    "@type": "Filters",
-    filters: [],
-  };
-
-  // Add search filters if provided
-  if (
-    params.name ||
-    params.description ||
-    params.biobank ||
-    params.lastupdate ||
-    params.all
-  ) {
-    const searchFilter: Record<string, unknown> = {
-      "@type": "SearchFilter",
-    };
-
-    if (params.name) {
-      searchFilter["dcterms:title"] = params.name;
-    }
-    if (params.description) {
-      searchFilter["dcterms:description"] = params.description;
-    }
-    if (params.biobank) {
-      searchFilter["dspace:biobank"] = params.biobank;
-    }
-    if (params.lastupdate) {
-      searchFilter["dcterms:modified"] = params.lastupdate;
-    }
-    if (params.all) {
-      searchFilter["dspace:search"] = params.all;
-    }
-
-    filter.filters.push(searchFilter);
-  }
-
-  // Add pagination
-  const page = params.page || 1;
-  const limit = params.limit || 10;
-  filter.filters.push({
-    "@type": "PaginationFilter",
-    "dspace:page": page,
-    "dspace:pageSize": limit,
-  });
-
   try {
+    const filter = createTableSearchFilter({
+      name: params.name,
+      description: params.description,
+      biobank: params.biobank,
+      lastupdate: params.lastupdate,
+      all: params.all,
+      page: params.page,
+      limit: params.limit,
+    });
+
+    console.log("Search filter:", filter);
     const response = await api.searchDecentralized(filter);
+    console.log("API Response:", response);
 
-    console.log("RESPONSE", response);
-
-    if (!response) {
-      return {
-        data: [],
-        pagination: {
-          total_items: 0,
-          page,
-          limit,
-        },
-      };
-    }
-
-    // Transform API response to table format
-    const processedData: CatalogItem[] = response.results.map(
-      (item: JsonLdObject) => {
-        const title = Array.isArray(item["dcterms:title"])
-          ? (item["dcterms:title"][0] as JsonLdValue)?.["@value"] || ""
-          : "";
-
-        const description = Array.isArray(item["dcterms:description"])
-          ? (item["dcterms:description"][0] as JsonLdValue)?.["@value"] || ""
-          : "";
-
-        const biobank =
-          (item["dspace:biobank"] as JsonLdValue)?.["@value"] || "";
-        const lastUpdate =
-          (item["dcterms:modified"] as JsonLdValue)?.["@value"] || "";
-
-        return {
-          id: String(item["@id"] || ""),
-          name: title,
-          description,
-          biobank,
-          last_update: lastUpdate,
-        };
-      }
+    const tableData = transformSearchResponseToTableData(
+      response,
+      params.page,
+      params.limit
     );
+    console.log("Transformed table data:", tableData);
 
-    return {
-      data: processedData,
-      pagination: {
-        total_items: response.metadata?.total || 0,
-        page: response.metadata?.page || page,
-        limit: response.metadata?.pageSize || limit,
-      },
-    };
+    return tableData;
   } catch (error) {
     console.error("Error fetching catalog data:", error);
     return {
       data: [],
       pagination: {
         total_items: 0,
-        page,
-        limit,
+        page: params.page || 1,
+        limit: params.limit || 10,
       },
     };
   }

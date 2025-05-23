@@ -13,16 +13,17 @@ import {
   getSortedRowModel,
   useVueTable,
 } from "@tanstack/vue-table";
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 import { valueUpdater } from "~/utils";
 /*
 import { AppMenuActions } from '#components';
 */
 import type {
-  SearchFilter,
   TableColumn,
   TableDataResponse,
-  DataItem,
+  TableRowData,
+  TableFilter,
+  DropdownMenuItem,
 } from "~/types/table.types";
 import DialogDataset from "./DialogDataset.vue";
 import TablePagination from "./table/Pagination.vue";
@@ -43,13 +44,22 @@ const props = withDefaults(defineProps<TableProps>(), {
   pageSize: 10,
 });
 
-const { dataSource, columns, pageSize } = props;
+const { dataSource, columns, pageSize, title } = props;
 
 const { t } = useI18n();
-const data = shallowRef<DataItem[]>([]);
+const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
 
 const fetchData = async () => {
+  console.log("Fetching data with params:", {
+    page: table.getState().pagination.pageIndex + 1,
+    limit: pageSize,
+    ...(searchValue.value &&
+      selectedFilterColumn.value && {
+        [selectedFilterColumn.value]: searchValue.value,
+      }),
+  });
+
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: pageSize,
@@ -58,6 +68,10 @@ const fetchData = async () => {
         [selectedFilterColumn.value]: searchValue.value,
       }),
   });
+
+  console.log("Received table data:", tableData);
+  console.log("Received pagination:", pagination);
+
   data.value = tableData ?? [];
   totalItems.value = pagination?.total_items ?? 0;
 };
@@ -119,7 +133,7 @@ const table = useVueTable({
   globalFilterFn: (row, columnId) => {
     const searchFilter = columnFilters.value.find(
       (filter) => filter.id === "search"
-    ) as SearchFilter | undefined;
+    ) as TableFilter | undefined;
     if (!searchFilter) return true;
     if (searchFilter.column !== "all" && searchFilter.column !== columnId) {
       return true;
@@ -173,12 +187,12 @@ const applySearchFilter = () => {
   if (!searchValue.value) {
     return;
   }
-  const searchFilter: SearchFilter = {
+  const searchFilter: TableFilter = {
     id: "search",
     value: searchValue.value,
     column: selectedFilterColumn.value,
   };
-  columnFilters.value.push(searchFilter as unknown as SearchFilter);
+  columnFilters.value.push(searchFilter as unknown as TableFilter);
 };
 
 watch(
@@ -193,7 +207,7 @@ watch(
         if (currentColumnFilters.length > 0) {
           const searchFilter = currentColumnFilters.find(
             (filter) => filter.id === "search"
-          ) as SearchFilter | undefined;
+          ) as TableFilter | undefined;
           if (searchFilter) {
             searchValue.value = searchFilter.value as string;
             selectedFilterColumn.value = searchFilter.column || "all";
@@ -248,32 +262,39 @@ onMounted(() => {
 const filterItems = ref<DropdownMenuItem[]>([
   {
     key: "sociodemographic",
+    label: t("filter.sociodemographic"),
     children: [
       {
         key: "simple",
         type: "checkbox",
         value: "simple",
+        label: t("filter.simple"),
       },
       {
         key: "advanced",
+        label: t("filter.advanced"),
         children: [
           {
             key: "red",
             type: "checkbox",
             value: "red",
+            label: t("filter.red"),
           },
           {
             key: "green",
             type: "checkbox",
             value: "green",
+            label: t("filter.green"),
           },
           {
             key: "blue",
+            label: t("filter.blue"),
             children: [
               {
                 key: "red",
                 type: "checkbox",
                 value: "red",
+                label: t("filter.red"),
               },
             ],
           },
@@ -285,11 +306,45 @@ const filterItems = ref<DropdownMenuItem[]>([
     key: "measurements",
     type: "checkbox",
     value: "measurements",
+    label: t("filter.measurements"),
   },
 ]);
 
 const _globalFiltersConstant = globalFiltersConstant;
 const _TableFilterVue = TableFilterVue;
+
+const filters = computed<DropdownMenuItem[]>(() => [
+  {
+    key: "all",
+    type: "checkbox",
+    value: "all",
+    label: t("filter.all"),
+  },
+  {
+    key: "name",
+    type: "checkbox",
+    value: "name",
+    label: t("filter.name"),
+  },
+  {
+    key: "description",
+    type: "checkbox",
+    value: "description",
+    label: t("filter.description"),
+  },
+  {
+    key: "biobank",
+    type: "checkbox",
+    value: "biobank",
+    label: t("filter.biobank"),
+  },
+  {
+    key: "lastupdate",
+    type: "checkbox",
+    value: "lastupdate",
+    label: t("filter.lastupdate"),
+  },
+]);
 </script>
 
 <template>
@@ -324,7 +379,12 @@ const _TableFilterVue = TableFilterVue;
     </div>
     <!-- end table filters -->
     <div class="flex-grow overflow-auto flex flex-col border rounded-md mb-20">
-      <Table>
+      <Table
+        :data-source="dataSource"
+        :columns="columns"
+        :page-size="pageSize"
+        :title="title"
+      >
         <TableHeader class="sticky top-0 bg-sidebar-background">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"

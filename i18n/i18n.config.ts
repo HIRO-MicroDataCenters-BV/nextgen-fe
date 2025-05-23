@@ -52,6 +52,9 @@ export default defineI18nConfig(() => {
           last_update: "Last Update",
           id: "ID",
           actions: "Actions",
+          license: "License",
+          publisher: "Publisher",
+          issued: "Issued",
         },
         fieldset: {
           basic_information: "Basic Information",
@@ -120,6 +123,7 @@ export default defineI18nConfig(() => {
           login: "Login",
           filter: "Filter",
           update_file: "Update File",
+          view: "View",
         },
         placeholder: {
           search: "Search...",
