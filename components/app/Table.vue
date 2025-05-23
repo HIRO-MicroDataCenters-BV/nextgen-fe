@@ -49,16 +49,10 @@ const { dataSource, columns, pageSize, title } = props;
 const { t } = useI18n();
 const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
+const isLoading = ref(true);
 
 const fetchData = async () => {
-  console.log("Fetching data with params:", {
-    page: table.getState().pagination.pageIndex + 1,
-    limit: pageSize,
-    ...(searchValue.value &&
-      selectedFilterColumn.value && {
-        [selectedFilterColumn.value]: searchValue.value,
-      }),
-  });
+  isLoading.value = true;
 
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
@@ -69,8 +63,7 @@ const fetchData = async () => {
       }),
   });
 
-  console.log("Received table data:", tableData);
-  console.log("Received pagination:", pagination);
+  isLoading.value = false;
 
   data.value = tableData ?? [];
   totalItems.value = pagination?.total_items ?? 0;
@@ -378,7 +371,11 @@ const filters = computed<DropdownMenuItem[]>(() => [
       </div>
     </div>
     <!-- end table filters -->
-    <div class="flex-grow overflow-auto flex flex-col border rounded-md mb-20">
+    <AppTablePreloader v-if="isLoading" />
+    <div
+      v-else
+      class="flex-grow overflow-auto flex flex-col border rounded-md mb-20"
+    >
       <Table
         :data-source="dataSource"
         :columns="columns"

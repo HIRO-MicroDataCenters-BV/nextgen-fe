@@ -13,7 +13,6 @@
 </template>
 
 <script setup lang="ts">
-console.log("my_catalog");
 import { h } from "vue";
 import { useRouter } from "vue-router";
 import AppContent from "@/components/app/Content.vue";
@@ -167,20 +166,16 @@ const fetchTableData = async (
       limit: params.limit,
     });
 
-    console.log("Search filter:", filter);
     const response = await api.searchDecentralized(filter);
-    console.log("API Response:", response);
 
     const tableData = transformSearchResponseToTableData(
       response,
       params.page,
       params.limit
     );
-    console.log("Transformed table data:", tableData);
 
     return tableData;
   } catch (error) {
-    console.error("Error fetching catalog data:", error);
     return {
       data: [],
       pagination: {
@@ -191,7 +186,4 @@ const fetchTableData = async (
     };
   }
 };
-
-const config = useRuntimeConfig();
-console.log(config.public);
 </script>
