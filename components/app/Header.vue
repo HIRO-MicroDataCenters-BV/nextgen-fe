@@ -45,7 +45,7 @@
                   >
                     <span
                       ><img :src="`/images/icons/${item.icon}.png`" alt=""
-                    /></span>
+                    ></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>

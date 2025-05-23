@@ -23,15 +23,6 @@ import * as z from "zod";
 const { t } = useI18n();
 const router = useRouter();
 
-const licenseOptions = [
-  { value: "cc_by", label: "Creative Commons BY" },
-  { value: "cc_by_sa", label: "Creative Commons BY-SA" },
-  { value: "cc_by_nc", label: "Creative Commons BY-NC" },
-  { value: "mit", label: "MIT License" },
-  { value: "gpl_3", label: "GPLv3" },
-  { value: "proprietary", label: "Proprietary" },
-];
-
 const formSchema = z.object({
   metadata_content: z.string().min(1),
 });

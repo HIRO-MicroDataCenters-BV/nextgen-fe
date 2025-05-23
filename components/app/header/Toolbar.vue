@@ -12,9 +12,9 @@
       ref="uploadRef"
       type="file"
       class="hidden"
-      @change="handleFileUpload"
       accept=".json,.csv"
-    />
+      @change="handleFileUpload"
+    >
   </div>
 </template>
 
