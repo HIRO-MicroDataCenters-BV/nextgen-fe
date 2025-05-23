@@ -152,38 +152,40 @@ export const useApi = () => {
   /**
    * Prepare search filter with proper JSON-LD context
    */
-  const prepareSearchFilter = async (
+  async function prepareSearchFilter(
     filter: SearchFilter
-  ): Promise<SearchFilter> => {
-    console.log(
-      "Original filter before compaction:",
-      JSON.stringify(filter, null, 2)
-    );
+  ): Promise<SearchFilter> {
+    console.log("Original filter before compaction:", filter);
 
-    // Compact the filter using the context
+    // Ensure filters array exists
+    if (!filter.filters) {
+      filter.filters = [];
+    }
+
+    // Compact the filter
     const compacted = (await jsonld.compact(
       filter,
       filter["@context"]
     )) as JsonLdObject;
+    console.log("Compacted filter:", compacted);
 
-    console.log("Compacted filter:", JSON.stringify(compacted, null, 2));
-
-    // Handle both array and object filters
-    const filters = Array.isArray(compacted.filters)
-      ? compacted.filters
-      : compacted.filters
-      ? [compacted.filters]
-      : [];
-
+    // Create a new filter object with the compacted data
     const result: SearchFilter = {
       "@context": filter["@context"],
-      "@type": "Filters" as const,
-      filters,
+      "@type": "Filters",
+      filters: Array.isArray(compacted.filters)
+        ? (compacted.filters as Array<{
+            "@type": string;
+            [key: string]: unknown;
+          }>)
+        : compacted.filters
+        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
+        : [],
     };
 
-    console.log("Final prepared filter:", JSON.stringify(result, null, 2));
+    console.log("Final prepared filter:", result);
     return result;
-  };
+  }
 
   return {
     /**

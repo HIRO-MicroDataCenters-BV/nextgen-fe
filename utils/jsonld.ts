@@ -209,17 +209,46 @@ export function createTableSearchFilter(params: {
   all?: string;
   page?: number;
   limit?: number;
+  filters?: Record<string, boolean>;
 }): SearchFilter {
+  console.log("Creating search filter with params:", params);
+
   const filter: SearchFilter = {
     "@context": {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
       dcterms: "http://purl.org/dc/terms/",
       dspace: "http://data-space.org/",
+      med: "http://oca.example.org/123/",
     },
     "@type": "Filters",
     filters: [],
   };
+
+  // Add boolean filters if provided
+  if (params.filters) {
+    const booleanFilters = Object.entries(params.filters)
+      .filter(([_, value]) => value === true)
+      .map(([key]) => key);
+
+    if (booleanFilters.length > 0) {
+      filter.filters.push({
+        "@type": "Filters",
+        "dcat:dataset": {
+          extraMetadata: {
+            "@type": "med:Record",
+            ...booleanFilters.reduce(
+              (acc, key) => ({
+                ...acc,
+                [`med:${key}`]: true,
+              }),
+              {}
+            ),
+          },
+        },
+      });
+    }
+  }
 
   // Add search filters if provided
   if (
@@ -267,5 +296,6 @@ export function createTableSearchFilter(params: {
     });
   }
 
+  console.log("Final search filter:", filter);
   return filter;
 }

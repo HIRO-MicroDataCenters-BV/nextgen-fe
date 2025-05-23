@@ -63,6 +63,7 @@ interface TableFetchParams {
   biobank?: string;
   lastupdate?: string;
   all?: string;
+  filters?: Record<string, boolean>;
 }
 
 interface TableDataResponse {
@@ -165,6 +166,7 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
+      filters: params.filters,
     });
 
     console.log("Created search filter:", JSON.stringify(filter, null, 2));

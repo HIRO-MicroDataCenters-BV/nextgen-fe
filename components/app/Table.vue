@@ -51,12 +51,20 @@ const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
 const isLoading = ref(true);
 
+const selectedFilters = ref<Record<string, boolean>>({});
+
+const handleFilterChange = (key: string, value: boolean) => {
+  selectedFilters.value[key] = value;
+  fetchData();
+};
+
 const fetchData = async () => {
   console.log("Fetching data with params:", {
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
     searchValue: searchValue.value,
     selectedFilterColumn: selectedFilterColumn.value,
+    selectedFilters: selectedFilters.value,
   });
 
   isLoading.value = true;
@@ -68,6 +76,7 @@ const fetchData = async () => {
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
       }),
+    filters: selectedFilters.value,
   });
 
   isLoading.value = false;
@@ -343,6 +352,7 @@ const filters = computed<DropdownMenuItem[]>(() => [
             id="filter"
             label="filter"
             :items="filterItems"
+            @filter-change="handleFilterChange"
           />
         </div>
       </div>

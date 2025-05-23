@@ -18,19 +18,26 @@ const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   items: () => [],
 });
 
+const emit = defineEmits<{
+  "filter-change": [key: string, value: boolean];
+}>();
+
 const items = ref<DropdownMenuItem[]>(props.items);
 const selectedValues = ref<string[]>([]);
 
 const handleCheckboxChange = (key: string) => {
-  if (selectedValues.value.includes(key)) {
+  const isSelected = selectedValues.value.includes(key);
+  if (isSelected) {
     selectedValues.value = selectedValues.value.filter((v) => v !== key);
   } else {
     selectedValues.value = [...selectedValues.value, key];
   }
+  emit("filter-change", key, !isSelected);
 };
 
 const handleRemoveSelected = (key: string) => {
   selectedValues.value = selectedValues.value.filter((v) => v !== key);
+  emit("filter-change", key, false);
 };
 </script>
 

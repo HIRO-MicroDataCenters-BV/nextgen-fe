@@ -109,6 +109,7 @@ export interface SearchFilter {
     dcat: string;
     dcterms: string;
     dspace: string;
+    med: string;
   };
   "@type": "Filters";
   filters: Array<{
