@@ -79,7 +79,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
-const emit = defineEmits(["save-form", "discard-form", "update-file"]);
+const emit = defineEmits(["save-form", "discard-form", "upload-file"]);
 
 const isMarketplacePage = computed(() => route.path.startsWith("/marketplace"));
 // Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
@@ -136,7 +136,7 @@ const toolbarButtons = computed<ToolbarButton[]>(() => {
       variant: "secondary",
       action: {
         type: "fileUpload",
-        onConfirm: () => emit("update-file"),
+        onConfirm: () => emit("upload-file"),
       },
     },
     {

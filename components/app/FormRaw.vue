@@ -3,16 +3,19 @@ import { useI18n } from "vue-i18n";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import type * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 
 const { t } = useI18n();
+
+const props = defineProps<{
+  id?: string;
+  formSchema: z.ZodType;
+  initialValues?: Record<string, unknown>;
+  fields?: FormField[];
+  initialData?: FormData;
+  submitLabel?: string;
+}>();
+
+const { appForm } = useAppForm();
 
 interface FormField {
   name: string;
@@ -25,15 +28,6 @@ interface FormField {
 interface FormData {
   [key: string]: string | number | boolean;
 }
-
-const props = defineProps<{
-  id?: string;
-  formSchema: z.ZodType;
-  initialValues?: Record<string, unknown>;
-  fields: FormField[];
-  initialData: FormData;
-  submitLabel: string;
-}>();
 
 const emit = defineEmits<{
   (e: "submit", data: Record<string, unknown>): void;
@@ -49,21 +43,18 @@ const onSubmit = handleSubmit((values) => {
   emit("submit", values);
 });
 
-const isLoading = ref(false);
-
-onMounted(async () => {
-  if (props.id) {
-    isLoading.value = true;
-    try {
-      // TODO: Replace with your API call
-      const response = await fetch("/api/raw/" + props.id);
-      const data = await response.json();
-      setFieldValue("metadata_content", data.metadata_content);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      isLoading.value = false;
-    }
+watch(appForm, (newVal) => {
+  console.log(newVal);
+  if (newVal.files.length > 0) {
+    const file = newVal.files[0];
+    console.log(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      console.log(">>", content);
+      setFieldValue("metadata_content", content);
+    };
+    reader.readAsText(file as Blob);
   }
 });
 
@@ -75,21 +66,21 @@ defineExpose({
 </script>
 
 <template>
-  <Form class="h-full flex flex-col" @submit="onSubmit">
+  <form class="h-full flex flex-col" @submit.prevent="onSubmit">
     <FormField v-slot="{ componentField }" name="metadata_content">
       <FormItem class="flex-1 flex flex-col">
         <FormLabel>{{ t("label.metadata_content") }}</FormLabel>
         <FormControl>
           <Textarea
             v-bind="componentField"
-            class="h-[calc(100vh-300px)] resize-none"
+            class="h-[calc(100vh-300px)] resize-none max-w-full overflow-x-auto"
             :placeholder="t('placeholder.enter_metadata_content')"
           />
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
-  </Form>
+  </form>
 </template>
 
 <style scoped>
