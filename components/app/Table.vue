@@ -13,22 +13,14 @@ import {
   getSortedRowModel,
   useVueTable,
 } from "@tanstack/vue-table";
-import { ref, watch, onMounted } from "vue";
 import { valueUpdater } from "~/utils";
-/*
-import { AppMenuActions } from '#components';
-*/
 import type {
-  SearchFilter,
   TableColumn,
   TableDataResponse,
-  DataItem,
+  TableRowData,
+  TableFilter,
+  DropdownMenuItem,
 } from "~/types/table.types";
-import DialogDataset from "./DialogDataset.vue";
-import TablePagination from "./table/Pagination.vue";
-import { filters as globalFiltersConstant } from "~/constants";
-import TableFilterVue from "~/components/app/TableFilter.vue";
-import TableDropdownFilter from "~/components/app/TableDropdownFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -37,23 +29,65 @@ interface TableProps {
   pageSize?: number;
 }
 
-const { dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
+const props = withDefaults(defineProps<TableProps>(), {
+  title: "",
+  columns: () => [],
+  pageSize: 10,
+});
+
+const { dataSource, columns, pageSize, title } = props;
 
 const { t } = useI18n();
-const data = shallowRef<DataItem[]>([]);
+const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
+const isLoading = ref(true);
+
+const selectedFilters = ref<Record<string, boolean>>({});
+
+const handleFilterChange = (key: string, value: boolean) => {
+  selectedFilters.value[key] = value;
+  fetchData();
+};
 
 const fetchData = async () => {
+  console.log("Fetching data with params:", {
+    page: table.getState().pagination.pageIndex + 1,
+    limit: table.getState().pagination.pageSize,
+    searchValue: searchValue.value,
+    selectedFilterColumn: selectedFilterColumn.value,
+    selectedFilters: selectedFilters.value,
+  });
+
+  isLoading.value = true;
+
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
-    limit: pageSize,
+    limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
       }),
+    filters: selectedFilters.value,
   });
-  data.value = tableData ?? [];
+
+  isLoading.value = false;
+
+  // Slice the data based on current page and page size
+  const start =
+    table.getState().pagination.pageIndex *
+    table.getState().pagination.pageSize;
+  const end = start + table.getState().pagination.pageSize;
+  data.value = tableData?.slice(start, end) ?? [];
   totalItems.value = pagination?.total_items ?? 0;
+
+  console.log("Processed data:", {
+    start,
+    end,
+    totalItems: totalItems.value,
+    currentPage: table.getState().pagination.pageIndex,
+    pageSize: table.getState().pagination.pageSize,
+    dataLength: data.value.length,
+  });
 };
 
 const selectedFilterColumn = ref("all");
@@ -82,6 +116,13 @@ const currentPage = ref<number>(
     ? parseInt(route.query.page)
     : 0
 );
+
+const handlePageChange = (page: number) => {
+  console.log("Page changed to:", page);
+  currentPage.value = page;
+  table.setPageIndex(page);
+  fetchData();
+};
 
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];
@@ -113,7 +154,7 @@ const table = useVueTable({
   globalFilterFn: (row, columnId) => {
     const searchFilter = columnFilters.value.find(
       (filter) => filter.id === "search"
-    ) as SearchFilter | undefined;
+    ) as TableFilter | undefined;
     if (!searchFilter) return true;
     if (searchFilter.column !== "all" && searchFilter.column !== columnId) {
       return true;
@@ -125,7 +166,7 @@ const table = useVueTable({
   initialState: {
     pagination: {
       pageIndex: currentPage.value,
-      pageSize,
+      pageSize: pageSize,
     },
   },
   onPaginationChange: (updater) => {
@@ -134,6 +175,7 @@ const table = useVueTable({
         ? updater(table.getState().pagination)
         : updater;
     currentPage.value = newPagination.pageIndex;
+    fetchData();
   },
   state: {
     get columnFilters() {
@@ -151,7 +193,7 @@ const table = useVueTable({
     get pagination() {
       return {
         pageIndex: currentPage.value,
-        pageSize,
+        pageSize: pageSize,
       };
     },
   },
@@ -167,12 +209,12 @@ const applySearchFilter = () => {
   if (!searchValue.value) {
     return;
   }
-  const searchFilter: SearchFilter = {
+  const searchFilter: TableFilter = {
     id: "search",
     value: searchValue.value,
     column: selectedFilterColumn.value,
   };
-  columnFilters.value.push(searchFilter as unknown as SearchFilter);
+  columnFilters.value.push(searchFilter as unknown as TableFilter);
 };
 
 watch(
@@ -187,7 +229,7 @@ watch(
         if (currentColumnFilters.length > 0) {
           const searchFilter = currentColumnFilters.find(
             (filter) => filter.id === "search"
-          ) as SearchFilter | undefined;
+          ) as TableFilter | undefined;
           if (searchFilter) {
             searchValue.value = searchFilter.value as string;
             selectedFilterColumn.value = searchFilter.column || "all";
@@ -241,56 +283,28 @@ onMounted(() => {
 
 const filterItems = ref<DropdownMenuItem[]>([
   {
-    key: "sociodemographic",
+    key: "status",
+    label: t("filter.status"),
     children: [
       {
-        key: "simple",
+        key: "isDeleted",
         type: "checkbox",
-        value: "simple",
+        value: "isDeleted",
+        label: t("filter.isDeleted"),
       },
       {
-        key: "advanced",
-        children: [
-          {
-            key: "red",
-            type: "checkbox",
-            value: "red",
-          },
-          {
-            key: "green",
-            type: "checkbox",
-            value: "green",
-          },
-          {
-            key: "blue",
-            children: [
-              {
-                key: "red",
-                type: "checkbox",
-                value: "red",
-              },
-            ],
-          },
-        ],
+        key: "isShared",
+        type: "checkbox",
+        value: "isShared",
+        label: t("filter.isShared"),
       },
     ],
   },
-  {
-    key: "measurements",
-    type: "checkbox",
-    value: "measurements",
-  },
 ]);
-
-const _globalFiltersConstant = globalFiltersConstant;
-const _TableFilterVue = TableFilterVue;
 </script>
 
 <template>
-  <div
-    class="w-full flex flex-col px-12 py-4"
-    style="height: calc(100vh - 80px)"
-  >
+  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-220px)]">
     <div class="mb-8">
       <!-- table filters -->
 
@@ -311,17 +325,27 @@ const _TableFilterVue = TableFilterVue;
             </span>
           </div>
 
-          <TableDropdownFilter
+          <AppTableDropdownFilter
             id="filter"
             label="filter"
             :items="filterItems"
+            @filter-change="handleFilterChange"
           />
         </div>
       </div>
     </div>
     <!-- end table filters -->
-    <div class="flex-grow overflow-auto flex flex-col border rounded-md mb-20">
-      <Table>
+    <AppTablePreloader v-if="isLoading" />
+    <div
+      v-else
+      class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
+    >
+      <Table
+        :data-source="dataSource"
+        :columns="columns"
+        :page-size="pageSize"
+        :title="title"
+      >
         <TableHeader class="sticky top-0 bg-sidebar-background">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
@@ -347,11 +371,6 @@ const _TableFilterVue = TableFilterVue;
                   />
                 </TableCell>
               </TableRow>
-              <TableRow v-if="row.getIsExpanded()">
-                <TableCell :colspan="row.getAllCells().length">
-                  {{ JSON.stringify(row.original) }}
-                </TableCell>
-              </TableRow>
             </template>
           </template>
 
@@ -364,20 +383,16 @@ const _TableFilterVue = TableFilterVue;
       </Table>
     </div>
 
-    <TablePagination
+    <AppTablePagination
       :current-page="currentPage"
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
       :page-size="pageSize"
-      :filtered-items-count="table.getFilteredRowModel().rows.length"
-      :can-previous-page="table.getCanPreviousPage()"
-      :can-next-page="table.getCanNextPage()"
-      @previous-page="table.previousPage()"
-      @on-next-page="table.nextPage()"
-      @on-first-page="table.setPageIndex(0)"
-      @on-last-page="table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)"
+      :can-previous-page="currentPage > 0"
+      :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
+      @page-change="handlePageChange"
     />
-    <DialogDataset
+    <AppDialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"
     />

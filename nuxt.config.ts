@@ -15,6 +15,9 @@ export default defineNuxtConfig({
     "nuxt-zod-i18n",
     "dayjs-nuxt",
     "@nuxtjs/color-mode",
+    "@vueuse/nuxt",
+    "nuxt-api-party",
+    "nuxt-proxy-request",
   ],
   icon: {
     serverBundle: {
@@ -28,18 +31,42 @@ export default defineNuxtConfig({
     ],
   },
   colorMode: {
-    preference: 'system',
-    fallback: 'light',
-    classPrefix: '',
-    classSuffix: '',
-    storage: 'localStorage',
-    storageKey: 'nuxt-color-mode'
+    preference: "system",
+    fallback: "light",
+    classPrefix: "",
+    classSuffix: "",
+    storage: "localStorage",
+    storageKey: "nuxt-color-mode",
   },
   shadcn: {
     prefix: "",
     componentDir: "./components/ui",
   },
   css: ["~/assets/css/tailwind.css"],
+  proxy: {
+    options: [
+      {
+        target: "http://localhost:8080",
+        pathFilter: ["/api/search/**"],
+        pathRewrite: {
+          "^/api/search": "",
+        },
+      },
+      {
+        target: "http://localhost:8081",
+        pathFilter: ["/api/catalog/**"],
+        pathRewrite: {
+          "^/api/catalog": "",
+        },
+      },
+    ],
+  },
+  runtimeConfig: {
+    public: {
+      apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL,
+      apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL,
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
   },

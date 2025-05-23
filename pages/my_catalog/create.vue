@@ -19,89 +19,18 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
-import AppContent from "@/components/app/Content.vue";
-import AppForm from "@/components/app/Form.vue";
 
 const { t } = useI18n();
 const router = useRouter();
 
-const licenseOptions = [
-  { value: "cc_by", label: "Creative Commons BY" },
-  { value: "cc_by_sa", label: "Creative Commons BY-SA" },
-  { value: "cc_by_nc", label: "Creative Commons BY-NC" },
-  { value: "mit", label: "MIT License" },
-  { value: "gpl_3", label: "GPLv3" },
-  { value: "proprietary", label: "Proprietary" },
-];
-
-const formSchema = [
-  {
-    label: "main",
-    fields: [
-      {
-        name: "dataProductName",
-        label: t("label.data_product_name"),
-        type: "text",
-        placeholder: t("placeholder.data_product_name"),
-        validation: z
-          .string()
-          .min(3, { message: t("validation.required_min_length") }),
-      },
-      {
-        name: "creator",
-        label: t("label.creator"),
-        type: "text",
-        placeholder: t("placeholder.creator"),
-        validation: z
-          .string()
-          .min(2, { message: t("validation.required_min_length") }),
-      },
-      {
-        name: "license",
-        label: t("label.license"),
-        type: "select",
-        placeholder: t("placeholder.select_license"),
-        options: licenseOptions,
-        validation: z.string({ required_error: t("validation.required") }),
-      },
-      {
-        name: "issued",
-        label: t("label.issued_date"),
-        type: "date",
-        placeholder: t("placeholder.pick_date"),
-        validation: z.date({ required_error: t("validation.required_date") }),
-      },
-      {
-        name: "tags",
-        label: t("label.tags"),
-        type: "tags",
-        placeholder: t("placeholder.tags_input"),
-        options: [
-          { value: "foo", label: "foo" },
-          { value: "bar", label: "bar" },
-          { value: "baz", label: "baz" },
-        ],
-        validation: z.array(z.string()).optional(),
-      },
-      {
-        name: "fileUpload",
-        label: t("label.file_upload"),
-        type: "file",
-        placeholder: t("placeholder.file_upload"),
-        props: {
-          multiple: true,
-          accept: "image/*,application/pdf",
-        },
-        validation: z.any().optional(),
-      },
-    ],
-  },
-];
+const formSchema = z.object({
+  metadata_content: z.string().min(1),
+});
 
 const formRef = ref();
 
 const initialValues = {
-  tags: ["foo", "bar"],
+  metadata_content: "",
 };
 
 const onSubmit = (formValues: Record<string, unknown>) => {

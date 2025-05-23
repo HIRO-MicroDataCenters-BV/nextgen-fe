@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import type { DropdownMenuItem } from "@/types/table.types";
-import {
-  DropdownMenuItem as DropdownMenuItemComponent,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem as DropdownMenuItemComponent } from "@/components/ui/dropdown-menu";
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -28,7 +22,7 @@ const isSelected = computed(() => {
   <template v-if="item.children">
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        {{ t(`label.${item.key}`) }}
+        {{ t(`filter.${item.key}`) }}
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
         <DropdownMenuSubContent>
@@ -63,7 +57,7 @@ const isSelected = computed(() => {
         >
           <Icon name="lucide:check" :class="cn('h-4 w-4')" />
         </div>
-        <span>{{ t(`label.${item.key}`) }}</span>
+        <span>{{ t(`filter.${item.key}`) }}</span>
       </Label>
     </DropdownMenuItemComponent>
   </template>
