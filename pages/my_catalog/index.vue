@@ -7,7 +7,8 @@
       :title="'my_catalog'"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="10"
+      :page-size="3"
+      :enable-pagination="true"
     />
   </AppContent>
 </template>
@@ -78,6 +79,9 @@ interface TableDataResponse {
     total_items: number;
     page: number;
     limit: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
   };
 }
 
@@ -154,7 +158,7 @@ const fetchTableData = async (
   try {
     // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 10);
+    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
 
     console.log("Using pagination params:", { page, limit });
 
@@ -175,9 +179,23 @@ const fetchTableData = async (
 
     const tableData = transformSearchResponseToTableData(response, page, limit);
 
-    console.log("Transformed table data:", tableData);
+    // Calculate total pages based on total items and page size
+    const totalPages = Math.ceil(tableData.pagination.total_items / limit);
 
-    return tableData;
+    // Update pagination info
+    const updatedTableData: TableDataResponse = {
+      data: tableData.data,
+      pagination: {
+        ...tableData.pagination,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1,
+      },
+    };
+
+    console.log("Transformed table data:", updatedTableData);
+
+    return updatedTableData;
   } catch (error) {
     console.error("Error fetching table data:", error);
     return {
@@ -185,7 +203,10 @@ const fetchTableData = async (
       pagination: {
         total_items: 0,
         page: params.page || 1,
-        limit: params.limit || 10,
+        limit: params.limit || 3,
+        total_pages: 0,
+        has_next: false,
+        has_prev: false,
       },
     };
   }

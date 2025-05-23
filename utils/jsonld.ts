@@ -154,6 +154,9 @@ export function transformSearchResponseToTableData(
     total_items: number;
     page: number;
     limit: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
   };
 } {
   if (!response || !response["@graph"]) {
@@ -163,6 +166,9 @@ export function transformSearchResponseToTableData(
         total_items: 0,
         page: currentPage,
         limit: currentLimit,
+        total_pages: 0,
+        has_next: false,
+        has_prev: false,
       },
     };
   }
@@ -187,6 +193,7 @@ export function transformSearchResponseToTableData(
   });
 
   const transformedData = datasets.map(transformDatasetToTableRow);
+  const totalPages = Math.ceil(transformedData.length / currentLimit);
 
   return {
     data: transformedData,
@@ -194,6 +201,9 @@ export function transformSearchResponseToTableData(
       total_items: transformedData.length,
       page: currentPage,
       limit: currentLimit,
+      total_pages: totalPages,
+      has_next: currentPage < totalPages,
+      has_prev: currentPage > 1,
     },
   };
 }

@@ -81,8 +81,22 @@ const fetchData = async () => {
 
   isLoading.value = false;
 
-  data.value = tableData ?? [];
+  // Slice the data based on current page and page size
+  const start =
+    table.getState().pagination.pageIndex *
+    table.getState().pagination.pageSize;
+  const end = start + table.getState().pagination.pageSize;
+  data.value = tableData?.slice(start, end) ?? [];
   totalItems.value = pagination?.total_items ?? 0;
+
+  console.log("Processed data:", {
+    start,
+    end,
+    totalItems: totalItems.value,
+    currentPage: table.getState().pagination.pageIndex,
+    pageSize: table.getState().pagination.pageSize,
+    dataLength: data.value.length,
+  });
 };
 
 const selectedFilterColumn = ref("all");
@@ -195,7 +209,7 @@ const table = useVueTable({
     get pagination() {
       return {
         pageIndex: currentPage.value,
-        pageSize,
+        pageSize: pageSize,
       };
     },
   },
@@ -394,11 +408,6 @@ const filters = computed<DropdownMenuItem[]>(() => [
                   />
                 </TableCell>
               </TableRow>
-              <TableRow v-if="row.getIsExpanded()">
-                <TableCell :colspan="row.getAllCells().length">
-                  {{ JSON.stringify(row.original) }}
-                </TableCell>
-              </TableRow>
             </template>
           </template>
 
@@ -416,11 +425,9 @@ const filters = computed<DropdownMenuItem[]>(() => [
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
       :page-size="pageSize"
-      :filtered-items-count="table.getFilteredRowModel().rows.length"
-      :can-previous-page="table.getCanPreviousPage()"
-      :can-next-page="table.getCanNextPage()"
+      :can-previous-page="currentPage > 0"
+      :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
       @page-change="handlePageChange"
-      @page-size-change="handlePageSizeChange"
     />
     <DialogDataset
       :open="openAddDataset"

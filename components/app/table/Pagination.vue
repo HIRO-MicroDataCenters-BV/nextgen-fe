@@ -1,80 +1,95 @@
 <script setup lang="ts">
-import {
-  Pagination,
-  PaginationFirst,
-  PaginationLast,
-  PaginationContent,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Button } from "~/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { Icon } from "#components";
 
 const props = defineProps<{
   currentPage: number;
   totalPages: number;
   totalItems: number;
-  filteredItemsCount: number;
+  pageSize: number;
   canPreviousPage: boolean;
   canNextPage: boolean;
-  pageSize: number;
+}>();
+
+const emit = defineEmits<{
+  "page-change": [page: number];
 }>();
 
 const { t } = useI18n();
 
-const pageSize = ref(props.pageSize);
-const currentPage = ref(props.currentPage);
-const totalPages = ref(props.totalPages);
-const totalItems = ref(props.totalItems);
+const handlePageChange = (page: number) => {
+  if (page < 0 || page >= props.totalPages) return;
+  emit("page-change", page);
+};
 
-defineEmits<{
-  "page-change": [page: number];
-  "page-size-change": [size: number];
-}>();
+const pages = computed(() => {
+  const pages = [];
+  for (let i = 0; i < props.totalPages; i++) {
+    pages.push(i);
+  }
+  return pages;
+});
 </script>
 
 <template>
   <div
-    class="flex items-center justify-end space-x-2 py-4 bg-sidebar-background sticky bottom-0"
+    class="flex items-center justify-between px-2 py-4 bg-sidebar-background sticky bottom-0"
   >
-    <div class="flex-auto text-sm text-muted-foreground">
+    <div class="flex-1 text-sm text-muted-foreground">
       {{ t("hint.showing") }}
-      {{ currentPage + 1 }}
+      {{ currentPage * pageSize + 1 }}
       {{ t("hint.to") }}
-      {{ totalPages || 1 }}
+      {{ Math.min((currentPage + 1) * pageSize, totalItems) }}
       {{ t("hint.out_of") }}
-      {{ filteredItemsCount }}
+      {{ totalItems }}
       {{ t("hint.data_products") }}
     </div>
 
-    <div class="flex gap-4 items-center">
-      <div class="flex gap-2">
-        <span>{{ t("hint.page") }}</span>
-        <span>{{ currentPage + 1 }}</span>
-        <span>{{ t("hint.of") }}</span>
-        <span>{{ totalPages || 1 }}</span>
+    <div class="flex items-center space-x-6 lg:space-x-8">
+      <div class="flex items-center space-x-2">
+        <p class="text-sm font-medium">{{ t("hint.page") }}</p>
+        <span class="text-sm font-medium">{{ currentPage + 1 }}</span>
+        <p class="text-sm font-medium">{{ t("hint.of") }}</p>
+        <span class="text-sm font-medium">{{ totalPages }}</span>
       </div>
-      <Pagination
-        :items-per-page="pageSize"
-        :total="totalItems"
-        :sibling-count="1"
-        show-edges
-        :default-page="currentPage"
-        @update:page="(page) => $emit('page-change', page - 1)"
-      >
-        <PaginationContent class="flex items-center gap-1">
-          <PaginationFirst @click="$emit('page-change', 0)" />
-          <PaginationPrevious @click="$emit('page-change', currentPage - 1)" />
-          <PaginationNext @click="$emit('page-change', currentPage + 1)" />
-          <PaginationLast @click="$emit('page-change', totalPages - 1)" />
-        </PaginationContent>
-      </Pagination>
+      <div class="flex items-center space-x-2">
+        <Button
+          variant="outline"
+          class="hidden h-8 w-8 p-0 lg:flex"
+          :disabled="!canPreviousPage"
+          @click="handlePageChange(0)"
+        >
+          <span class="sr-only">{{ t("action.first_page") }}</span>
+          <Icon name="lucide:chevrons-left" class="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          class="h-8 w-8 p-0"
+          :disabled="!canPreviousPage"
+          @click="handlePageChange(currentPage - 1)"
+        >
+          <span class="sr-only">{{ t("action.previous_page") }}</span>
+          <Icon name="lucide:chevron-left" class="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          class="h-8 w-8 p-0"
+          :disabled="!canNextPage"
+          @click="handlePageChange(currentPage + 1)"
+        >
+          <span class="sr-only">{{ t("action.next_page") }}</span>
+          <Icon name="lucide:chevron-right" class="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          class="hidden h-8 w-8 p-0 lg:flex"
+          :disabled="!canNextPage"
+          @click="handlePageChange(totalPages - 1)"
+        >
+          <span class="sr-only">{{ t("action.last_page") }}</span>
+          <Icon name="lucide:chevrons-right" class="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   </div>
 </template>
