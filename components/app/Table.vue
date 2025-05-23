@@ -304,7 +304,7 @@ const filterItems = ref<DropdownMenuItem[]>([
 </script>
 
 <template>
-  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-120px)]">
+  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-220px)]">
     <div class="mb-8">
       <!-- table filters -->
 
@@ -338,7 +338,7 @@ const filterItems = ref<DropdownMenuItem[]>([
     <AppTablePreloader v-if="isLoading" />
     <div
       v-else
-      class="flex-grow overflow-auto flex flex-col border rounded-md mb-20"
+      class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
     >
       <Table
         :data-source="dataSource"
