@@ -293,10 +293,7 @@ const _TableFilterVue = TableFilterVue;
 </script>
 
 <template>
-  <div
-    class="w-full flex flex-col px-12 py-4"
-    style="height: calc(100vh - 80px)"
-  >
+  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-120px)]">
     <div class="mb-8">
       <!-- table filters -->
 

@@ -2,7 +2,10 @@ import type { Row } from "@tanstack/vue-table";
 
 export interface TableColumn {
   id: string;
+  header: () => string;
   cell: (props: { row: Row<unknown> }) => unknown;
+  enableSorting?: boolean;
+  enableHiding?: boolean;
 }
 
 export interface TableDataResponse {
@@ -19,7 +22,7 @@ export interface DataItem {
   [key: string]: unknown;
 }
 
-export interface SearchFilter {
+export interface TableFilter {
   id: string;
   value: string | number;
   column?: string;

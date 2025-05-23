@@ -3,43 +3,14 @@ import {
   apiResponseSchema,
 } from "~/schemas/response.schema";
 import * as jsonld from "jsonld";
-
-// Types for API
-interface SearchFilter {
-  "@context": {
-    "@vocab": string;
-    [key: string]: string;
-  };
-  "@type": "Filters";
-  filters: Array<{
-    [key: string]: unknown;
-  }>;
-}
-
-interface SearchResponse {
-  "@context": {
-    "@vocab": string;
-    [key: string]: string;
-  };
-  "@type": string;
-  results: Array<Record<string, unknown>>;
-  metadata?: {
-    total: number;
-    page: number;
-    pageSize: number;
-    catalogs: Array<{
-      id: string;
-      status: "success" | "error";
-      error?: string;
-    }>;
-  };
-}
-
-type JsonLdObject = {
-  "@context": Record<string, unknown>;
-  "@type"?: string;
-  [key: string]: unknown;
-};
+import type {
+  SearchFilter,
+  SearchResponse,
+  JsonLdObject,
+  CatalogDataset,
+  CatalogResponse,
+  ApiError,
+} from "~/types/api.types";
 
 /**
  * Fetch data from the API
@@ -47,7 +18,12 @@ type JsonLdObject = {
  */
 export const useApi = () => {
   const config = useRuntimeConfig();
-  const baseUrl = config.public.apiSearchServiceUrl;
+
+  const serviceUrls = {
+    search: config.public.apiSearchServiceUrl,
+    catalog: config.public.apiCatalogServiceUrl,
+  };
+
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
   const toaster = useToaster();
@@ -67,7 +43,7 @@ export const useApi = () => {
     };
 
     if (!isFormData) {
-      headers["Content-Type"] = "application/ld+json";
+      headers["Content-Type"] = "application/json";
     }
 
     // Authentication is disabled but kept in code
@@ -86,6 +62,7 @@ export const useApi = () => {
    * @returns
    */
   const request = async <T>(
+    service: "search" | "catalog",
     url: string,
     method: string = "GET",
     body?: unknown,
@@ -94,6 +71,7 @@ export const useApi = () => {
       timeout?: number;
     }
   ) => {
+    const baseUrl = serviceUrls[service];
     const isFormData = body instanceof FormData;
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;
@@ -112,12 +90,18 @@ export const useApi = () => {
     };
 
     try {
-      const res = await fetch(`${baseUrl}${url}`, opts);
+      const res = await fetch(`/api/${service}${url}`, opts);
       clearTimeout(timeoutId);
 
       const data = await res.json();
 
       if (!res.ok) {
+        const error = data as ApiError;
+        const errorMessage =
+          error["dcterms:description"]?.["@value"] ||
+          error["dcterms:title"]?.["@value"] ||
+          "An error occurred";
+
         switch (res.status) {
           case 401:
             token.value = null;
@@ -127,27 +111,24 @@ export const useApi = () => {
             return null;
           case 422:
             if (showToast) {
-              toaster.show("error", data.detail);
+              toaster.show("error", errorMessage);
             }
             return null;
           case 503:
             if (showToast) {
-              toaster.show("error", data.detail);
+              toaster.show("error", errorMessage);
             }
             return null;
           default:
             if (showToast) {
-              toaster.show("error", `HTTP error! status: ${res.status}`);
+              toaster.show("error", errorMessage);
             }
             return null;
         }
       }
 
-      const result =
-        res.status >= 400 && res.status < 600
-          ? apiErrorResponseSchema.parse(data)
-          : apiResponseSchema.parse(data);
-      return result as T;
+      // For successful responses, return the JSON-LD data directly
+      return data as T;
     } catch (err) {
       if (method === "DELETE") {
         return;
@@ -187,33 +168,84 @@ export const useApi = () => {
   };
 
   return {
-    // Health check
+    /**
+     * Performs a health check of the search service
+     * @returns Promise with the service status
+     * @example
+     * const api = useApi();
+     * const status = await api.healthCheck();
+     */
     healthCheck: async () => {
-      return request<{ status: string }>(`/health-check`);
+      return request<{ status: string }>("search", `/health-check`);
     },
 
-    // Metrics
+    /**
+     * Retrieves metrics from the search service
+     * @returns Promise with service metrics data
+     * @example
+     * const api = useApi();
+     * const metrics = await api.getMetrics();
+     */
     getMetrics: async () => {
-      return request<Record<string, unknown>>(`/metrics`);
+      return request<Record<string, unknown>>("search", `/metrics`);
     },
 
-    // Local search
+    /**
+     * Searches the local catalog using provided filters
+     * @param filter - Search filter object with JSON-LD context
+     * @returns Promise with search results
+     * @example
+     * const api = useApi();
+     * const results = await api.searchLocalCatalog({
+     *   "@context": { "@vocab": "http://data-space.org/" },
+     *   "@type": "Filters",
+     *   filters: []
+     * });
+     */
     searchLocalCatalog: async (filter: SearchFilter) => {
       const preparedFilter = await prepareSearchFilter(filter);
       return request<SearchResponse>(
+        "search",
         `/search-catalog/`,
         "POST",
         preparedFilter
       );
     },
 
-    // Decentralized search
+    /**
+     * Performs a decentralized search across multiple catalogs
+     * @param filter - Search filter object with JSON-LD context
+     * @returns Promise with search results from multiple catalogs
+     * @example
+     * const api = useApi();
+     * const results = await api.searchDecentralized({
+     *   "@context": { "@vocab": "http://data-space.org/" },
+     *   "@type": "Filters",
+     *   filters: []
+     * });
+     */
     searchDecentralized: async (filter: SearchFilter) => {
       const preparedFilter = await prepareSearchFilter(filter);
-      return request<SearchResponse>(`/search/`, "POST", preparedFilter);
+      return request<SearchResponse>(
+        "search",
+        `/search/`,
+        "POST",
+        preparedFilter
+      );
     },
 
-    // Helper method to create a basic filter
+    /**
+     * Creates a basic search filter with the provided context and filters
+     * @param context - JSON-LD context object
+     * @param filters - Array of filter objects
+     * @returns SearchFilter object
+     * @example
+     * const api = useApi();
+     * const filter = api.createFilter(
+     *   { "dcat": "http://www.w3.org/ns/dcat#" },
+     *   [{ "type": "Dataset" }]
+     * );
+     */
     createFilter: (
       context: Record<string, string>,
       filters: Array<Record<string, unknown>>
@@ -226,6 +258,175 @@ export const useApi = () => {
         "@type": "Filters",
         filters,
       };
+    },
+
+    /**
+     * Retrieves the local catalog with optional filtering
+     * @param filter - Optional search filter to apply
+     * @returns Promise with catalog data or null if error occurs
+     * @example
+     * const api = useApi();
+     * const catalog = await api.getLocalCatalog();
+     */
+    getLocalCatalog: async (
+      filter?: SearchFilter
+    ): Promise<CatalogResponse | null> => {
+      const response = await request<CatalogResponse>(
+        "catalog",
+        "/catalog/",
+        "POST",
+        filter ? JSON.stringify(filter) : "{}"
+      );
+      return response || null;
+    },
+
+    /**
+     * Retrieves a specific dataset by its ID
+     * @param id - Dataset identifier
+     * @returns Promise with dataset data or null if not found
+     * @example
+     * const api = useApi();
+     * const dataset = await api.getDataset("dataset-123");
+     */
+    getDataset: async (id: string): Promise<CatalogDataset | null> => {
+      const response = await request<CatalogDataset>(
+        "catalog",
+        `/datasets/${id}/`,
+        "GET"
+      );
+      return response || null;
+    },
+
+    /**
+     * Creates or updates a dataset
+     * @param filename - Name of the dataset file
+     * @param dataset - Dataset data in JSON-LD format
+     * @returns Promise with updated dataset data or null if error occurs
+     * @example
+     * const api = useApi();
+     * const updated = await api.saveDataset("my-dataset", datasetData);
+     */
+    saveDataset: async (
+      filename: string,
+      dataset: CatalogDataset
+    ): Promise<CatalogDataset | null> => {
+      const response = await request<CatalogDataset>(
+        "catalog",
+        `/datasets/${filename}/`,
+        "POST",
+        dataset
+      );
+      return response || null;
+    },
+
+    /**
+     * Deletes a dataset by its ID
+     * @param id - Dataset identifier
+     * @returns Promise with boolean indicating success
+     * @example
+     * const api = useApi();
+     * const success = await api.deleteDataset("dataset-123");
+     */
+    deleteDataset: async (id: string): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/datasets/${id}/`,
+        "DELETE"
+      );
+      return response !== null;
+    },
+
+    /**
+     * Shares a dataset, making it publicly available
+     * @param id - Dataset identifier
+     * @returns Promise with boolean indicating success
+     * @example
+     * const api = useApi();
+     * const success = await api.shareDataset("dataset-123");
+     */
+    shareDataset: async (id: string): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/datasets/${id}/share/`,
+        "POST"
+      );
+      return response !== null;
+    },
+
+    /**
+     * Unshares a dataset, making it private
+     * @param id - Dataset identifier
+     * @returns Promise with boolean indicating success
+     * @example
+     * const api = useApi();
+     * const success = await api.unshareDataset("dataset-123");
+     */
+    unshareDataset: async (id: string): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/datasets/${id}/unshare/`,
+        "POST"
+      );
+      return response !== null;
+    },
+
+    /**
+     * Uploads a MMIO file to the catalog service
+     * @param file - File to upload
+     * @returns Promise with file location URL or null if upload fails
+     * @example
+     * const api = useApi();
+     * const file = new File(["content"], "file.mmio");
+     * const location = await api.uploadMmioFile(file);
+     */
+    uploadMmioFile: async (file: File): Promise<string | null> => {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await request<{ Location: string }>(
+        "catalog",
+        "/mmio/",
+        "POST",
+        formData
+      );
+
+      return response?.Location || null;
+    },
+
+    /**
+     * Retrieves a MMIO file by its filename
+     * @param filename - Name of the MMIO file
+     * @returns Promise with file Blob or null if not found
+     * @example
+     * const api = useApi();
+     * const file = await api.getMmioFile("file.mmio");
+     */
+    getMmioFile: async (filename: string): Promise<Blob | null> => {
+      const response = await request<Blob>(
+        "catalog",
+        `/mmio/${filename}/`,
+        "GET",
+        undefined,
+        { showToast: true }
+      );
+      return response || null;
+    },
+
+    /**
+     * Deletes a MMIO file by its filename
+     * @param filename - Name of the MMIO file
+     * @returns Promise with boolean indicating success
+     * @example
+     * const api = useApi();
+     * const success = await api.deleteMmioFile("file.mmio");
+     */
+    deleteMmioFile: async (filename: string): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/mmio/${filename}/`,
+        "DELETE"
+      );
+      return response !== null;
     },
   };
 };

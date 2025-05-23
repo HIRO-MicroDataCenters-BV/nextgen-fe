@@ -13,11 +13,18 @@
 </template>
 
 <script setup lang="ts">
-import { h } from 'vue';
-import { useRouter } from 'vue-router';
+console.log("my_catalog");
+import { h } from "vue";
+import { useRouter } from "vue-router";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import type {
+  SearchFilter,
+  JsonLdValue,
+  JsonLdObject,
+} from "~/types/api.types";
+import type { TableColumn } from "~/types/table.types";
 // import { Icon } from '#components';
 
 const { t } = useI18n();
@@ -36,12 +43,12 @@ interface MockDataItem {
 }
 
 interface CatalogItem {
-  id: string; // ID must be a string for the table
+  id: string;
   name: string;
   biobank: string;
   description: string;
   last_update: string;
-  // Add other fields from MockDataItem if they are directly used or transformed
+  [key: string]: string; // Add index signature to satisfy DataItem type
 }
 
 interface TableFetchParams {
@@ -70,103 +77,174 @@ const navigateToEdit = (id: string) => {
 };
 
 // Defining columns for the table
-const columns = [
+const columns: TableColumn[] = [
   {
     id: "name",
-    header: () => t('label.data_product_name'),
-    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("name"),
+    header: () => t("label.data_product_name"),
+    cell: ({ row }) => row.getValue("name") as string,
   },
   {
-    id: "biobank", // Or perhaps 'type' if that's more accurate from mock data
-    header: () => t('label.biobank'),
-    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("biobank"),
+    id: "biobank",
+    header: () => t("label.biobank"),
+    cell: ({ row }) => row.getValue("biobank") as string,
   },
   {
     id: "description",
-    header: () => t('label.description'),
-    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => row.getValue("description"),
+    header: () => t("label.description"),
+    cell: ({ row }) => row.getValue("description") as string,
   },
   {
     id: "last_update",
-    header: () => t('label.last_updated'),
-    cell: ({ row }: { row: { getValue: (key: string) => unknown } }) => dayjs(row.getValue("last_update")).format("DD/MM/YYYY"),
+    header: () => t("label.last_updated"),
+    cell: ({ row }) =>
+      dayjs(row.getValue("last_update") as string).format("DD/MM/YYYY"),
   },
   {
     id: "actions",
-    header: () => t('label.actions'),
-    cell: ({ row }: { row: { original: CatalogItem } }) => h('div', { class: 'flex space-x-2' }, [
-      h(Button, {
-        variant: 'ghost',
-        size: 'sm',
-        onClick: () => navigateToEdit(row.original.id),
-      }, () => [
-        h('Icon', { name: 'lucide:file-edit', class: 'mr-1 h-4 w-4' }), // Using h for Icon as well
-        t('action.edit')
-      ])
-    ]),
+    header: () => t("label.actions"),
+    cell: ({ row }) => {
+      const item = row.original as CatalogItem;
+      return h("div", { class: "flex space-x-2" }, [
+        h(
+          Button,
+          {
+            variant: "ghost",
+            size: "sm",
+            onClick: () => navigateToEdit(item.id),
+          },
+          () => [
+            h("Icon", { name: "lucide:file-edit", class: "mr-1 h-4 w-4" }),
+            t("action.edit"),
+          ]
+        ),
+      ]);
+    },
     enableSorting: false,
     enableHiding: false,
   },
 ];
 
-// Function to fetch data for the table from the mock data
-const fetchTableData = async (paramsAsUnknown: unknown): Promise<TableDataResponse> => {
+// Function to fetch data for the table using the API
+const fetchTableData = async (
+  paramsAsUnknown: unknown
+): Promise<TableDataResponse> => {
   const params = paramsAsUnknown as TableFetchParams;
-  // Importing mock data
-  const mockData = mock.value.data;
+  const api = useApi();
 
-  // Imitation of pagination
+  // Create search filter based on table parameters
+  const filter: SearchFilter = {
+    "@context": {
+      "@vocab": "http://data-space.org/",
+      dcat: "http://www.w3.org/ns/dcat#",
+      med: "http://oca.example.org/123/",
+    },
+    "@type": "Filters",
+    filters: [],
+  };
+
+  // Add search filters if provided
+  if (
+    params.name ||
+    params.description ||
+    params.biobank ||
+    params.lastupdate ||
+    params.all
+  ) {
+    const searchFilter: Record<string, unknown> = {
+      "@type": "SearchFilter",
+    };
+
+    if (params.name) {
+      searchFilter["dcterms:title"] = params.name;
+    }
+    if (params.description) {
+      searchFilter["dcterms:description"] = params.description;
+    }
+    if (params.biobank) {
+      searchFilter["dspace:biobank"] = params.biobank;
+    }
+    if (params.lastupdate) {
+      searchFilter["dcterms:modified"] = params.lastupdate;
+    }
+    if (params.all) {
+      searchFilter["dspace:search"] = params.all;
+    }
+
+    filter.filters.push(searchFilter);
+  }
+
+  // Add pagination
   const page = params.page || 1;
   const limit = params.limit || 10;
-  const start = (page - 1) * limit;
-  const end = start + limit;
+  filter.filters.push({
+    "@type": "PaginationFilter",
+    "dspace:page": page,
+    "dspace:pageSize": limit,
+  });
 
-  // Filtering data based on the search parameters
-  let filteredData = [...mockData];
-  if (params.name) {
-    filteredData = filteredData.filter((item) =>
-      item.name.toLowerCase().includes(params.name!.toLowerCase())
-    );
-  }
-  if (params.description) {
-    filteredData = filteredData.filter((item) =>
-      item.description.toLowerCase().includes(params.description!.toLowerCase())
-    );
-  }
-  if (params.biobank) { // This filters on item.type
-    filteredData = filteredData.filter((item) =>
-      item.type.toLowerCase().includes(params.biobank!.toLowerCase())
-    );
-  }
-  if (params.lastupdate) {
-    filteredData = filteredData.filter((item) =>
-      item.last_update.toLowerCase().includes(params.lastupdate!.toLowerCase())
-    );
-  }
-  if (params.all) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.name.toLowerCase().includes(params.all!.toLowerCase()) ||
-        item.description.toLowerCase().includes(params.all!.toLowerCase()) ||
-        item.type.toLowerCase().includes(params.all!.toLowerCase()) || // for biobank column
-        item.last_update.toLowerCase().includes(params.all!.toLowerCase())
-    );
-  }
+  try {
+    const response = await api.searchDecentralized(filter);
 
-  // Map data to CatalogItem and ensure id is a string
-  const processedData: CatalogItem[] = filteredData.slice(start, end).map(item => ({
-    ...item,
-    id: String(item.id), // Convert id to string
-  }));
+    console.log("RESPONSE", response);
 
-  // Returning the data in the format expected by the Table component
-  return {
-    data: processedData,
-    pagination: {
-      total_items: filteredData.length,
-      page,
-      limit,
-    },
-  };
+    if (!response) {
+      return {
+        data: [],
+        pagination: {
+          total_items: 0,
+          page,
+          limit,
+        },
+      };
+    }
+
+    // Transform API response to table format
+    const processedData: CatalogItem[] = response.results.map(
+      (item: JsonLdObject) => {
+        const title = Array.isArray(item["dcterms:title"])
+          ? (item["dcterms:title"][0] as JsonLdValue)?.["@value"] || ""
+          : "";
+
+        const description = Array.isArray(item["dcterms:description"])
+          ? (item["dcterms:description"][0] as JsonLdValue)?.["@value"] || ""
+          : "";
+
+        const biobank =
+          (item["dspace:biobank"] as JsonLdValue)?.["@value"] || "";
+        const lastUpdate =
+          (item["dcterms:modified"] as JsonLdValue)?.["@value"] || "";
+
+        return {
+          id: String(item["@id"] || ""),
+          name: title,
+          description,
+          biobank,
+          last_update: lastUpdate,
+        };
+      }
+    );
+
+    return {
+      data: processedData,
+      pagination: {
+        total_items: response.metadata?.total || 0,
+        page: response.metadata?.page || page,
+        limit: response.metadata?.pageSize || limit,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching catalog data:", error);
+    return {
+      data: [],
+      pagination: {
+        total_items: 0,
+        page,
+        limit,
+      },
+    };
+  }
 };
+
+const config = useRuntimeConfig();
+console.log(config.public);
 </script>
