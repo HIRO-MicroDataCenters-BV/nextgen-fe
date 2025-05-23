@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import type { DropdownMenuItem } from "@/types/table.types";
-import {
-  DropdownMenuItem as DropdownMenuItemComponent,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem as DropdownMenuItemComponent } from "@/components/ui/dropdown-menu";
 const { t } = useI18n();
 
 const props = defineProps<{

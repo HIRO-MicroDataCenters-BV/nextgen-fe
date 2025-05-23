@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import type * as z from "zod";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,

@@ -81,21 +81,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-// import { Icon } from '#components'; // Ensure Icon is globally available or imported
 
 const { t } = useI18n();
 const route = useRoute();

@@ -13,11 +13,7 @@ import {
   getSortedRowModel,
   useVueTable,
 } from "@tanstack/vue-table";
-import { ref, watch, onMounted, computed } from "vue";
 import { valueUpdater } from "~/utils";
-/*
-import { AppMenuActions } from '#components';
-*/
 import type {
   TableColumn,
   TableDataResponse,
@@ -25,11 +21,6 @@ import type {
   TableFilter,
   DropdownMenuItem,
 } from "~/types/table.types";
-import DialogDataset from "./DialogDataset.vue";
-import TablePagination from "./table/Pagination.vue";
-import { filters as globalFiltersConstant } from "~/constants";
-import TableFilterVue from "~/components/app/TableFilter.vue";
-import TableDropdownFilter from "~/components/app/TableDropdownFilter.vue";
 
 interface TableProps {
   title?: string;
@@ -362,7 +353,7 @@ const filters = computed<DropdownMenuItem[]>(() => [
             </span>
           </div>
 
-          <TableDropdownFilter
+          <AppTableDropdownFilter
             id="filter"
             label="filter"
             :items="filterItems"
@@ -420,7 +411,7 @@ const filters = computed<DropdownMenuItem[]>(() => [
       </Table>
     </div>
 
-    <TablePagination
+    <AppTablePagination
       :current-page="currentPage"
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
@@ -429,7 +420,7 @@ const filters = computed<DropdownMenuItem[]>(() => [
       :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
       @page-change="handlePageChange"
     />
-    <DialogDataset
+    <AppDialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"
     />

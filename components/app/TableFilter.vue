@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { cn } from '@/lib/utils';
+import { useI18n } from "vue-i18n";
+import { cn } from "@/lib/utils";
 
 const { t } = useI18n();
 const props = withDefaults(
   defineProps<{
-    id?: string,
-    label?: string,
-    items?: {key: string, label: string}[],
-    column?: unknown
+    id?: string;
+    label?: string;
+    items?: { key: string; label: string }[];
+    column?: unknown;
   }>(),
   {
-    id: '',
-    label: '',
+    id: "",
+    label: "",
     items: () => [],
     column: undefined,
   }
@@ -22,9 +21,9 @@ const props = withDefaults(
 const label = ref(props.label);
 const items = ref(props.items);
 const selectedValues = ref<string[]>([]);
-const q = ref('');
+const q = ref("");
 
-const handleSelect = (option: { key: string, label: string }) => {
+const handleSelect = (option: { key: string; label: string }) => {
   const isSelected = selectedValues.value.includes(option.label);
   if (isSelected) {
     const index = selectedValues.value.indexOf(option.label);
@@ -60,8 +59,9 @@ const handleSelect = (option: { key: string, label: string }) => {
 
             <template v-else>
               <Badge
-                v-for="option in items
-                  .filter((option) => selectedValues.includes(option.label))"
+                v-for="option in items.filter((option) =>
+                  selectedValues.includes(option.label)
+                )"
                 :key="option.key"
                 variant="secondary"
                 class="rounded-sm px-1 font-normal"
@@ -77,7 +77,7 @@ const handleSelect = (option: { key: string, label: string }) => {
       <Command>
         <CommandInput v-model="q" :placeholder="t('placeholder.search')" />
         <CommandList>
-          <CommandEmpty/>
+          <CommandEmpty />
           <CommandGroup>
             <CommandItem
               v-for="option in items"
@@ -86,16 +86,18 @@ const handleSelect = (option: { key: string, label: string }) => {
               @select="handleSelect(option)"
             >
               <div
-                :class="cn(
-                  'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
-                  selectedValues.includes(option.label)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'opacity-50 [&_svg]:invisible',
-                )"
+                :class="
+                  cn(
+                    'mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary',
+                    selectedValues.includes(option.label)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'opacity-50 [&_svg]:invisible'
+                  )
+                "
               >
                 <Icon name="lucide:check" :class="cn('h-4 w-4')" />
               </div>
-              
+
               <span>{{ option.label }}</span>
             </CommandItem>
           </CommandGroup>
@@ -108,7 +110,7 @@ const handleSelect = (option: { key: string, label: string }) => {
                 class="justify-center text-center p-2"
                 @select="selectedValues = []"
               >
-                {{ t('action.clear_filters') }}
+                {{ t("action.clear_filters") }}
               </CommandItem>
             </CommandGroup>
           </template>
@@ -118,6 +120,4 @@ const handleSelect = (option: { key: string, label: string }) => {
   </Popover>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

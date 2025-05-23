@@ -5,11 +5,6 @@ import type {
   DropdownMenuItem,
   TableDropdownFilterProps,
 } from "@/types/table.types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const { t } = useI18n();
 const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
