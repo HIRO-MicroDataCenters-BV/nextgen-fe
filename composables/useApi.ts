@@ -1,7 +1,3 @@
-import {
-  apiErrorResponseSchema,
-  apiResponseSchema,
-} from "~/schemas/response.schema";
 import * as jsonld from "jsonld";
 import type {
   SearchFilter,
@@ -90,7 +86,7 @@ export const useApi = () => {
     };
 
     try {
-      const res = await fetch(`/api/${service}${url}`, opts);
+      const res = await fetch(`${baseUrl}${url}`, opts);
       clearTimeout(timeoutId);
 
       const data = await res.json();

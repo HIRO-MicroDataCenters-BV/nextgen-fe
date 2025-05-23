@@ -18,14 +18,6 @@ const handlePageChange = (page: number) => {
   if (page < 0 || page >= props.totalPages) return;
   emit("page-change", page);
 };
-
-const pages = computed(() => {
-  const pages = [];
-  for (let i = 0; i < props.totalPages; i++) {
-    pages.push(i);
-  }
-  return pages;
-});
 </script>
 
 <template>

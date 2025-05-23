@@ -15,77 +15,22 @@
 
 <script setup lang="ts">
 import { h } from "vue";
-import { useRouter } from "vue-router";
-import AppContent from "@/components/app/Content.vue";
-import AppTable from "@/components/app/Table.vue";
-import { Button } from "@/components/ui/button";
-import type {
-  SearchFilter,
-  JsonLdValue,
-  JsonLdObject,
-} from "~/types/api.types";
 import type { TableColumn } from "~/types/table.types";
+import type {
+  CatalogItem,
+  TableFetchParams,
+  TableDataResponse,
+} from "~/types/catalog.types";
+import type { JsonLdResponse } from "~/types/jsonld.types";
 import {
   createTableSearchFilter,
   transformSearchResponseToTableData,
 } from "~/utils/jsonld";
-import { Link } from "#components";
-// import { Icon } from '#components';
+import { Button } from "@/components/ui/button";
 
 const { t } = useI18n();
 const dayjs = useDayjs();
 const router = useRouter();
-
-// Assuming mock might not be typed, provide a basic type for its data
-interface MockDataItem {
-  id: number; // Original ID is a number
-  name: string;
-  description: string;
-  status: string;
-  type: string; // This was used for biobank filtering
-  biobank: string;
-  last_update: string;
-}
-
-interface CatalogItem {
-  id: string;
-  name: string;
-  biobank: string;
-  description: string;
-  last_update: string;
-  [key: string]: string; // Add index signature to satisfy DataItem type
-}
-
-interface TableFetchParams {
-  page?: number;
-  limit?: number;
-  name?: string;
-  description?: string;
-  biobank?: string;
-  lastupdate?: string;
-  all?: string;
-  filters?: Record<string, boolean>;
-}
-
-interface TableDataResponse {
-  data: Array<{
-    id: string;
-    name: string;
-    description: string;
-    biobank: string;
-    last_update: string;
-  }>;
-  pagination: {
-    total_items: number;
-    page: number;
-    limit: number;
-    total_pages: number;
-    has_next: boolean;
-    has_prev: boolean;
-  };
-}
-
-const mock = useMock() as Ref<{ data: MockDataItem[] }>; // Type useMock if possible
 
 const navigateToEdit = (id: string) => {
   router.push(`/my_catalog/${id}/edit`);
@@ -177,7 +122,11 @@ const fetchTableData = async (
     const response = await api.searchDecentralized(filter);
     console.log("API response:", response);
 
-    const tableData = transformSearchResponseToTableData(response, page, limit);
+    const tableData = transformSearchResponseToTableData(
+      response as unknown as JsonLdResponse,
+      page,
+      limit
+    );
 
     // Calculate total pages based on total items and page size
     const totalPages = Math.ceil(tableData.pagination.total_items / limit);

@@ -6,8 +6,6 @@ import type {
   JsonLdBooleanValue,
   JsonLdLongValue,
   JsonLdLanguageValue,
-  JsonLdPublisher,
-  JsonLdTheme,
   JsonLdDistribution,
   DatasetMetadata,
   SearchFilter,
@@ -34,14 +32,14 @@ export function getJsonLdValue(
  */
 export function getJsonLdValueByPath(obj: JsonLdObject, path: string): string {
   const parts = path.split(".");
-  let current: any = obj;
+  let current: unknown = obj;
 
   for (const part of parts) {
     if (!current) return "";
-    current = current[part];
+    current = current[part as keyof typeof current];
   }
 
-  return getJsonLdValue(current);
+  return getJsonLdValue(current as JsonLdValue | JsonLdValue[] | undefined);
 }
 
 /**

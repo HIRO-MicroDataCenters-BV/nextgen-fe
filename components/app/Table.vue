@@ -124,13 +124,6 @@ const handlePageChange = (page: number) => {
   fetchData();
 };
 
-const handlePageSizeChange = (size: number) => {
-  console.log("Page size changed to:", size);
-  table.setPageSize(size);
-  currentPage.value = 0;
-  fetchData();
-};
-
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];
   return cols.map((item) => ({
@@ -306,27 +299,6 @@ const filterItems = ref<DropdownMenuItem[]>([
         label: t("filter.isShared"),
       },
     ],
-  },
-]);
-
-const filters = computed<DropdownMenuItem[]>(() => [
-  {
-    key: "all",
-    type: "checkbox",
-    value: "all",
-    label: t("filter.all"),
-  },
-  {
-    key: "name",
-    type: "checkbox",
-    value: "name",
-    label: t("filter.name"),
-  },
-  {
-    key: "description",
-    type: "checkbox",
-    value: "description",
-    label: t("filter.description"),
   },
 ]);
 </script>

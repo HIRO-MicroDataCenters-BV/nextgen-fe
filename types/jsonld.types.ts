@@ -91,7 +91,7 @@ export interface JsonLdResponse {
 export interface JsonLdObject {
   "@id": string;
   "@type": string | string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface JsonLdValue {
