@@ -136,6 +136,7 @@ export default defineI18nConfig(() => {
           filter: "Filter",
           update_file: "Update File",
           view: "View",
+          upload_file: "Upload File",
         },
         placeholder: {
           search: "Search...",

@@ -45,7 +45,7 @@
                   >
                     <span
                       ><img :src="`/images/icons/${item.icon}.png`" alt=""
-                    ></span>
+                    /></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>
@@ -65,23 +65,15 @@
       </Button>
 
       <!-- My Catalog Form Page (Create/Edit) Buttons -->
-      <template v-else-if="isMyCatalogFormPage">
-        <Button variant="outline" @click="onDiscardClick">
-          {{ t("action.discard") }}
-        </Button>
-        <Button @click="onUpdateFile">{{ t("action.update_file") }}</Button>
-        <Button @click="onSave">
-          {{ t("action.save_changes") }}
-        </Button>
-      </template>
-
-      <!-- Optional: v-else for any other case, or leave empty if no buttons for other pages -->
+      <Toolbar v-else-if="isMyCatalogFormPage" :buttons="toolbarButtons" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { useRoute, useRouter } from "vue-router";
+import Toolbar from "./header/Toolbar.vue";
+import type { ToolbarButton } from "~/types/toolbar.types";
 
 const { t } = useI18n();
 const route = useRoute();
@@ -134,17 +126,40 @@ const navigateToCreateCatalogItem = () => {
   router.push("/my_catalog/create");
 };
 
-const onSave = () => {
-  emit("save-form");
-};
+const toolbarButtons = computed<ToolbarButton[]>(() => {
+  const buttons: ToolbarButton[] = [];
 
-const onUpdateFile = () => {
-  emit("update-file");
-};
+  buttons.push(
+    {
+      id: "discard",
+      label: t("action.discard"),
+      variant: "outline",
+      action: {
+        type: "discard",
+        onConfirm: () => emit("discard-form"),
+      },
+    },
+    {
+      id: "fileUpload",
+      label: t("action.upload_file"),
+      variant: "secondary",
+      action: {
+        type: "fileUpload",
+        onConfirm: () => emit("update-file"),
+      },
+    },
+    {
+      id: "submit",
+      label: t("action.create"),
+      action: {
+        type: "submit",
+        onConfirm: () => emit("save-form"),
+      },
+    }
+  );
 
-const onDiscardClick = () => {
-  emit("discard-form");
-};
+  return buttons;
+});
 
 const availableBiobanks = ref([
   { key: "umcu", icon: "umcu", label: "UMCU", url: "./umcu" },
