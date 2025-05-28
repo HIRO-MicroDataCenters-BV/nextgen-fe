@@ -45,7 +45,7 @@ export function useMenu() {
         id: "home",
         title: t("menu.home"),
         icon: "lucide:home",
-        url: "/",
+        url: "/home",
         items: [],
         isActive: route.path === "/",
       },

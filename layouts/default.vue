@@ -6,12 +6,21 @@
         class="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12"
       >
         <div class="flex items-center gap-2 px-4 justify-between w-full">
-          <div class="flex items-center gap-2 px-10">
+          <div class="flex items-center gap-2 px-10 h-6">
             <SidebarTrigger class="-ml-1" />
-            <Separator orientation="vertical" class="mr-2 h-4" />
+            <Separator orientation="vertical" class="mr-2 h-12" />
             <AppBreadcrumb />
           </div>
+
           <div class="flex items-center gap-2 ml-auto items-center">
+            <div v-if="isHome" class="flex items-end gap-2">
+              <Button variant="secondary" as="a" href="/contacts">{{
+                $t("action.contacts")
+              }}</Button>
+              <Button variant="secondary" as="a" href="https://github.com/">{{
+                $t("action.github")
+              }}</Button>
+            </div>
             <AppColorModeSwitch />
           </div>
         </div>
@@ -22,3 +31,12 @@
     </SidebarInset>
   </SidebarProvider>
 </template>
+
+<script setup lang="ts">
+const route = useRouter();
+console.log("r", route);
+const currentRouteName = computed(() => route.currentRoute.value.name);
+const isHome = computed(() => currentRouteName.value === "home");
+console.log("currentRouteName", currentRouteName.value);
+//const isHome = computed(() => route.path === "/home");
+</script>

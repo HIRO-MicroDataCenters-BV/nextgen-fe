@@ -3583,7 +3583,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vueuse/core@npm:13.2.0, @vueuse/core@npm:^13.1.0":
+"@vueuse/core@npm:13.2.0":
   version: 13.2.0
   resolution: "@vueuse/core@npm:13.2.0"
   dependencies:
@@ -3608,6 +3608,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@vueuse/core@npm:^13.3.0":
+  version: 13.3.0
+  resolution: "@vueuse/core@npm:13.3.0"
+  dependencies:
+    "@types/web-bluetooth": "npm:^0.0.21"
+    "@vueuse/metadata": "npm:13.3.0"
+    "@vueuse/shared": "npm:13.3.0"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/3e62bf0a4f6bb175eebb065df73b1e09bb62ecc02986fc1a07c9a7e212ca9388f09d01fd1d02a5149ec43e6cc1f51161e4f27ccb186a8a0d17f11d63bd8e7a51
+  languageName: node
+  linkType: hard
+
 "@vueuse/metadata@npm:12.8.2":
   version: 12.8.2
   resolution: "@vueuse/metadata@npm:12.8.2"
@@ -3619,6 +3632,13 @@ __metadata:
   version: 13.2.0
   resolution: "@vueuse/metadata@npm:13.2.0"
   checksum: 10c0/3bd58c7e2248685368ac9ade62ecc96de526f854b9dbd52a22b0c555095a0614308daa3d2f0f5158cecfafd2471bbc05c56b2585dc39c25e5545c22cc2fbd195
+  languageName: node
+  linkType: hard
+
+"@vueuse/metadata@npm:13.3.0":
+  version: 13.3.0
+  resolution: "@vueuse/metadata@npm:13.3.0"
+  checksum: 10c0/a4392f75088c0f15a56969602c019dd47101d8e2fe91061d40a90b10c9a9188df97b1cb69c15750ccd987e3f7878c99f0f76d0b3d3d7def83a21210c2b60117d
   languageName: node
   linkType: hard
 
@@ -3652,6 +3672,15 @@ __metadata:
   peerDependencies:
     vue: ^3.5.0
   checksum: 10c0/ba40631bd0ea6bdb19b3b4e34134cd4d2e7efdb018b22d3ba016a2ec206d9a6103ab880a61c8f73c611fd4a0b4900d53aa8e2ca04512b0326dcb76428f2545cf
+  languageName: node
+  linkType: hard
+
+"@vueuse/shared@npm:13.3.0":
+  version: 13.3.0
+  resolution: "@vueuse/shared@npm:13.3.0"
+  peerDependencies:
+    vue: ^3.5.0
+  checksum: 10c0/3dd3186a8784f26f13f37f78144aaf9586bb12138a5cc84f0779a5e9f5dd20d317e0ca5377d1091dd51f159e1e6ae64a18f8967bf42aabace96e03cafe4e272b
   languageName: node
   linkType: hard
 
@@ -8763,7 +8792,7 @@ __metadata:
     "@tanstack/vue-table": "npm:^8.21.3"
     "@types/jsonld": "npm:^1.5.15"
     "@vee-validate/zod": "npm:^4.15.0"
-    "@vueuse/core": "npm:^13.1.0"
+    "@vueuse/core": "npm:^13.3.0"
     "@vueuse/nuxt": "npm:13.2.0"
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
@@ -8777,7 +8806,7 @@ __metadata:
     nuxt-proxy-request: "npm:^2.1.0"
     nuxt-zod-i18n: "npm:1.11.5"
     openapi-typescript: "npm:^5 || ^6 || ^7"
-    reka-ui: "npm:^2.2.1"
+    reka-ui: "npm:^2.3.0"
     shadcn-nuxt: "npm:2.0.1"
     tailwind-merge: "npm:^3.2.0"
     tailwindcss: "npm:^4.1.4"
@@ -10165,9 +10194,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"reka-ui@npm:^2.2.1":
-  version: 2.2.1
-  resolution: "reka-ui@npm:2.2.1"
+"reka-ui@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "reka-ui@npm:2.3.0"
   dependencies:
     "@floating-ui/dom": "npm:^1.6.13"
     "@floating-ui/vue": "npm:^1.1.6"
@@ -10181,7 +10210,7 @@ __metadata:
     ohash: "npm:^2.0.11"
   peerDependencies:
     vue: ">= 3.2.0"
-  checksum: 10c0/0f49e081620808587df7afb3bc5e5c8eb25e772de5054bf382e687a0cc7b39d848c2479dd9d540b498af2eb949d772d08ff43993c851b89001f2edd3c5ade3e6
+  checksum: 10c0/781da63d9afb06693f619e515efd0f7542cca1ee93be227a287be855a9313e0c2c4ab0122064590190d7e77f822b6f004a386e54af6e391590512deaa1da6560
   languageName: node
   linkType: hard
 
