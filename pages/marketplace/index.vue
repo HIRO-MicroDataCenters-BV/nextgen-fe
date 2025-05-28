@@ -13,6 +13,17 @@
 </template>
 
 <script setup lang="ts">
+import type { TableColumn } from "~/types/table.types";
+import type {
+  CatalogItem,
+  TableFetchParams,
+  TableDataResponse,
+} from "~/types/catalog.types";
+import type { JsonLdResponse } from "~/types/jsonld.types";
+import {
+  createTableSearchFilter,
+  transformSearchResponseToTableData,
+} from "~/utils/jsonld";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
 
@@ -21,13 +32,12 @@ const dayjs = useDayjs();
 const { page, setPage } = useApp();
 
 setPage({
-  section: 'marketplace',
+  section: "marketplace",
 });
 
 const baseUrl = page.value.section;
 
 const mock = useMock();
-
 
 // Defining columns for the table
 const columns = [
@@ -43,12 +53,12 @@ const columns = [
     id: "biobank",
     cell: ({ row }) =>
       h(
-        'a',
-        { href: `${baseUrl}/${row.getValue('id')}` },
-        row.getValue('biobank'),
+        "a",
+        { href: `${baseUrl}/${row.getValue("id")}` },
+        row.getValue("biobank")
       ),
   },
-  
+
   {
     id: "description",
     cell: ({ row }) => row.getValue("description"),
@@ -60,56 +70,72 @@ const columns = [
 ];
 
 // Function to fetch data for the table from the mock data
-const fetchTableData = async (params) => {
-  // Importing mock data
-  const mockData = mock.value.data;
+const fetchTableData = async (
+  paramsAsUnknown: unknown
+): Promise<TableDataResponse> => {
+  const params = paramsAsUnknown as TableFetchParams;
+  const api = useApi();
 
-  // Imitation of pagination
-  const page = params.page || 1;
-  const limit = params.limit || 10;
-  const start = (page - 1) * limit;
-  const end = start + limit;
+  console.log("Received params in fetchTableData:", params);
 
-  // Filtering data based on the search parameters
-  let filteredData = [...mockData];
-  if (params.name) {
-    filteredData = filteredData.filter((item) =>
-      item.name.toLowerCase().includes(params.name.toLowerCase())
-    );
-  }
-  if (params.description) {
-    filteredData = filteredData.filter((item) =>
-      item.description.toLowerCase().includes(params.description.toLowerCase())
-    );
-  }
-  if (params.biobank) {
-    filteredData = filteredData.filter((item) =>
-      item.type.toLowerCase().includes(params.biobank.toLowerCase())
-    );
-  }
-  if (params.lastupdate) {
-    filteredData = filteredData.filter((item) =>
-      item.last_update.toLowerCase().includes(params.lastupdate.toLowerCase())
-    );
-  }
-  if (params.all) {
-    filteredData = filteredData.filter(
-      (item) =>
-        item.name.toLowerCase().includes(params.all.toLowerCase()) ||
-        item.description.toLowerCase().includes(params.all.toLowerCase()) ||
-        item.type.toLowerCase().includes(params.all.toLowerCase()) ||
-        item.last_update.toLowerCase().includes(params.all.toLowerCase())
-    );
-  }
+  try {
+    // Ensure we have valid pagination parameters
+    const page = Math.max(1, params.page || 1);
+    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
 
-  // Returning the data in the format expected by the Table component
-  return {
-    data: filteredData.slice(start, end),
-    pagination: {
-      total_items: filteredData.length,
+    console.log("Using pagination params:", { page, limit });
+
+    const filter = createTableSearchFilter({
+      name: params.name,
+      description: params.description,
+      biobank: params.biobank,
+      lastupdate: params.lastupdate,
+      all: params.all,
       page,
       limit,
-    },
-  };
+      filters: params.filters,
+    });
+
+    console.log("Created search filter:", JSON.stringify(filter, null, 2));
+    const response = await api.searchDecentralized(filter);
+    console.log("API response:", response);
+
+    const tableData = transformSearchResponseToTableData(
+      response as unknown as JsonLdResponse,
+      page,
+      limit
+    );
+
+    // Calculate total pages based on total items and page size
+    const totalPages = Math.ceil(tableData.pagination.total_items / limit);
+
+    // Update pagination info
+    const updatedTableData: TableDataResponse = {
+      data: tableData.data,
+      pagination: {
+        ...tableData.pagination,
+        total_pages: totalPages,
+        has_next: page < totalPages,
+        has_prev: page > 1,
+      },
+    };
+
+    console.log("Transformed table data:", updatedTableData);
+
+    return updatedTableData;
+  } catch (error) {
+    console.error("Error fetching table data:", error);
+    return {
+      data: [],
+      pagination: {
+        total_items: 0,
+        page: params.page || 1,
+        limit: params.limit || 3,
+        total_pages: 0,
+        has_next: false,
+        has_prev: false,
+      },
+    };
+  }
 };
 </script>

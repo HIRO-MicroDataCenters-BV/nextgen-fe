@@ -36,8 +36,8 @@ export interface DropdownMenuItem {
   key: string;
   label: string;
   children?: DropdownMenuItem[];
-  type?: "checkbox" | "select";
-  value?: string;
+  type?: "checkbox" | "select" | "text" | "number";
+  value?: string | number | boolean;
 }
 
 export interface TableDropdownFilterProps {

@@ -123,7 +123,7 @@ const fetchTableData = async (
     });
 
     console.log("Created search filter:", JSON.stringify(filter, null, 2));
-    const response = await api.searchDecentralized(filter);
+    const response = await api.searchLocalCatalog(filter);
     console.log("API response:", response);
 
     const tableData = transformSearchResponseToTableData(

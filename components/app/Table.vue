@@ -21,6 +21,7 @@ import type {
   TableFilter,
   DropdownMenuItem,
 } from "~/types/table.types";
+import { useFilters } from "~/composables/useFilters";
 
 interface TableProps {
   title?: string;
@@ -42,9 +43,11 @@ const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
 const isLoading = ref(true);
 
-const selectedFilters = ref<Record<string, boolean>>({});
+const selectedFilters = ref<Record<string, boolean | string | number>>({});
 
-const handleFilterChange = (key: string, value: boolean) => {
+const { filterGroups, getActiveFilters, resetFilters } = useFilters();
+
+const handleFilterChange = (key: string, value: boolean | string | number) => {
   selectedFilters.value[key] = value;
   fetchData();
 };
@@ -56,6 +59,7 @@ const fetchData = async () => {
     searchValue: searchValue.value,
     selectedFilterColumn: selectedFilterColumn.value,
     selectedFilters: selectedFilters.value,
+    activeFilters: getActiveFilters(),
   });
 
   isLoading.value = true;
@@ -67,7 +71,10 @@ const fetchData = async () => {
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
       }),
-    filters: selectedFilters.value,
+    filters: {
+      ...selectedFilters.value,
+      ...getActiveFilters(),
+    },
   });
 
   isLoading.value = false;
@@ -281,26 +288,18 @@ onMounted(() => {
   fetchData();
 });
 
-const filterItems = ref<DropdownMenuItem[]>([
-  {
-    key: "status",
-    label: t("filter.status"),
-    children: [
-      {
-        key: "isDeleted",
-        type: "checkbox",
-        value: "isDeleted",
-        label: t("filter.isDeleted"),
-      },
-      {
-        key: "isShared",
-        type: "checkbox",
-        value: "isShared",
-        label: t("filter.isShared"),
-      },
-    ],
-  },
-]);
+const filterItems = ref<DropdownMenuItem[]>(
+  filterGroups.value.map((group) => ({
+    key: group.key,
+    label: t(`filters.${group.key}`),
+    children: group.items.map((item) => ({
+      key: item.key,
+      type: item.type,
+      value: item.key,
+      label: t(`filters.${item.key}`),
+    })),
+  }))
+);
 </script>
 
 <template>

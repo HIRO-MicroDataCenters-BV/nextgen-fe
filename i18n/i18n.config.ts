@@ -7,7 +7,7 @@ export default defineI18nConfig(() => {
         app: {
           title: "NextGen",
           description:
-            "Build ML models on institutional medical data at source. Accelerate research, advance treatment, change lives for the better.",
+            "Build ML models on institutional medical data at source. Accelerate research, advance treatment, change lives for the better.",
           copyright: "Copyright {year} © NextGen",
         },
         status: {
@@ -34,6 +34,8 @@ export default defineI18nConfig(() => {
           my_catalog: "Private metadata catalog",
           new_metadata_details: "New metadata details.",
           change_metadata_details: "Change metadata details.",
+          marketplace_description:
+            "Decentralised search across all institutional catalogs",
         },
         text: {
           available_biobank_description:
@@ -62,6 +64,34 @@ export default defineI18nConfig(() => {
           hasMetadata: "Has Metadata",
           hasDistribution: "Has Distribution",
           hasSeries: "Has Series",
+          sociodemographics: "Sociodemographics",
+          age: "Age",
+          gender: "Gender",
+          ethnicity: "Ethnicity",
+          comorbidities: "Comorbidities",
+          previous_myocardial_infarction: "Previous Myocardial Infarction",
+          stroke: "Stroke",
+          chronic_obstructive_pulmonary_disease:
+            "Chronic Obstructive Pulmonary Disease",
+          atrial_fibrillation: "Atrial Fibrillation",
+          peripheral_artery_disease: "Peripheral Artery Disease",
+          hypertension: "Hypertension",
+          diabetes: "Diabetes",
+          hypercholesterolemia: "Hypercholesterolemia",
+          chronic_kidney_disease: "Chronic Kidney Disease",
+          physical_measurements: "Physical Measurements",
+          height: "Height",
+          waist_hip_ratio: "Waist-Hip Ratio",
+          waist_height_ratio: "Waist-Height Ratio",
+          sbp: "Systolic Blood Pressure",
+          lifestyle_habits: "Lifestyle Habits",
+          smoking_history: "Smoking History",
+          filter_types: {
+            checkbox: "Yes/No",
+            select: "Select",
+            number: "Number",
+            text: "Text",
+          },
         },
         column: {
           name: "Name",
@@ -205,7 +235,7 @@ export default defineI18nConfig(() => {
             {
               title: "Full Compliance",
               description:
-                "Access sensitive data while maintaining full compliance with patient privacy laws.",
+                "Access sensitive data while maintaining full compliance with patient privacy laws.",
             },
             {
               title: "Better Models",
@@ -215,7 +245,7 @@ export default defineI18nConfig(() => {
             {
               title: "Share Value, not Data",
               description:
-                "Make your datasets discoverable while keeping them secure and at your grounds.",
+                "Make your datasets discoverable while keeping them secure and at your grounds.",
             },
             {
               title: "Total Access Control",
