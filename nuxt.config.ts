@@ -30,6 +30,11 @@ export default defineNuxtConfig({
       },
     ],
   },
+  dayjs: {
+    locales: ["en"],
+    defaultLocale: "en",
+    plugins: ["utc", "timezone", "quarterOfYear"],
+  },
   colorMode: {
     preference: "system",
     fallback: "light",
