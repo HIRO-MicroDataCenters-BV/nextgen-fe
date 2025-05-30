@@ -84,6 +84,8 @@ interface Props {
 const props = defineProps<Props>();
 const dayjs = useDayjs();
 
+console.log(props.data);
+
 const flattenedData = computed(() => {
   if (!props.data) return [];
   return flattenData(props.data);
@@ -107,10 +109,22 @@ function getDataType(value: unknown): string {
 
 // Helper function to format labels
 function formatLabel(key: string): string {
+  if(key.includes('.')){
+    const parts = key.split('.');
+    const end = parts[parts.length - 1];
+
+    let result = parts[0]
+    if(end.includes('/')){
+      const endParts = end.split('/');
+      if(endParts.length > 1){
+        result += ` / ${endParts[endParts.length - 1]}`;
+      } 
+    } else {
+      result += ` / ${end}`;
+    }
+    return result;
+  }
   return key
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim();
 }
 
 // Helper function to get display value for complex objects
@@ -123,7 +137,16 @@ function getDisplayValue(value: unknown): string {
     if (value.id) return value.id;
     return JSON.stringify(value);
   }
-  return String(value);
+  
+  const stringValue = String(value);
+  
+  // Check if the string looks like a URL and contains slashes
+  if (stringValue.includes('/') && (stringValue.startsWith('http') || stringValue.includes('://'))) {
+    const parts = stringValue.split('/');
+    return parts[parts.length - 1] || stringValue;
+  }
+  
+  return stringValue;
 }
 
 // Function to flatten nested data into a flat structure
