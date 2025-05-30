@@ -42,7 +42,7 @@ setPage({
 
 const baseUrl = page.value.section;
 
-const mock = useMock();
+// const mock = useMock();
 
 // Defining columns for the table
 const columns = [

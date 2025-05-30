@@ -45,7 +45,7 @@ const isLoading = ref(true);
 
 const selectedFilters = ref<Record<string, boolean | string | number>>({});
 
-const { filterGroups, getActiveFilters, resetFilters } = useFilters();
+const { filterGroups, getActiveFilters, resetFilters: _resetFilters } = useFilters();
 
 const handleFilterChange = (key: string, value: boolean | string | number) => {
   selectedFilters.value[key] = value;

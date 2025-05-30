@@ -89,7 +89,7 @@ const router = useRouter();
 
 const emit = defineEmits(["save-form", "discard-form", "upload-file"]);
 
-const isMarketplacePage = computed(() => route.path.startsWith("/marketplace"));
+const _isMarketplacePage = computed(() => route.path.startsWith("/marketplace"));
 // Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
 const isMyCatalogIndexPage = computed(() => route.path === "/my_catalog");
 const isMyCatalogCreatePage = computed(
@@ -105,8 +105,8 @@ const isMyCatalogFormPage = computed(
   () => isMyCatalogCreatePage.value || isMyCatalogEditPage.value
 );
 
-const title = ref(props.title);
-const description = ref(props.description);
+const _title = ref(props.title);
+const _description = ref(props.description);
 const showAvailableBiobanks = ref(props.showAvailableBiobanks);
 console.log("showAvailableBiobanks", showAvailableBiobanks.value);
 /*

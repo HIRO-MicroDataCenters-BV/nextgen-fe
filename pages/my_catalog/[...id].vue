@@ -16,8 +16,8 @@ import {
   createTableSearchFilter,
 } from "~/utils/jsonld";
 
-const { t } = useI18n();
-const dayjs = useDayjs();
+// // const { t } = useI18n();
+  // const dayjs = useDayjs();
 const api = useApi();
 const { setPage, page } = useApp();
 

@@ -147,7 +147,7 @@ export const useFilters = () => {
   ]);
 
   const getActiveFilters = () => {
-    const activeFilters: Record<string, any> = {};
+    const activeFilters: Record<string, unknown> = {};
 
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {

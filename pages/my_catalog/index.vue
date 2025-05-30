@@ -37,7 +37,7 @@ const { t } = useI18n();
 const dayjs = useDayjs();
 const router = useRouter();
 const tableRef = ref();
-const { setPage, page } = useApp();
+const { setPage } = useApp();
 setPage({
   section: "my_catalog",
   title: t("title.my_catalog"),

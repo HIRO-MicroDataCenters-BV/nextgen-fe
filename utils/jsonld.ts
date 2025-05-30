@@ -262,7 +262,7 @@ export function createTableSearchFilter(params: {
  * @param jsonLdData - JSON-LD data structure
  * @returns The dcat:dataset object if found, null otherwise
  */
-export function findDatasetInJsonLd(jsonLdData: any): any | null {
+export function findDatasetInJsonLd(jsonLdData: unknown): unknown | null {
   if (!jsonLdData) return null;
 
   // Check if data has @graph array
@@ -293,7 +293,7 @@ export function convertJsonLdDatasetToJson(
     flattenArrays?: boolean;
     excludeOriginalData?: boolean;
   } = {}
-): Record<string, any> {
+): Record<string, unknown> {
   const {
     preferredLanguage = "en",
     includeRawData = false,
@@ -303,7 +303,7 @@ export function convertJsonLdDatasetToJson(
 
   if (!dataset) return {};
 
-  const result: Record<string, any> = {
+  const result: Record<string, unknown> = {
     id: dataset["@id"] || "",
     type: Array.isArray(dataset["@type"])
       ? dataset["@type"]
@@ -459,7 +459,7 @@ function processJsonLdValue(
   includeRawData: boolean = false,
   depth: number = 0,
   excludeOriginalData: boolean = false
-): any {
+): unknown {
   if (!value) return null;
 
   // Prevent infinite recursion
@@ -501,7 +501,7 @@ function processJsonLdValue(
     }
 
     // Handle regular objects (deep traversal)
-    const result: Record<string, any> = {};
+    const result: Record<string, unknown> = {};
     Object.entries(obj).forEach(([key, val]) => {
       // Convert property name to camelCase for convenience
       const camelKey = key

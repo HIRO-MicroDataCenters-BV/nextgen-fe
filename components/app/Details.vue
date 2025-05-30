@@ -78,7 +78,7 @@ import { Badge } from "~/components/ui/badge";
 import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
 
 interface Props {
-  data: any;
+  data: unknown;
 }
 
 const props = defineProps<Props>();
@@ -90,7 +90,7 @@ const flattenedData = computed(() => {
 });
 
 // Helper function to determine data type
-function getDataType(value: any): string {
+function getDataType(value: unknown): string {
   if (value === null || value === undefined) return "string";
   if (typeof value === "boolean") return "boolean";
   if (typeof value === "number") return "number";
@@ -114,7 +114,7 @@ function formatLabel(key: string): string {
 }
 
 // Helper function to get display value for complex objects
-function getDisplayValue(value: any): string {
+function getDisplayValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object") {
     if (value.label) return value.label;
@@ -127,7 +127,7 @@ function getDisplayValue(value: any): string {
 }
 
 // Function to flatten nested data into a flat structure
-function flattenData(data: any, prefix = ""): any[] {
+function flattenData(data: unknown, prefix = ""): unknown[] {
   const result = [];
 
   for (const [key, value] of Object.entries(data)) {

@@ -7,7 +7,7 @@ export function encodeId(id: string): string {
       .replace(/=/g, "");
 
     return encoded;
-  } catch (error) {
+  } catch {
     throw new Error(`Wrong format for encoding: ${id}`);
   }
 }
@@ -21,7 +21,7 @@ export function decodeId(hash: string): string {
     new URL(decoded);
 
     return decoded;
-  } catch (error) {
+  } catch {
     throw new Error(`Wrong format for decoding: ${hash}`);
   }
 }
