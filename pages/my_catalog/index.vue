@@ -29,6 +29,7 @@ import {
 } from "~/utils/jsonld";
 import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
+import type { SearchFilter } from "~/types/api.types";
 
 const { deleteDataset } = useApi();
 
@@ -36,17 +37,34 @@ const { t } = useI18n();
 const dayjs = useDayjs();
 const router = useRouter();
 const tableRef = ref();
+const { setPage, page } = useApp();
+setPage({
+  section: "my_catalog",
+  title: t("title.my_catalog"),
+  subtitle: t("subtitle.my_catalog"),
+});
 
-const navigateToEdit = (id: string) => {
-  router.push(`/my_catalog/${id}/edit`);
-};
 
 // Defining columns for the table
 const columns: TableColumn[] = [
   {
     id: "name",
     header: () => t("label.data_product_name"),
-    cell: ({ row }) => row.getValue("name") as string,
+    cell: ({ row }) => {
+      const item = row.original as CatalogItem;
+      const idArr = item.id.split("/");
+      const id = item.id.includes("/") ? idArr[idArr.length - 1] : item.id;
+      
+      return h(
+        Button,
+        {
+          onClick: () => router.push(`/my_catalog/${id}`),
+          variant: "link",
+          class: "p-0 h-auto font-normal text-left justify-start",
+        },
+        () => [row.getValue("name") as string]
+      );
+    },
   },
   {
     id: "description",
@@ -78,9 +96,7 @@ const columns: TableColumn[] = [
     header: () => t("label.actions"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
-      console.log(item);
-      const idArr = item.id.split("/");
-      const id = item.id.includes("/") ? idArr[idArr.length - 1] : item.id;
+      const id = item.id;
       console.log(id);
 
       return h(DropdownAction, {
@@ -126,11 +142,13 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters: params.filters,
+      filters: params.filters && Object.keys(params.filters).length > 0
+          ? params.filters
+          : undefined,
     });
 
     console.log("Created search filter:", JSON.stringify(filter, null, 2));
-    const response = await api.searchLocalCatalog(filter);
+    const response = await api.searchLocalCatalog(filter as SearchFilter);
     console.log("API response:", response);
 
     const tableData = transformSearchResponseToTableData(

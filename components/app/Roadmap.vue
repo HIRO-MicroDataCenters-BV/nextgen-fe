@@ -9,7 +9,7 @@
       </h4>
       <Separator class="mb-4" />
     </div>
-    <div class="roadmap-item" v-for="item in roadmap" :key="item.id">
+    <div v-for="item in roadmap" :key="item.id" class="roadmap-item">
       <div class="roadmap-item-content grid grid-cols-2 gap-4">
         <div>
           <p>

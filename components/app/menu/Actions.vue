@@ -9,7 +9,7 @@ interface Item {
 const { t } = useI18n();
 const props = defineProps<{
   items: Item[];
-  id: number;
+  id: string;
   title: string;
 }>();
 

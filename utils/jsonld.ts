@@ -236,65 +236,7 @@ export function createTableSearchFilter(params: {
   // Add boolean filters if provided
   if (params.filters) {
     filter.filters = params.filters;
-    /*
-    const booleanFilters = Object.entries(params.filters)
-      .filter(([_, value]) => value === true)
-      .map(([key]) => key);
-
-    if (booleanFilters.length > 0) {
-      filter.filters.push({
-        "@type": "Filters",
-        "dcat:dataset": {
-          extraMetadata: {
-            "@type": "med:Record",
-            ...booleanFilters.reduce(
-              (acc, key) => ({
-                ...acc,
-                [`med:${key}`]: true,
-              }),
-              {}
-            ),
-          },
-        },
-      });
-    }
-      */
   }
-
-  // Add search filters if provided
-  /*
-  if (
-    params.name ||
-    params.description ||
-    params.biobank ||
-    params.lastupdate ||
-    params.all
-  ) {
-    const searchFilter: { "@type": string; [key: string]: unknown } = {
-      "@type": "SearchFilter",
-    };
-
-    if (params.name) {
-      searchFilter["dcterms:title"] = params.name;
-    }
-    if (params.description) {
-      searchFilter["dcterms:description"] = params.description;
-    }
-    if (params.biobank) {
-      searchFilter["dspace:biobank"] = params.biobank;
-    }
-    if (params.lastupdate) {
-      searchFilter["dcterms:modified"] = params.lastupdate;
-    }
-    if (params.all) {
-      searchFilter["dspace:search"] = params.all;
-    }
-
-    filter.filters.push(searchFilter);
-
-    
-  }
-    */
 
   // TEMPORARY: Disable pagination
   const DISABLE_PAGINATION = true;
@@ -543,9 +485,9 @@ function processJsonLdValue(
     // Handle JSON-LD value objects
     if ("@value" in obj) {
       if ("@language" in obj) {
-        return getLanguageValue(obj as JsonLdLanguageValue, preferredLanguage);
+        return getLanguageValue(obj as unknown as JsonLdLanguageValue, preferredLanguage);
       }
-      return getJsonLdValue(obj as JsonLdValue);
+      return getJsonLdValue(obj as unknown as JsonLdValue);
     }
 
     // Handle nested JSON-LD objects (deep traversal)

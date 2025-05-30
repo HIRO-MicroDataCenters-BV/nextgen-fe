@@ -2,6 +2,7 @@
   <AppContent
     :title="t('title.marketplace')"
     :description="t('subtitle.marketplace')"
+    :show-available-biobanks="true"
   >
     <AppTable
       :title="'marketplace'"
@@ -13,7 +14,6 @@
 </template>
 
 <script setup lang="ts">
-import type { TableColumn } from "~/types/table.types";
 import type {
   CatalogItem,
   TableFetchParams,
@@ -28,7 +28,7 @@ import {
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
 
-import { encodeId, decodeId } from "~/utils";
+import type { SearchFilter } from "~/types/api.types";
 
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -36,6 +36,8 @@ const { page, setPage } = useApp();
 
 setPage({
   section: "marketplace",
+  title: t("title.marketplace"),
+  subtitle: t("subtitle.marketplace"),
 });
 
 const baseUrl = page.value.section;
@@ -100,7 +102,7 @@ const fetchTableData = async (
     console.log("params", params);
 
     console.log("Created search filter:", JSON.stringify(filter, null, 2));
-    const response = await api.searchDecentralized(filter);
+    const response = await api.searchDecentralized(filter as SearchFilter);
     console.log("API response:", response);
 
     const tableData = transformSearchResponseToTableData(

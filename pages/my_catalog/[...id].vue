@@ -9,6 +9,7 @@
 </template>
 
 <script lang="ts" setup>
+import type { SearchFilter } from "~/types/api.types";
 import {
   findDatasetInJsonLd,
   convertJsonLdDatasetToJson,
@@ -40,7 +41,7 @@ onMounted(async () => {
     });
 
     console.log("Created search filter:", filter);
-    const response = await api.searchDecentralized(filter);
+    const response = await api.searchLocalCatalog(filte as SearchFilter);
     const dataset = findDatasetInJsonLd(response);
 
     if (dataset) {

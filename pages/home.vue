@@ -4,7 +4,7 @@
       class="flex flex-col gap-4 justify-center items-center w-sm max-w-full mx-auto text-center mb-8"
     >
       <div class="flex justify-center items-center w-full mb-2">
-        <img src="/images/logo.svg" class="size-8" alt="cog-logo" />
+        <img src="/images/logo.svg" class="size-8" alt="cog-logo" >
       </div>
       <h1 class="text-4xl font-bold">{{ $t("app.title") }}</h1>
       <p class="text-sm text-black">
@@ -29,7 +29,7 @@
           <div class="flex justify-center items-start w-full mb-12 gap-6">
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/folder2.png" class="max-w-full" />
+                <img src="/images/folder2.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[0].title") }}</h4>
@@ -40,7 +40,7 @@
             </div>
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/shield.png" class="max-w-full" />
+                <img src="/images/shield.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[1].title") }}</h4>
@@ -51,7 +51,7 @@
             </div>
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/processor.png" class="max-w-full" />
+                <img src="/images/processor.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[2].title") }}</h4>
@@ -87,7 +87,7 @@
           <div class="flex justify-center items-start w-full mb-12 gap-6">
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/folder.png" class="max-w-full" />
+                <img src="/images/folder.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[3].title") }}</h4>
@@ -98,7 +98,7 @@
             </div>
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/lock.png" class="max-w-full" />
+                <img src="/images/lock.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[4].title") }}</h4>
@@ -109,7 +109,7 @@
             </div>
             <div class="overflow-hidden rounded-xl w-[256px]">
               <div>
-                <img src="/images/glass.png" class="max-w-full" />
+                <img src="/images/glass.png" class="max-w-full" >
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[5].title") }}</h4>
