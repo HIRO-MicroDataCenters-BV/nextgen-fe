@@ -3,18 +3,18 @@
     <div class="flex-auto">
       <div class="flex items-center">
         <h1 class="text-lg font-semibold">
-          {{ currentPageTitle }}
+          {{ page.title }}
         </h1>
       </div>
       <p class="text-small text-muted-foreground">
-        {{ currentPageDescription }}
+        {{ page.subtitle }}
       </p>
     </div>
     <div class="flex items-center space-x-2">
       <!-- Button Groups: Use v-if / v-else-if for mutually exclusive sets -->
 
       <!-- Marketplace Page Buttons -->
-      <Popover v-if="isMarketplacePage">
+      <Popover v-if="showAvailableBiobanks">
         <PopoverTrigger as-child>
           <Button variant="secondary">{{
             t("action.available_biobanks")
@@ -45,7 +45,7 @@
                   >
                     <span
                       ><img :src="`/images/icons/${item.icon}.png`" alt=""
-                    ></span>
+                    /></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>
@@ -75,6 +75,14 @@ import { useRoute, useRouter } from "vue-router";
 import Toolbar from "./header/Toolbar.vue";
 import type { ToolbarButton } from "~/types/toolbar.types";
 
+const { page } = useApp();
+
+const props = defineProps<{
+  title: string;
+  description?: string;
+  showAvailableBiobanks?: boolean;
+}>();
+
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -97,6 +105,11 @@ const isMyCatalogFormPage = computed(
   () => isMyCatalogCreatePage.value || isMyCatalogEditPage.value
 );
 
+const title = ref(props.title);
+const description = ref(props.description);
+const showAvailableBiobanks = ref(props.showAvailableBiobanks);
+console.log("showAvailableBiobanks", showAvailableBiobanks.value);
+/*
 const currentPageTitle = computed(() => {
   if (isMyCatalogCreatePage.value) return t("title.create");
   if (isMyCatalogEditPage.value) return t("title.edit");
@@ -112,7 +125,7 @@ const currentPageDescription = computed(() => {
   if (isMarketplacePage.value) return t("subtitle.marketplace_description");
   return "";
 });
-
+*/
 const navigateToCreateCatalogItem = () => {
   router.push("/my_catalog/create");
 };

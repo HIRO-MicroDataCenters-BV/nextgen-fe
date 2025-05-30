@@ -48,24 +48,6 @@ export default defineNuxtConfig({
     componentDir: "./components/ui",
   },
   css: ["~/assets/css/tailwind.css"],
-  proxy: {
-    options: [
-      {
-        target: "http://localhost:8080",
-        pathFilter: ["/api/search/**"],
-        pathRewrite: {
-          "^/api/search": "",
-        },
-      },
-      {
-        target: "http://localhost:8081",
-        pathFilter: ["/api/catalog/**"],
-        pathRewrite: {
-          "^/api/catalog": "",
-        },
-      },
-    ],
-  },
   runtimeConfig: {
     public: {
       apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL,

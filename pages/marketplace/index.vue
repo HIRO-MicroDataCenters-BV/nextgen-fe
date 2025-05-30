@@ -20,12 +20,15 @@ import type {
   TableDataResponse,
 } from "~/types/catalog.types";
 import type { JsonLdResponse } from "~/types/jsonld.types";
+import Button from "@/components/ui/button/Button.vue";
 import {
   createTableSearchFilter,
   transformSearchResponseToTableData,
 } from "~/utils/jsonld";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
+
+import { encodeId, decodeId } from "~/utils";
 
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -42,30 +45,26 @@ const mock = useMock();
 // Defining columns for the table
 const columns = [
   {
-    id: "id",
-    cell: ({ row }) => row.getValue("id"),
-  },
-  {
     id: "name",
-    cell: ({ row }) => row.getValue("name"),
-  },
-  {
-    id: "biobank",
-    cell: ({ row }) =>
-      h(
-        "a",
-        { href: `${baseUrl}/${row.getValue("id")}` },
-        row.getValue("biobank")
-      ),
-  },
+    cell: ({ row }) => {
+      const item = row.original as CatalogItem;
+      const id = item.id;
+      console.log("id", id);
 
+      return h(
+        Button,
+        { as: "a", variant: "link", class: "p-0", href: `${baseUrl}/${id}` },
+        row.getValue("name")
+      );
+    },
+  },
   {
     id: "description",
     cell: ({ row }) => row.getValue("description"),
   },
   {
-    id: "last_update",
-    cell: ({ row }) => dayjs(row.getValue("last_update")).format("DD/MM/YYYY"),
+    id: "issued",
+    cell: ({ row }) => dayjs(row.getValue("issued")).format("DD/MM/YYYY"),
   },
 ];
 
@@ -93,8 +92,12 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters: params.filters,
+      filters:
+        params.filters && Object.keys(params.filters).length > 0
+          ? params.filters
+          : undefined,
     });
+    console.log("params", params);
 
     console.log("Created search filter:", JSON.stringify(filter, null, 2));
     const response = await api.searchDecentralized(filter);

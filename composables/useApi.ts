@@ -19,6 +19,7 @@ export const useApi = () => {
     search: config.public.apiSearchServiceUrl,
     catalog: config.public.apiCatalogServiceUrl,
   };
+  console.log("serviceUrls", serviceUrls);
 
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
@@ -68,6 +69,7 @@ export const useApi = () => {
     }
   ) => {
     const baseUrl = serviceUrls[service];
+    console.log("baseUrl", baseUrl);
     const isFormData = body instanceof FormData;
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;

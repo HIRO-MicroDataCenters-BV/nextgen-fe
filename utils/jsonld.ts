@@ -109,9 +109,9 @@ export function transformDatasetToTableRow(
         ),
       }
     : null;
-
+  // Transform dataset to table row format
   const result: DatasetMetadata = {
-    id: String(dataset["@id"] || ""),
+    id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
     name: getLanguageValue(dataset["dcterms:title"] as JsonLdLanguageValue),
     description: getLanguageValue(
       dataset["dcterms:description"] as JsonLdLanguageValue
@@ -226,8 +226,8 @@ export function createTableSearchFilter(params: {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
       dcterms: "http://purl.org/dc/terms/",
-      dspace: "http://data-space.org/",
-      med: "http://oca.example.org/123/",
+      med: "http://med.example.org/",
+      Filters: "http://data-space.org/Filters",
     },
     "@type": "Filters",
     filters: [],
@@ -235,6 +235,8 @@ export function createTableSearchFilter(params: {
 
   // Add boolean filters if provided
   if (params.filters) {
+    filter.filters = params.filters;
+    /*
     const booleanFilters = Object.entries(params.filters)
       .filter(([_, value]) => value === true)
       .map(([key]) => key);
@@ -256,9 +258,11 @@ export function createTableSearchFilter(params: {
         },
       });
     }
+      */
   }
 
   // Add search filters if provided
+  /*
   if (
     params.name ||
     params.description ||
@@ -287,7 +291,10 @@ export function createTableSearchFilter(params: {
     }
 
     filter.filters.push(searchFilter);
+
+    
   }
+    */
 
   // TEMPORARY: Disable pagination
   const DISABLE_PAGINATION = true;
@@ -297,7 +304,7 @@ export function createTableSearchFilter(params: {
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 10);
 
-    filter.filters.push({
+    (filter.filters as Array<unknown>).push({
       "@type": "PaginationFilter",
       "dspace:page": page,
       "dspace:pageSize": limit,
@@ -306,4 +313,279 @@ export function createTableSearchFilter(params: {
 
   console.log("Final search filter:", filter);
   return filter;
+}
+
+/**
+ * Find dcat:dataset element in JSON-LD data
+ * @param jsonLdData - JSON-LD data structure
+ * @returns The dcat:dataset object if found, null otherwise
+ */
+export function findDatasetInJsonLd(jsonLdData: any): any | null {
+  if (!jsonLdData) return null;
+
+  // Check if data has @graph array
+  const graph = jsonLdData["@graph"] || [jsonLdData];
+
+  // Iterate through graph items
+  for (const item of graph) {
+    // Check if item has dcat:dataset property
+    if (item["dcat:dataset"]) {
+      return item["dcat:dataset"];
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Convert JSON-LD dataset to convenient JSON format for template rendering
+ * @param dataset - JSON-LD dataset object
+ * @param options - Conversion options
+ * @returns Converted dataset in convenient format
+ */
+export function convertJsonLdDatasetToJson(
+  dataset: JsonLdObject,
+  options: {
+    preferredLanguage?: string;
+    includeRawData?: boolean;
+    flattenArrays?: boolean;
+    excludeOriginalData?: boolean;
+  } = {}
+): Record<string, any> {
+  const {
+    preferredLanguage = "en",
+    includeRawData = false,
+    flattenArrays = true,
+    excludeOriginalData = false,
+  } = options;
+
+  if (!dataset) return {};
+
+  const result: Record<string, any> = {
+    id: dataset["@id"] || "",
+    type: Array.isArray(dataset["@type"])
+      ? dataset["@type"]
+      : [dataset["@type"] || ""],
+  };
+
+  // Process each property in the dataset
+  Object.entries(dataset).forEach(([key, value]) => {
+    if (key.startsWith("@")) {
+      // Skip @id and @type as they're already processed
+      if (key !== "@id" && key !== "@type") {
+        result[key] = value;
+      }
+      return;
+    }
+
+    // Convert property name to camelCase for convenience
+    const camelKey = key
+      .replace(/[:-]/g, "_")
+      .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+    const processedValue = processJsonLdValue(
+      value,
+      preferredLanguage,
+      flattenArrays,
+      includeRawData,
+      0,
+      excludeOriginalData
+    );
+
+    if (!excludeOriginalData) {
+      result[key] = processedValue;
+    }
+
+    // Always provide camelCase version
+    result[camelKey] = processedValue;
+  });
+
+  // Add structured data for common properties
+  if (dataset["dcterms:title"]) {
+    result.title = getLanguageValue(
+      dataset["dcterms:title"] as JsonLdLanguageValue,
+      preferredLanguage
+    );
+  }
+
+  if (dataset["dcterms:description"]) {
+    result.description = getLanguageValue(
+      dataset["dcterms:description"] as JsonLdLanguageValue,
+      preferredLanguage
+    );
+  }
+
+  if (dataset["dcterms:identifier"]) {
+    result.identifier = getJsonLdValue(
+      dataset["dcterms:identifier"] as JsonLdStringValue
+    );
+  }
+
+  if (dataset["dcterms:modified"]) {
+    result.lastModified = getJsonLdValue(
+      dataset["dcterms:modified"] as JsonLdStringValue
+    );
+  }
+
+  if (dataset["dcterms:issued"]) {
+    result.issued = getJsonLdValue(
+      dataset["dcterms:issued"] as JsonLdStringValue
+    );
+  }
+
+  if (dataset["dcat:keyword"]) {
+    result.keywords = Array.isArray(dataset["dcat:keyword"])
+      ? dataset["dcat:keyword"].map((k) =>
+          getJsonLdValue(k as JsonLdStringValue)
+        )
+      : [getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue)];
+  }
+
+  if (dataset["dcat:theme"]) {
+    result.themes = Array.isArray(dataset["dcat:theme"])
+      ? dataset["dcat:theme"].map((theme: JsonLdObject) => ({
+          id: theme["@id"],
+          label: getLanguageValue(
+            theme["skos:prefLabel"] as JsonLdLanguageValue,
+            preferredLanguage
+          ),
+          raw: includeRawData ? theme : undefined,
+        }))
+      : [
+          {
+            id: (dataset["dcat:theme"] as JsonLdObject)["@id"],
+            label: getLanguageValue(
+              (dataset["dcat:theme"] as JsonLdObject)[
+                "skos:prefLabel"
+              ] as JsonLdLanguageValue,
+              preferredLanguage
+            ),
+            raw: includeRawData ? dataset["dcat:theme"] : undefined,
+          },
+        ];
+  }
+
+  if (dataset["dcterms:publisher"]) {
+    const publisher = dataset["dcterms:publisher"] as JsonLdObject;
+    result.publisher = {
+      id: publisher["@id"],
+      name: getJsonLdValue(publisher["foaf:name"] as JsonLdStringValue),
+      identifier: getJsonLdValue(
+        publisher["dcterms:identifier"] as JsonLdStringValue
+      ),
+      raw: includeRawData ? publisher : undefined,
+    };
+  }
+
+  if (dataset["dcat:distribution"]) {
+    const dist = dataset["dcat:distribution"] as JsonLdDistribution;
+    result.distribution = {
+      id: dist["@id"],
+      description: getLanguageValue(
+        dist["dcterms:description"] as JsonLdLanguageValue,
+        preferredLanguage
+      ),
+      accessURL: dist["dcat:accessURL"]["@id"],
+      format: getJsonLdValue(dist["dcat:format"] as JsonLdStringValue),
+      byteSize: getJsonLdValue(dist["dcat:byteSize"] as JsonLdLongValue),
+      availability: {
+        id: dist["dcatap:availability"]["@id"],
+        label: getLanguageValue(
+          dist["dcatap:availability"]["skos:prefLabel"] as JsonLdLanguageValue,
+          preferredLanguage
+        ),
+      },
+      raw: includeRawData ? dist : undefined,
+    };
+  }
+
+  // Include raw data if requested
+  if (includeRawData) {
+    result._raw = dataset;
+  }
+
+  return result;
+}
+
+/**
+ * Process JSON-LD value recursively
+ */
+function processJsonLdValue(
+  value: unknown,
+  preferredLanguage: string,
+  flattenArrays: boolean,
+  includeRawData: boolean = false,
+  depth: number = 0,
+  excludeOriginalData: boolean = false
+): any {
+  if (!value) return null;
+
+  // Prevent infinite recursion
+  if (depth > 10) return value;
+
+  if (Array.isArray(value)) {
+    const processed = value.map((v) =>
+      processJsonLdValue(
+        v,
+        preferredLanguage,
+        flattenArrays,
+        includeRawData,
+        depth + 1,
+        excludeOriginalData
+      )
+    );
+    return flattenArrays && processed.length === 1 ? processed[0] : processed;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, unknown>;
+
+    // Handle JSON-LD value objects
+    if ("@value" in obj) {
+      if ("@language" in obj) {
+        return getLanguageValue(obj as JsonLdLanguageValue, preferredLanguage);
+      }
+      return getJsonLdValue(obj as JsonLdValue);
+    }
+
+    // Handle nested JSON-LD objects (deep traversal)
+    if ("@id" in obj || "@type" in obj) {
+      return convertJsonLdDatasetToJson(obj as JsonLdObject, {
+        preferredLanguage,
+        flattenArrays,
+        includeRawData,
+        excludeOriginalData,
+      });
+    }
+
+    // Handle regular objects (deep traversal)
+    const result: Record<string, any> = {};
+    Object.entries(obj).forEach(([key, val]) => {
+      // Convert property name to camelCase for convenience
+      const camelKey = key
+        .replace(/[:-]/g, "_")
+        .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+      const processedValue = processJsonLdValue(
+        val,
+        preferredLanguage,
+        flattenArrays,
+        includeRawData,
+        depth + 1,
+        excludeOriginalData
+      );
+
+      if (!excludeOriginalData) {
+        result[key] = processedValue;
+      }
+
+      // Also provide camelCase version if different from original
+      if (camelKey !== key) {
+        result[camelKey] = processedValue;
+      }
+    });
+    return result;
+  }
+
+  return value;
 }

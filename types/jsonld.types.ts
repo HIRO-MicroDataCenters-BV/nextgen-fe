@@ -108,12 +108,10 @@ export interface SearchFilter {
     "@vocab": string;
     dcat: string;
     dcterms: string;
-    dspace: string;
+    dspace?: string;
     med: string;
+    Filters?: "Filters" | string;
   };
-  "@type": "Filters";
-  filters: Array<{
-    "@type": string;
-    [key: string]: unknown;
-  }>;
+  "@type": string;
+  filters: unknown;
 }

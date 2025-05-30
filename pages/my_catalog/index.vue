@@ -4,6 +4,7 @@
     :description="t('subtitle.my_catalog')"
   >
     <AppTable
+      ref="tableRef"
       :title="'my_catalog'"
       :columns="columns"
       :data-source="fetchTableData"
@@ -27,10 +28,14 @@ import {
   transformSearchResponseToTableData,
 } from "~/utils/jsonld";
 import { Button } from "@/components/ui/button";
+import DropdownAction from "~/components/app/menu/Actions.vue";
+
+const { deleteDataset } = useApi();
 
 const { t } = useI18n();
 const dayjs = useDayjs();
 const router = useRouter();
+const tableRef = ref();
 
 const navigateToEdit = (id: string) => {
   router.push(`/my_catalog/${id}/edit`);
@@ -77,21 +82,23 @@ const columns: TableColumn[] = [
       const idArr = item.id.split("/");
       const id = item.id.includes("/") ? idArr[idArr.length - 1] : item.id;
       console.log(id);
-      return h("div", { class: "flex space-x-2" }, [
-        h(
-          Button,
+
+      return h(DropdownAction, {
+        title: row.getValue("dataset_name") as string,
+        id,
+        items: [
           {
-            variant: "ghost",
-            size: "sm",
-            class: "items-center",
-            onClick: () => navigateToEdit(id),
+            key: "delete_dataset",
+            label: "delete_dataset",
+            hasConfirmation: true,
+            action: async () => {
+              await deleteDataset(id);
+              tableRef.value.fetchData();
+            },
           },
-          () => [t("action.edit")]
-        ),
-      ]);
+        ],
+      });
     },
-    enableSorting: false,
-    enableHiding: false,
   },
 ];
 

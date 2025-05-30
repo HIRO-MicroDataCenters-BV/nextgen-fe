@@ -1,94 +1,219 @@
 <template>
-    <AppContent :title="page.title" :description="page.subtitle" :show-available-biobanks="false">
-        <div v-if="content" class="px-10">
+  <AppContent
+    :title="page.title"
+    :description="page.subtitle"
+    :show-available-biobanks="false"
+  >
+    <div v-if="datasetData" class="px-10">
       <Table class="w-full table-fixed">
         <TableBody>
           <TableRow
-            v-for="(item, index) in schema"
+            v-for="(item, index) in flattenedData"
             :key="`content-item-${index}`"
           >
-            <TableCell class="text-left pb-4 pr-8 border-none text-gray-400 uppercase">{{
-              t(`label.${item.key}`)
-            }}</TableCell>
-            <TableCell class="text-left pb-4 pr-8 border-none flex flex-wrap gap-2 py-8">
-              <template v-if="item.type === 'text'">
-                {{ content[item.key] }}
+            <TableCell
+              class="text-left pb-4 pr-8 border-none text-gray-400 uppercase align-top overflow-hidden"
+            >
+              <span class="w-full overflow-elipsis overflow-hidden">
+                {{ formatLabel(item.key) }}
+              </span>
+            </TableCell>
+            <TableCell class="text-left pb-4 pr-8 border-none py-8">
+              <!-- String/Text -->
+              <template v-if="item.type === 'string'">
+                <span class="text-gray-900">{{ item.value }}</span>
               </template>
+
+              <!-- Date -->
               <template v-if="item.type === 'date'">
-                {{ dayjs(content[item.key]).format('YYYY-MM-DD HH:mm:ss') }}
+                <span class="text-gray-900">
+                  {{ dayjs(item.value).format("YYYY-MM-DD HH:mm:ss") }}
+                </span>
               </template>
+
+              <!-- Boolean -->
+              <template v-if="item.type === 'boolean'">
+                <Icon name="lucide:check" />
+              </template>
+
+              <!-- Array -->
               <template v-if="item.type === 'array'">
-                <span v-for="field in content[item.key]" :key="field" class="rounded-md">{{ field }}</span>
+                <div class="flex flex-wrap gap-2">
+                  <Badge
+                    v-for="(arrayItem, arrayIndex) in item.value"
+                    :key="arrayIndex"
+                    variant="secondary"
+                  >
+                    {{ getDisplayValue(arrayItem) }}
+                  </Badge>
+                </div>
+              </template>
+
+              <!-- Object -->
+              <template v-if="item.type === 'object'">
+                <div class="space-y-2">
+                  <div
+                    v-for="(objValue, objKey) in item.value"
+                    :key="objKey"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="text-sm text-gray-500 min-w-20 overflow-hidden"
+                      >{{ objKey }}:</span
+                    >
+                    <span class="text-gray-900">{{
+                      getDisplayValue(objValue)
+                    }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Number -->
+              <template v-if="item.type === 'number'">
+                <span class="text-gray-900 font-mono">{{ item.value }}</span>
               </template>
             </TableCell>
           </TableRow>
         </TableBody>
       </Table>
     </div>
-    </AppContent>
-  </template>
-  
-  <script lang="ts" setup>
-  const { t } = useI18n();
-  const dayjs = useDayjs();
-  //const { fetchDatasets } = useApi();
-  const { setPage, page } = useApp();
-  const content = ref();
-  const schema = [
-    {
-        key: "theme",
-        type: "array",
-    },
-    {
-        key: "creator",
-        type: "text",
-    },
-    {
-        key: "license",
-        type: "text",
-    },
-    {
-        key: "issued",
-        type: "date",
-    },
-    {
-        key: "last_update",
-        type: "date",
-    },
-  ];
-  
-  onMounted(async () => {
-    content.value = {
-      theme: ["Clinical", "Genomics"],
-      creator: "EMBL_EBI",
-      license: "Open Access",
-      issued: "2021-01-01 00:45:00",
-      last_update: "2024-01-01 02:13:00",
-      title: "Biobank",
-      description: "Biobank description",
-    };
-    setPage({
-        section: 'marketplace',
-        title: content.value.title as string,
-        subtitle: content.value.description as string,
-    });
-    /*
-    const res = await fetchDatasets({ id: id.value });
-    if (res && 'data' in res && res.data && Array.isArray(res.data)) {
-      const data = res.data;
-      content.value = data[0];
-      if (content.value) {
-        console.log(content);
-        setPage({
-          section: 'dataset_management',
-          title: content.value.dataset_name as string,
-          subtitle: content.value.description as string,
+  </AppContent>
+</template>
+
+<script lang="ts" setup>
+import {
+  findDatasetInJsonLd,
+  convertJsonLdDatasetToJson,
+  createTableSearchFilter,
+} from "~/utils/jsonld";
+import { Badge } from "~/components/ui/badge";
+import { Switch } from "~/components/ui/switch";
+
+const { t } = useI18n();
+const dayjs = useDayjs();
+const api = useApi();
+const { setPage, page } = useApp();
+
+const datasetData = ref();
+const flattenedData = ref([]);
+
+const route = useRoute();
+const datasetId = route.params.id;
+
+// Helper function to determine data type
+function getDataType(value: any): string {
+  if (value === null || value === undefined) return "string";
+  if (typeof value === "boolean") return "boolean";
+  if (typeof value === "number") return "number";
+  if (Array.isArray(value)) return "array";
+  if (typeof value === "object") return "object";
+  if (typeof value === "string") {
+    // Check if it's a date string
+    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+    if (dateRegex.test(value)) return "date";
+    return "string";
+  }
+  return "string";
+}
+
+// Helper function to format labels
+function formatLabel(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
+}
+
+// Helper function to get display value for complex objects
+function getDisplayValue(value: any): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object") {
+    if (value.label) return value.label;
+    if (value.name) return value.name;
+    if (value.title) return value.title;
+    if (value.id) return value.id;
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+// Function to flatten nested data into a flat structure
+function flattenData(data: any, prefix = ""): any[] {
+  const result = [];
+
+  for (const [key, value] of Object.entries(data)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    const type = getDataType(value);
+
+    // Skip certain system keys
+    if (key.startsWith("@") || key === "type") continue;
+
+    if (type === "object" && value && !Array.isArray(value)) {
+      // For simple objects, show as object type
+      if (Object.keys(value).length <= 5) {
+        result.push({
+          key: fullKey,
+          value,
+          type: "object",
         });
+      } else {
+        // For complex objects, flatten them
+        result.push(...flattenData(value, fullKey));
+      }
+    } else {
+      result.push({
+        key: fullKey,
+        value,
+        type,
+      });
+    }
+  }
+
+  return result;
+}
+
+onMounted(async () => {
+  try {
+    const filter = createTableSearchFilter({
+      filters: [
+        {
+          "@type": "dcat:Catalog",
+          "dcat:dataset": {
+            "@type": "dcat:Dataset",
+            "dcterms:identifier": datasetId,
+          },
+        },
+      ],
+    });
+
+    console.log("Created search filter:", filter);
+    const response = await api.searchDecentralized(filter);
+    const dataset = findDatasetInJsonLd(response);
+
+    if (dataset) {
+      const data = convertJsonLdDatasetToJson(dataset, {
+        preferredLanguage: "en",
+        includeRawData: false,
+        flattenArrays: true,
+        excludeOriginalData: true,
+      });
+
+      console.log("Dataset:", dataset, data);
+
+      datasetData.value = data;
+      flattenedData.value = flattenData(data);
+
+      if (data) {
+        setPage({
+          title: data.title || "Dataset",
+          subtitle: data.description || "",
+        });
+        console.log("SETO!");
       }
     }
-      */
-  });
-  </script>
-  
-  <style></style>
-  
+  } catch (error) {
+    console.error("Error loading dataset:", error);
+  }
+});
+</script>
+
+<style></style>
