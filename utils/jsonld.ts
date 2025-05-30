@@ -157,7 +157,7 @@ export function transformSearchResponseToTableData(
     has_prev: boolean;
   };
 } {
-  if (!response || !response["@graph"]) {
+  if (!response) {
     return {
       data: [],
       pagination: {
@@ -171,24 +171,38 @@ export function transformSearchResponseToTableData(
     };
   }
 
-  // Get the graph array from the response
-  const graph = response["@graph"];
-
   // Extract datasets from catalogs
   const datasets: JsonLdObject[] = [];
-  graph.forEach((item) => {
-    if (item["@type"] === "dcat:Catalog" && item["dcat:dataset"]) {
-      const catalogDatasets = Array.isArray(item["dcat:dataset"])
-        ? item["dcat:dataset"]
-        : [item["dcat:dataset"]];
+  
+  // Handle response with @graph structure
+  if (response["@graph"]) {
+    const graph = response["@graph"];
+    graph.forEach((item) => {
+      if (item["@type"] === "dcat:Catalog" && item["dcat:dataset"]) {
+        const catalogDatasets = Array.isArray(item["dcat:dataset"])
+          ? item["dcat:dataset"]
+          : [item["dcat:dataset"]];
 
-      catalogDatasets.forEach((dataset) => {
-        if (dataset["@type"] === "dcat:Dataset") {
-          datasets.push(dataset);
-        }
-      });
-    }
-  });
+        catalogDatasets.forEach((dataset) => {
+          if (dataset["@type"] === "dcat:Dataset") {
+            datasets.push(dataset);
+          }
+        });
+      }
+    });
+  }
+  // Handle direct catalog structure (new format)
+  else if (response["@type"] === "dcat:Catalog" && response["dcat:dataset"]) {
+    const catalogDatasets = Array.isArray(response["dcat:dataset"])
+      ? response["dcat:dataset"]
+      : [response["dcat:dataset"]];
+
+    catalogDatasets.forEach((dataset) => {
+      if (dataset["@type"] === "dcat:Dataset") {
+        datasets.push(dataset);
+      }
+    });
+  }
 
   const transformedData = datasets.map(transformDatasetToTableRow);
   const totalPages = Math.ceil(transformedData.length / currentLimit);
@@ -272,7 +286,18 @@ export function findDatasetInJsonLd(jsonLdData: unknown): unknown | null {
   for (const item of graph) {
     // Check if item has dcat:dataset property
     if (item["dcat:dataset"]) {
-      return item["dcat:dataset"];
+      const datasets = item["dcat:dataset"];
+      // If dcat:dataset is an array, return the first dataset
+      if (Array.isArray(datasets) && datasets.length > 0) {
+        return datasets[0];
+      }
+      // If dcat:dataset is a single object, return it
+      return datasets;
+    }
+    
+    // Check if the item itself is a dataset (for direct catalog structure)
+    if (item["@type"] === "dcat:Dataset") {
+      return item;
     }
   }
 

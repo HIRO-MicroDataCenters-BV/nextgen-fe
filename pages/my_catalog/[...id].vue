@@ -41,7 +41,7 @@ onMounted(async () => {
     });
 
     console.log("Created search filter:", filter);
-    const response = await api.searchLocalCatalog(filte as SearchFilter);
+    const response = await api.searchLocalCatalog(filter as SearchFilter);
     const dataset = findDatasetInJsonLd(response);
 
     if (dataset) {

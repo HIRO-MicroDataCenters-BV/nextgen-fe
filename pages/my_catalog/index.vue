@@ -8,7 +8,7 @@
       :title="'my_catalog'"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="3"
+      :page-size="10"
       :enable-pagination="true"
     />
   </AppContent>
@@ -52,15 +52,14 @@ const columns: TableColumn[] = [
     header: () => t("label.data_product_name"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
-      const idArr = item.id.split("/");
-      const id = item.id.includes("/") ? idArr[idArr.length - 1] : item.id;
+      const id = item.id
       
       return h(
         Button,
         {
-          onClick: () => router.push(`/my_catalog/${id}`),
+          href: `/my_catalog/${id}`,
+          as: "a",
           variant: "link",
-          class: "p-0 h-auto font-normal text-left justify-start",
         },
         () => [row.getValue("name") as string]
       );
@@ -78,20 +77,6 @@ const columns: TableColumn[] = [
       dayjs(row.getValue("issued") as string).format("DD/MM/YYYY"),
   },
   {
-    id: "license",
-    header: () => t("label.license"),
-    cell: ({ row }) =>
-      h(
-        Button,
-        {
-          onClick: () =>
-            window.open(row.getValue("license") as string, "_blank"),
-          variant: "link",
-        },
-        () => [t("action.view")]
-      ),
-  },
-  {
     id: "actions",
     header: () => t("label.actions"),
     cell: ({ row }) => {
@@ -100,7 +85,7 @@ const columns: TableColumn[] = [
       console.log(id);
 
       return h(DropdownAction, {
-        title: row.getValue("dataset_name") as string,
+        title: row.getValue("name") as string,
         id,
         items: [
           {

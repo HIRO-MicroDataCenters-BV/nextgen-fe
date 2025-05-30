@@ -21,6 +21,8 @@ export default defineI18nConfig(() => {
           home: "Login",
           create: "Create",
           edit: "Edit",
+          actions: "Actions",
+          are_you_sure: "Are you sure?",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -40,6 +42,9 @@ export default defineI18nConfig(() => {
         text: {
           available_biobank_description:
             "Currently available institutional data products from our partners.",
+        },
+        alert: {
+          delete_dataset: "Are you sure you want to delete {name}?",
         },
         menu: {
           home: "Home",
@@ -155,6 +160,7 @@ export default defineI18nConfig(() => {
           metadata_content: "Metadata Content",
         },
         action: {
+          delete_dataset: "Delete",
           contacts: "Contacts",
           github: "GitHub",
           add_dataset: "Add Dataset",

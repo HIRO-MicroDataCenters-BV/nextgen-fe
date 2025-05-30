@@ -40,8 +40,10 @@ const action = ref();
           @click="
             () => {
               action = item.action;
+              console.log(item);
               if (item.hasConfirmation) {
                 if (item.key.includes('delete')) {
+                  console.log('delete');
                   isOpenDelete = true;
                 }
               } else {
@@ -59,13 +61,13 @@ const action = ref();
   <AlertDialog :open="isOpenDelete" @update:open="isOpenDelete = $event">
     <AlertDialogContent>
       <AlertDialogHeader>
-        <AlertDialogTitle>{{ $t('title.are_you_sure') }}</AlertDialogTitle>
+        <AlertDialogTitle>{{ t('title.are_you_sure') }}</AlertDialogTitle>
         <AlertDialogDescription>
           {{ t('alert.delete_dataset', { name: props.title }) }}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel>{{ $t('action.cancel') }}</AlertDialogCancel>
+        <AlertDialogCancel>{{ t('action.cancel') }}</AlertDialogCancel>
         <AlertDialogAction
           variant="destructive"
           @click="
@@ -73,7 +75,7 @@ const action = ref();
               action();
             }
           "
-          >{{ $t('action.delete') }}</AlertDialogAction
+          >{{ t('action.delete') }}</AlertDialogAction
         >
       </AlertDialogFooter>
     </AlertDialogContent>
