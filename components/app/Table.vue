@@ -13,21 +13,15 @@ import {
   getSortedRowModel,
   useVueTable,
 } from "@tanstack/vue-table";
-import { ref, watch, onMounted } from "vue";
 import { valueUpdater } from "~/utils";
-/*
-import { AppMenuActions } from '#components';
-*/
 import type {
-  SearchFilter,
   TableColumn,
   TableDataResponse,
-  DataItem,
+  TableRowData,
+  TableFilter,
+  DropdownMenuItem,
 } from "~/types/table.types";
-import DialogDataset from "./DialogDataset.vue";
-import TablePagination from "./table/Pagination.vue";
-import { filters } from "~/constants";
-import TableFilter from "~/components/app/TableFilter.vue";
+import { useFilters } from "~/composables/useFilters";
 
 interface TableProps {
   title?: string;
@@ -36,30 +30,74 @@ interface TableProps {
   pageSize?: number;
 }
 
-const { title, dataSource, columns, pageSize = 10 } = defineProps<TableProps>();
+const props = withDefaults(defineProps<TableProps>(), {
+  title: "",
+  columns: () => [],
+  pageSize: 10,
+});
 
-const mock = useMock();
+const { dataSource, columns, pageSize, title } = props;
 
 const { t } = useI18n();
-const data = shallowRef<DataItem[]>([]);
+const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
+const isLoading = ref(true);
 
-const hasTableFilters = ref(true);
+const selectedFilters = ref<Record<string, boolean | string | number>>({});
+
+const { filterGroups, getActiveFilters, resetFilters: _resetFilters } = useFilters();
+
+const handleFilterChange = (key: string, value: boolean | string | number, multiple: boolean) => {
+  if (!multiple) {
+    selectedFilters.value = {};
+  }
+  if(value){
+    selectedFilters.value[key] = value;
+  }
+  // Сбрасываем текстовое поле поиска при изменении фильтров
+  searchValue.value = "";
+  applySearchFilter();
+  fetchData();
+};
+
 const fetchData = async () => {
+  isLoading.value = true;
+
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
-    limit: pageSize,
+    limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
       }),
+    filters: {
+      ...selectedFilters.value,
+      ...getActiveFilters(),
+    },
   });
-  data.value = tableData ?? [];
-  totalItems.value = pagination?.total_items ?? 0;
-};
 
-const toggleTableFilters = () => {
-  hasTableFilters.value = !hasTableFilters.value;
+  isLoading.value = false;
+
+  let filteredData = tableData ?? [];
+  
+  // Применяем текстовую фильтрацию по всем полям
+  if (searchValue.value && searchValue.value.trim()) {
+    const searchTerm = searchValue.value.toLowerCase().trim();
+    filteredData = filteredData.filter((row) => {
+      return Object.values(row).some((value) => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(searchTerm);
+      });
+    });
+  }
+
+  // Slice the data based on current page and page size
+  const start =
+    table.getState().pagination.pageIndex *
+    table.getState().pagination.pageSize;
+  const end = start + table.getState().pagination.pageSize;
+  data.value = filteredData.slice(start, end);
+  totalItems.value = searchValue.value ? filteredData.length : (pagination?.total_items ?? 0);
 };
 
 const selectedFilterColumn = ref("all");
@@ -71,34 +109,41 @@ const router = useRouter();
 */
 
 const columnFilters = ref<ColumnFiltersState>(
-  route.query.filters
-    ? JSON.parse(decodeURIComponent(route.query.filters as string))
+  route.query.filters && typeof route.query.filters === "string"
+    ? JSON.parse(decodeURIComponent(route.query.filters))
     : []
 );
 const columnVisibility = ref<VisibilityState>(
-  route.query.visibility
-    ? JSON.parse(decodeURIComponent(route.query.visibility as string))
+  route.query.visibility && typeof route.query.visibility === "string"
+    ? JSON.parse(decodeURIComponent(route.query.visibility))
     : {}
 );
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
 
 const currentPage = ref<number>(
-  route.query.page ? parseInt(route.query.page as string) : 0
+  route.query.page && typeof route.query.page === "string"
+    ? parseInt(route.query.page)
+    : 0
 );
 
-const getColumns = (list: TableColumn[]) => {
-  return list.map((item) => {
-    return {
-      id: item.id,
-      accessorKey: item.id,
-      header: t(`column.${item.id}`),
-      cell: item.cell,
-    };
-  });
+const handlePageChange = (page: number) => {
+  currentPage.value = page;
+  table.setPageIndex(page);
+  fetchData();
 };
 
-const mappedColumns = ref(getColumns(columns ?? []));
+const getColumns = (cols: TableColumn[] | undefined) => {
+  if (!cols) return [];
+  return cols.map((item) => ({
+    id: item.id,
+    accessorKey: item.id,
+    header: t(`column.${item.id}`),
+    cell: item.cell,
+  }));
+};
+
+const mappedColumns = ref(getColumns(columns));
 const table = useVueTable({
   data,
   columns: mappedColumns.value,
@@ -118,7 +163,7 @@ const table = useVueTable({
   globalFilterFn: (row, columnId) => {
     const searchFilter = columnFilters.value.find(
       (filter) => filter.id === "search"
-    ) as SearchFilter | undefined;
+    ) as TableFilter | undefined;
     if (!searchFilter) return true;
     if (searchFilter.column !== "all" && searchFilter.column !== columnId) {
       return true;
@@ -130,7 +175,7 @@ const table = useVueTable({
   initialState: {
     pagination: {
       pageIndex: currentPage.value,
-      pageSize,
+      pageSize: pageSize,
     },
   },
   onPaginationChange: (updater) => {
@@ -139,6 +184,7 @@ const table = useVueTable({
         ? updater(table.getState().pagination)
         : updater;
     currentPage.value = newPagination.pageIndex;
+    fetchData();
   },
   state: {
     get columnFilters() {
@@ -156,7 +202,7 @@ const table = useVueTable({
     get pagination() {
       return {
         pageIndex: currentPage.value,
-        pageSize,
+        pageSize: pageSize,
       };
     },
   },
@@ -165,65 +211,36 @@ const table = useVueTable({
 const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 
-const addDataSet = () => {
-  openAddDataset.value = true;
-};
 const applySearchFilter = () => {
   columnFilters.value = columnFilters.value.filter(
     (filter) => filter.id !== "search"
   );
   if (!searchValue.value) {
+    fetchData();
     return;
   }
-  const searchFilter: SearchFilter = {
+  const searchFilter: TableFilter = {
     id: "search",
     value: searchValue.value,
     column: selectedFilterColumn.value,
   };
-  columnFilters.value.push(searchFilter as unknown as SearchFilter);
+  columnFilters.value.push(searchFilter as unknown as TableFilter);
+  fetchData();
 };
-/*
-const updateUrlParams = () => {
-  if (isUpdatingFromState.value) return;
 
-  const query: Record<string, string> = {};
-  if (columnFilters.value.length > 0) {
-    query.filters = encodeURIComponent(JSON.stringify(columnFilters.value));
-  }
-
-  if (Object.keys(columnVisibility.value).length > 0) {
-    query.visibility = encodeURIComponent(
-      JSON.stringify(columnVisibility.value),
-    );
-  }
-
-  if (currentPage.value > 0) {
-    query.page = currentPage.value.toString();
-  }
-  isUpdatingFromState.value = true;
-  router.replace({ query }).then(() => {
-    setTimeout(() => {
-      isUpdatingFromState.value = false;
-    }, 100);
-    fetchData();
-  });
-};
-*/
 watch(
   () => route.query,
   (newQuery) => {
     if (isUpdatingFromState.value) return;
     isUpdatingFromState.value = true;
     try {
-      if (newQuery.filters) {
-        columnFilters.value = JSON.parse(
-          decodeURIComponent(newQuery.filters as string)
-        );
-        const filters = columnFilters.value;
-        if (filters.length > 0) {
-          const searchFilter = filters.find(
+      if (newQuery.filters && typeof newQuery.filters === "string") {
+        columnFilters.value = JSON.parse(decodeURIComponent(newQuery.filters));
+        const currentColumnFilters = columnFilters.value;
+        if (currentColumnFilters.length > 0) {
+          const searchFilter = currentColumnFilters.find(
             (filter) => filter.id === "search"
-          ) as SearchFilter | undefined;
+          ) as TableFilter | undefined;
           if (searchFilter) {
             searchValue.value = searchFilter.value as string;
             selectedFilterColumn.value = searchFilter.column || "all";
@@ -237,27 +254,21 @@ watch(
         searchValue.value = "";
         selectedFilterColumn.value = "all";
       }
-      if (newQuery.visibility) {
+      if (newQuery.visibility && typeof newQuery.visibility === "string") {
         columnVisibility.value = JSON.parse(
-          decodeURIComponent(newQuery.visibility as string)
+          decodeURIComponent(newQuery.visibility)
         );
       } else {
         columnVisibility.value = {};
       }
-      if (newQuery.page) {
-        const pageIndex = parseInt(newQuery.page as string);
+      if (newQuery.page && typeof newQuery.page === "string") {
+        const pageIndex = parseInt(newQuery.page);
         currentPage.value = pageIndex;
         table.setPageIndex(pageIndex);
       } else {
         currentPage.value = 0;
         table.setPageIndex(0);
       }
-    } catch (error) {
-      console.error("Error parsing query parameters:", error);
-      columnFilters.value = [];
-      columnVisibility.value = {};
-      currentPage.value = 0;
-      table.setPageIndex(0);
     } finally {
       setTimeout(() => {
         isUpdatingFromState.value = false;
@@ -279,26 +290,31 @@ watch(
 
 onMounted(() => {
   fetchData();
-  /*
-  setTimeout(() => {
-    if (Object.keys(route.query).length === 0) {
-      updateUrlParams();
-    }
-  }, 50);
-  */
 });
+
+const filterItems = ref<DropdownMenuItem[]>(
+  filterGroups.value.map((group) => ({
+    key: group.key,
+    label: t(`filters.${group.key}`),
+    children: group.items.map((item) => ({
+      key: item.key,
+      type: item.type,
+      value: item.key,
+      label: t(`filters.${item.key}`),
+    })),
+  }))
+);
+
+defineExpose({ fetchData });
 </script>
 
 <template>
-  <div
-    class="w-full flex flex-col px-12 py-4"
-    style="height: calc(100vh - 80px)"
-  >
+  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-220px)]">
     <div class="mb-8">
       <!-- table filters -->
 
       <div class="flex gap-2 items-center">
-        <div class="flex-auto flex  flex-wrap gap-2">
+        <div class="flex-auto flex flex-wrap gap-2">
           <div class="flex gap-2 relative max-w-sm items-center">
             <Input
               v-model="searchValue"
@@ -313,15 +329,28 @@ onMounted(() => {
               <Icon name="lucide:search" />
             </span>
           </div>
-          <template v-for="filter in filters" :key="filter.key">
-            <TableFilter :filter="filter" />
-          </template>
+
+          <AppTableDropdownFilter
+            id="filter"
+            label="filter"
+            :items="filterItems"
+            @filter-change="handleFilterChange"
+          />
         </div>
       </div>
     </div>
     <!-- end table filters -->
-    <div class="flex-grow overflow-auto flex flex-col border rounded-md mb-20">
-      <Table>
+    <AppTablePreloader v-if="isLoading" />
+    <div
+      v-else
+      class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
+    >
+      <Table
+        :data-source="dataSource"
+        :columns="columns"
+        :page-size="pageSize"
+        :title="title"
+      >
         <TableHeader class="sticky top-0 bg-sidebar-background">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
@@ -347,11 +376,6 @@ onMounted(() => {
                   />
                 </TableCell>
               </TableRow>
-              <TableRow v-if="row.getIsExpanded()">
-                <TableCell :colspan="row.getAllCells().length">
-                  {{ JSON.stringify(row.original) }}
-                </TableCell>
-              </TableRow>
             </template>
           </template>
 
@@ -364,22 +388,16 @@ onMounted(() => {
       </Table>
     </div>
 
-    <TablePagination
+    <AppTablePagination
       :current-page="currentPage"
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
       :page-size="pageSize"
-      :filtered-items-count="table.getFilteredRowModel().rows.length"
-      :can-previous-page="table.getCanPreviousPage()"
-      :can-next-page="table.getCanNextPage()"
-      @previous-page="table.previousPage()"
-      @on-next-page="table.nextPage()"
-      @on-first-page="table.setPageIndex(0)"
-      @on-last-page="
-        table.setPageIndex(Math.ceil(totalItems / pageSize) - 1)
-      "
+      :can-previous-page="currentPage > 0"
+      :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
+      @page-change="handlePageChange"
     />
-    <DialogDataset
+    <AppDialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"
     />

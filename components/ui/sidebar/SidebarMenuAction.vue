@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<PrimitiveProps & {
   class?: HTMLAttributes['class']
 }>(), {
   as: 'button',
+  class: '',
 })
 </script>
 

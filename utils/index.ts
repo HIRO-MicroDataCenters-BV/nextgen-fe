@@ -16,3 +16,23 @@ export function valueUpdater<T extends Updater<unknown>>(
       ? updaterOrValue(ref.value)
       : updaterOrValue;
 }
+
+// Экспорт утилит для кодирования/декодирования ID
+export {
+  encodeId,
+  decodeId,
+  isValidId,
+  isValidHash,
+  convertId,
+} from "./idEncoder";
+
+// Экспорт утилит для работы с JSON-LD
+export {
+  getJsonLdValue,
+  getJsonLdValueByPath,
+  transformDatasetToTableRow,
+  transformSearchResponseToTableData,
+  createTableSearchFilter,
+  findDatasetInJsonLd,
+  convertJsonLdDatasetToJson,
+} from "./jsonld";

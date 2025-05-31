@@ -2,27 +2,48 @@ import type { Row } from "@tanstack/vue-table";
 
 export interface TableColumn {
   id: string;
-  cell: (props: { row: Row<any> }) => any;
+  header: () => string;
+  cell: (props: { row: Row<TableRowData> }) => unknown;
+  enableSorting?: boolean;
+  enableHiding?: boolean;
+}
+
+export interface TableRowData {
+  id: string;
+  name: string;
+  description: string;
+  biobank: string;
+  last_update: string;
+  [key: string]: unknown;
 }
 
 export interface TableDataResponse {
-  data: DataItem[];
-  pagination?: {
+  data: TableRowData[];
+  pagination: {
     total_items: number;
     page: number;
     limit: number;
   };
 }
 
-export interface DataItem {
-  id: string;
-  [key: string]: any;
-}
-
-export interface SearchFilter {
+export interface TableFilter {
   id: string;
   value: string | number;
   column?: string;
 }
 
-export interface TableRowType extends Row<any> {}
+export interface DropdownMenuItem {
+  key: string;
+  label: string;
+  children?: DropdownMenuItem[];
+  type?: "checkbox" | "select" | "text" | "number";
+  value?: string | number | boolean;
+}
+
+export interface TableDropdownFilterProps {
+  id?: string;
+  label?: string;
+  items?: DropdownMenuItem[];
+  column?: unknown;
+  multiple?: boolean;
+}

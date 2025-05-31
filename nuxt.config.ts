@@ -14,6 +14,10 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "nuxt-zod-i18n",
     "dayjs-nuxt",
+    "@nuxtjs/color-mode",
+    "@vueuse/nuxt",
+    "nuxt-api-party",
+    "nuxt-proxy-request",
   ],
   icon: {
     serverBundle: {
@@ -26,11 +30,30 @@ export default defineNuxtConfig({
       },
     ],
   },
+  dayjs: {
+    locales: ["en"],
+    defaultLocale: "en",
+    plugins: ["utc", "timezone", "quarterOfYear"],
+  },
+  colorMode: {
+    preference: "system",
+    fallback: "light",
+    classPrefix: "",
+    classSuffix: "",
+    storage: "localStorage",
+    storageKey: "nuxt-color-mode",
+  },
   shadcn: {
     prefix: "",
     componentDir: "./components/ui",
   },
   css: ["~/assets/css/tailwind.css"],
+  runtimeConfig: {
+    public: {
+      apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL,
+      apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL,
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
   },
