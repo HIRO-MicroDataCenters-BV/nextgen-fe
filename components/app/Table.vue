@@ -300,6 +300,8 @@ const filterItems = ref<DropdownMenuItem[]>(
     })),
   }))
 );
+
+defineExpose({ fetchData });
 </script>
 
 <template>

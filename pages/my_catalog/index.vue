@@ -35,7 +35,6 @@ const { deleteDataset } = useApi();
 
 const { t } = useI18n();
 const dayjs = useDayjs();
-const _router = useRouter();
 const tableRef = ref();
 const { setPage } = useApp();
 setPage({
