@@ -3,18 +3,18 @@
     <div class="flex-auto">
       <div class="flex items-center">
         <h1 class="text-lg font-semibold">
-          {{ currentPageTitle }}
+          {{ page.title }}
         </h1>
       </div>
       <p class="text-small text-muted-foreground">
-        {{ currentPageDescription }}
+        {{ page.subtitle }}
       </p>
     </div>
     <div class="flex items-center space-x-2">
       <!-- Button Groups: Use v-if / v-else-if for mutually exclusive sets -->
 
       <!-- Marketplace Page Buttons -->
-      <Popover v-if="isMarketplacePage">
+      <Popover v-if="showAvailableBiobanks">
         <PopoverTrigger as-child>
           <Button variant="secondary">{{
             t("action.available_biobanks")
@@ -43,7 +43,9 @@
                     class="flex p-2 w-full flex gap-2 text-left items-start justify-start"
                     variant="ghost"
                   >
-                    <span><img :src="`/images/icons/${item.icon}.png`" /></span>
+                    <span
+                      ><img :src="`/images/icons/${item.icon}.png`" alt=""
+                    ></span>
                     <span>{{ item.label }}</span>
                   </Button>
                 </CommandItem>
@@ -63,45 +65,30 @@
       </Button>
 
       <!-- My Catalog Form Page (Create/Edit) Buttons -->
-      <template v-else-if="isMyCatalogFormPage">
-        <Button variant="outline" @click="onDiscardClick">
-          {{ t("action.discard") }}
-        </Button>
-        <Button @click="onUpdateFile">{{ t("action.update_file") }}</Button>
-        <Button @click="onSave">
-          {{ t("action.save_changes") }}
-        </Button>
-      </template>
-
-      <!-- Optional: v-else for any other case, or leave empty if no buttons for other pages -->
+      <Toolbar v-else-if="isMyCatalogFormPage" :buttons="toolbarButtons" />
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-// import { Icon } from '#components'; // Ensure Icon is globally available or imported
+import Toolbar from "./header/Toolbar.vue";
+import type { ToolbarButton } from "~/types/toolbar.types";
+
+const { page } = useApp();
+
+const props = defineProps<{
+  title: string;
+  description?: string;
+  showAvailableBiobanks?: boolean;
+}>();
 
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
-const emit = defineEmits(["save-form", "discard-form", "update-file"]);
+const emit = defineEmits(["submit", "discard", "change-file"]);
 
-const isMarketplacePage = computed(() => route.path.startsWith("/marketplace"));
 // Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
 const isMyCatalogIndexPage = computed(() => route.path === "/my_catalog");
 const isMyCatalogCreatePage = computed(
@@ -109,54 +96,51 @@ const isMyCatalogCreatePage = computed(
 );
 const isMyCatalogEditPage = computed(
   () =>
-    route.path.startsWith("/my_catalog/") &&
-    route.params.id &&
     route.path.endsWith("/edit")
 );
 const isMyCatalogFormPage = computed(
   () => isMyCatalogCreatePage.value || isMyCatalogEditPage.value
 );
 
-const currentPageTitle = computed(() => {
-  if (isMyCatalogCreatePage.value)
-    return t("header_title.create_catalog_item_details", "Create");
-  if (isMyCatalogEditPage.value)
-    return t("header_title.edit_catalog_item_details", "Edit Details");
-  if (isMyCatalogIndexPage.value) return t("title.my_catalog", "My Catalog");
-  if (isMarketplacePage.value) return t("title.marketplace", "Marketplace");
-  return "";
-});
-
-const currentPageDescription = computed(() => {
-  if (isMyCatalogCreatePage.value)
-    return t("header_subtitle.new_metadata_details", "New metadata details.");
-  if (isMyCatalogEditPage.value)
-    return t(
-      "header_subtitle.change_metadata_details",
-      "Change metadata details."
-    );
-  if (isMyCatalogIndexPage.value)
-    return t("subtitle.my_catalog", "Manage your data products.");
-  if (isMarketplacePage.value)
-    return t("subtitle.marketplace_description", "Explore available biobanks.");
-  return "";
-});
-
+const showAvailableBiobanks = ref(props.showAvailableBiobanks);
 const navigateToCreateCatalogItem = () => {
   router.push("/my_catalog/create");
 };
 
-const onSave = () => {
-  emit("save-form");
-};
+const toolbarButtons = computed<ToolbarButton[]>(() => {
+  const buttons: ToolbarButton[] = [];
 
-const onUpdateFile = () => {
-  emit("update-file");
-};
+  buttons.push(
+    {
+      id: "discard",
+      label: t("action.discard"),
+      variant: "outline",
+      action: {
+        type: "discard",
+        onConfirm: () => router.back(),
+      },
+    },
+    {
+      id: "fileUpload",
+      label: t("action.upload_file"),
+      variant: "secondary",
+      action: {
+        type: "fileUpload",
+        onConfirm: () => emit("change-file"),
+      },
+    },
+    {
+      id: "submit",
+      label: isMyCatalogEditPage.value ? t("action.save") : t("action.create"),
+      action: {
+        type: "submit",
+        onConfirm: () => emit("submit"),
+      },
+    }
+  );
 
-const onDiscardClick = () => {
-  emit("discard-form");
-};
+  return buttons;
+});
 
 const availableBiobanks = ref([
   { key: "umcu", icon: "umcu", label: "UMCU", url: "./umcu" },

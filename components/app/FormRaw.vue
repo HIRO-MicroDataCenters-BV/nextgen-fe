@@ -1,29 +1,36 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
-import * as z from "zod";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import type * as z from "zod";
 
 const { t } = useI18n();
 
 const props = defineProps<{
   id?: string;
   formSchema: z.ZodType;
-  initialValues?: Record<string, any>;
+  initialValues?: Record<string, unknown>;
+  fields?: FormField[];
+  initialData?: FormData;
+  submitLabel?: string;
 }>();
 
+const { appForm } = useAppForm();
+
+interface FormField {
+  name: string;
+  label: string;
+  type: string;
+  required?: boolean;
+  options?: Array<{ label: string; value: string | number }>;
+}
+
+interface FormData {
+  [key: string]: string | number | boolean;
+}
+
 const emit = defineEmits<{
-  (e: "submit", data: Record<string, any>): void;
+  (e: "submit", data: Record<string, unknown>): void;
   (e: "cancel"): void;
 }>();
 
@@ -36,21 +43,17 @@ const onSubmit = handleSubmit((values) => {
   emit("submit", values);
 });
 
-const isLoading = ref(false);
+const hasFile = ref(false);
 
-onMounted(async () => {
-  if (props.id) {
-    isLoading.value = true;
-    try {
-      // TODO: Replace with your API call
-      const response = await fetch("/api/raw/" + props.id);
-      const data = await response.json();
-      setFieldValue("metadata_content", data.metadata_content);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      isLoading.value = false;
-    }
+watch(appForm, (newVal) => {
+  if (newVal.files.length > 0) {
+    hasFile.value = true;
+    const file = newVal.files[0];
+    const reader = new FileReader();
+    reader.onload = () => {
+      setFieldValue("file", file);
+    };
+    reader.readAsText(file as Blob);
   }
 });
 
@@ -58,25 +61,26 @@ defineExpose({
   submit: onSubmit,
   cancel: () => emit("cancel"),
   resetForm,
+  setFieldValue,
 });
 </script>
 
 <template>
-  <Form @submit="onSubmit" class="h-full flex flex-col">
+  <form class="h-full flex flex-col" @submit.prevent="onSubmit">
     <FormField v-slot="{ componentField }" name="metadata_content">
       <FormItem class="flex-1 flex flex-col">
         <FormLabel>{{ t("label.metadata_content") }}</FormLabel>
         <FormControl>
           <Textarea
             v-bind="componentField"
-            class="h-[calc(100vh-300px)] resize-none"
+            class="h-[calc(100vh-300px)] resize-none max-w-full overflow-x-auto"
             :placeholder="t('placeholder.enter_metadata_content')"
           />
         </FormControl>
         <FormMessage />
       </FormItem>
     </FormField>
-  </Form>
+  </form>
 </template>
 
 <style scoped>

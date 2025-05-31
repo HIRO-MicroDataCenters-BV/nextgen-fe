@@ -7,16 +7,22 @@ export default defineI18nConfig(() => {
         app: {
           title: "NextGen",
           description:
-            "NextGen is a unified platform for managing, publishing, and discovering biomedical and scientific data. It empowers researchers and organizations to collaborate, share resources, and accelerate innovation through a modern catalog, marketplace, and seamless integration with biobanks.",
+            "Build ML models on institutional medical data at source. Accelerate research, advance treatment, change lives for the better.",
+          copyright: "Copyright {year} © NextGen",
         },
         status: {
           loading_data: "Loading data...",
+          item_not_found: "Item not found",
         },
         title: {
           marketplace: "Marketplace",
           my_catalog: "My Catalog",
           settings: "Settings",
           home: "Login",
+          create: "Create",
+          edit: "Edit",
+          actions: "Actions",
+          are_you_sure: "Are you sure?",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -28,10 +34,17 @@ export default defineI18nConfig(() => {
           data_products: "Data Products",
           available_biobanks: "Available Biobanks",
           my_catalog: "Private metadata catalog",
+          new_metadata_details: "New metadata details.",
+          change_metadata_details: "Change metadata details.",
+          marketplace_description:
+            "Decentralised search across all institutional catalogs",
         },
         text: {
           available_biobank_description:
             "Currently available institutional data products from our partners.",
+        },
+        alert: {
+          delete_dataset: "Are you sure you want to delete {name}?",
         },
         menu: {
           home: "Home",
@@ -45,6 +58,46 @@ export default defineI18nConfig(() => {
           home: "Home",
           marketplace: "Marketplace",
         },
+        filter: {
+          status: "Status",
+          isDeleted: "Is Deleted",
+          isShared: "Is Shared",
+          hasAge: "Has Age",
+          hasSex: "Has Sex",
+          hasHeight: "Has Height",
+          hasMedicalConditions: "Has Medical Conditions",
+          hasMetadata: "Has Metadata",
+          hasDistribution: "Has Distribution",
+          hasSeries: "Has Series",
+          sociodemographics: "Sociodemographics",
+          age: "Age",
+          gender: "Gender",
+          ethnicity: "Ethnicity",
+          comorbidities: "Comorbidities",
+          previous_myocardial_infarction: "Previous Myocardial Infarction",
+          stroke: "Stroke",
+          chronic_obstructive_pulmonary_disease:
+            "Chronic Obstructive Pulmonary Disease",
+          atrial_fibrillation: "Atrial Fibrillation",
+          peripheral_artery_disease: "Peripheral Artery Disease",
+          hypertension: "Hypertension",
+          diabetes: "Diabetes",
+          hypercholesterolemia: "Hypercholesterolemia",
+          chronic_kidney_disease: "Chronic Kidney Disease",
+          physical_measurements: "Physical Measurements",
+          height: "Height",
+          waist_hip_ratio: "Waist-Hip Ratio",
+          waist_height_ratio: "Waist-Height Ratio",
+          sbp: "Systolic Blood Pressure",
+          lifestyle_habits: "Lifestyle Habits",
+          smoking_history: "Smoking History",
+          filter_types: {
+            checkbox: "Yes/No",
+            select: "Select",
+            number: "Number",
+            text: "Text",
+          },
+        },
         column: {
           name: "Name",
           biobank: "Biobank",
@@ -52,6 +105,9 @@ export default defineI18nConfig(() => {
           last_update: "Last Update",
           id: "ID",
           actions: "Actions",
+          license: "License",
+          publisher: "Publisher",
+          issued: "Issued",
         },
         fieldset: {
           basic_information: "Basic Information",
@@ -104,6 +160,11 @@ export default defineI18nConfig(() => {
           metadata_content: "Metadata Content",
         },
         action: {
+          save: "Save",
+          edit_dataset: "Edit",
+          delete_dataset: "Delete",
+          contacts: "Contacts",
+          github: "GitHub",
           add_dataset: "Add Dataset",
           previous: "Previous",
           next: "Next",
@@ -120,6 +181,11 @@ export default defineI18nConfig(() => {
           login: "Login",
           filter: "Filter",
           update_file: "Update File",
+          view: "View",
+          upload_file: "Upload File",
+          back_to_catalog: "Back to Catalog",
+          for_researchers: "For Researchers",
+          for_data_providers: "For Data Providers",
         },
         placeholder: {
           search: "Search...",
@@ -144,6 +210,7 @@ export default defineI18nConfig(() => {
           data_products: "data products",
           out_of: "out of",
           no_found: "No found",
+          quarter: "Q{quarter}, {year}",
         },
         validation: {
           required: "This field is required",
@@ -155,6 +222,58 @@ export default defineI18nConfig(() => {
           required_max_length:
             "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
+        },
+        home: {
+          roadmap: {
+            item: [
+              {
+                description:
+                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus interdum hendrerit ex vitae sodales. Donec id leo ipsum. Phasellus volutpat aliquet mauris, et blandit nulla laoreet vitae.",
+              },
+            ],
+            title: "Roadmap",
+            subtitle: "NextGen Milestones",
+          },
+          card: [
+            {
+              title: "Hidden Data Products",
+              description:
+                "Discover previously inaccessible datasets across institutions through our decentralized search.",
+            },
+            {
+              title: "Full Compliance",
+              description:
+                "Access sensitive data while maintaining full compliance with patient privacy laws.",
+            },
+            {
+              title: "Better Models",
+              description:
+                "Train ML models on diverse, multi-institutional data without extraction or duplication.",
+            },
+            {
+              title: "Share Value, not Data",
+              description:
+                "Make your datasets discoverable while keeping them secure and at your grounds.",
+            },
+            {
+              title: "Total Access Control",
+              description:
+                "Define exactly who can use your data and how through enforced policies.",
+            },
+            {
+              title: "Full Transparency",
+              description:
+                "Track every interaction with your data through immutable usage logs.",
+            },
+          ],
+          footer: {
+            title: "Real-World Impact",
+            subtitle: "Cardiovascular Research Network",
+            description:
+              "A multi-institution team used Dataspace to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
+            result:
+              "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
+          },
         },
         zodI18n: {
           errors: {

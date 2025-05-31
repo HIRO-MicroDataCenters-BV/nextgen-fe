@@ -1,94 +1,67 @@
 <template>
-    <AppContent :title="page.title" :description="page.subtitle" :show-available-biobanks="false">
-        <div v-if="content" class="px-10">
-      <Table class="w-full table-fixed">
-        <TableBody>
-          <TableRow
-            v-for="(item, index) in schema"
-            :key="`content-item-${index}`"
-          >
-            <TableCell class="text-left pb-4 pr-8 border-none text-gray-400 uppercase">{{
-              t(`label.${item.key}`)
-            }}</TableCell>
-            <TableCell class="text-left pb-4 pr-8 border-none flex flex-wrap gap-2 py-8">
-              <template v-if="item.type === 'text'">
-                {{ content[item.key] }}
-              </template>
-              <template v-if="item.type === 'date'">
-                {{ dayjs(content[item.key]).format('YYYY-MM-DD HH:mm:ss') }}
-              </template>
-              <template v-if="item.type === 'array'">
-                <span v-for="field in content[item.key]" :key="field" class="rounded-md">{{ field }}</span>
-              </template>
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-    </AppContent>
-  </template>
-  
-  <script lang="ts" setup>
-  const { t } = useI18n();
-  const dayjs = useDayjs();
-  //const { fetchDatasets } = useApi();
-  const { setPage, page } = useApp();
-  const content = ref();
-  const schema = [
-    {
-        key: "theme",
-        type: "array",
-    },
-    {
-        key: "creator",
-        type: "text",
-    },
-    {
-        key: "license",
-        type: "text",
-    },
-    {
-        key: "issued",
-        type: "date",
-    },
-    {
-        key: "last_update",
-        type: "date",
-    },
-  ];
-  
-  onMounted(async () => {
-    content.value = {
-      theme: ["Clinical", "Genomics"],
-      creator: "EMBL_EBI",
-      license: "Open Access",
-      issued: "2021-01-01 00:45:00",
-      last_update: "2024-01-01 02:13:00",
-      title: "Biobank",
-      description: "Biobank description",
-    };
-    setPage({
-        section: 'marketplace',
-        title: content.value.title as string,
-        subtitle: content.value.description as string,
+  <AppContent
+    :title="page.title"
+    :description="page.subtitle"
+    :show-available-biobanks="false"
+  >
+    <AppDetails :data="datasetData" />
+  </AppContent>
+</template>
+
+<script lang="ts" setup>
+import {
+  findDatasetInJsonLd,
+  convertJsonLdDatasetToJson,
+  createTableSearchFilter,
+} from "~/utils/jsonld";
+
+// // const { t } = useI18n();
+  // const dayjs = useDayjs();
+const api = useApi();
+const { setPage, page } = useApp();
+
+const datasetData = ref();
+
+const route = useRoute();
+const datasetId = route.params.id;
+
+onMounted(async () => {
+  try {
+    const filter = createTableSearchFilter({
+      filters: [
+        {
+          "@type": "dcat:Catalog",
+          "dcat:dataset": {
+            "@type": "dcat:Dataset",
+            "dcterms:identifier": datasetId,
+          },
+        },
+      ],
     });
-    /*
-    const res = await fetchDatasets({ id: id.value });
-    if (res && 'data' in res && res.data && Array.isArray(res.data)) {
-      const data = res.data;
-      content.value = data[0];
-      if (content.value) {
-        console.log(content);
+    const response = await api.searchDecentralized(filter);
+    const dataset = findDatasetInJsonLd(response);
+
+    if (dataset) {
+      const data = convertJsonLdDatasetToJson(dataset, {
+        preferredLanguage: "en",
+        includeRawData: false,
+        flattenArrays: true,
+        excludeOriginalData: true,
+      });
+
+      datasetData.value = data;
+
+      if (data) {
         setPage({
-          section: 'dataset_management',
-          title: content.value.dataset_name as string,
-          subtitle: content.value.description as string,
+          title: data.title || "Dataset",
+          subtitle: data.description || "",
         });
       }
     }
-      */
-  });
-  </script>
-  
-  <style></style>
-  
+  } catch (error) {
+    console.error("Error loading dataset:", error);
+  }
+});
+</script>
+
+<style></style>

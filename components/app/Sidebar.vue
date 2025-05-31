@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { NuxtLink } from '#components';
+
 const { t } = useI18n();
 const { menu, user } = useMenu();
 </script>
@@ -36,12 +38,12 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.main" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <a :href="item.url">
+                <NuxtLink :href="item.url">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
                   <span>{{ item.title }}</span>
-                </a>
+                </NuxtLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -72,9 +74,9 @@ const { menu, user } = useMenu();
                       :key="subItem.title"
                     >
                       <SidebarMenuSubButton as-child>
-                        <a :href="subItem.url">
+                        <NuxtLink :href="subItem.url">
                           <span>{{ subItem.title }}</span>
-                        </a>
+                        </NuxtLink>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
                   </SidebarMenuSub>
@@ -91,12 +93,12 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.secondary" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <a :href="item.url">
+                <NuxtLink :href="item.url">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
                   <span>{{ item.title }}</span>
-                </a>
+                </NuxtLink>
               </SidebarMenuButton>
             </SidebarMenuItem>
 

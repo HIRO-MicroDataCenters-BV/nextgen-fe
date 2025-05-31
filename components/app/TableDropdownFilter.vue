@@ -5,32 +5,38 @@ import type {
   DropdownMenuItem,
   TableDropdownFilterProps,
 } from "@/types/table.types";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const { t } = useI18n();
 const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   id: "",
   label: "",
   items: () => [],
+  multiple: false,
 });
+
+const emit = defineEmits<{
+  "filter-change": [key: string, value: boolean, multiple: boolean];
+}>();
 
 const items = ref<DropdownMenuItem[]>(props.items);
 const selectedValues = ref<string[]>([]);
 
 const handleCheckboxChange = (key: string) => {
-  if (selectedValues.value.includes(key)) {
+  const isSelected = selectedValues.value.includes(key);
+  if (isSelected) {
     selectedValues.value = selectedValues.value.filter((v) => v !== key);
   } else {
+    if (!props.multiple) {
+      selectedValues.value = [];
+    }
     selectedValues.value = [...selectedValues.value, key];
   }
+  emit("filter-change", key, !isSelected, props.multiple);
 };
 
 const handleRemoveSelected = (key: string) => {
   selectedValues.value = selectedValues.value.filter((v) => v !== key);
+  emit("filter-change", key, false, props.multiple);
 };
 </script>
 
@@ -51,7 +57,7 @@ const handleRemoveSelected = (key: string) => {
           v-for="item in selectedValues"
           :key="item"
           variant="secondary"
-          class="rounded-sm px-2 text-sm"
+          class="rounded-sm px-2 text-sm capitalize"
         >
           {{ item }}
           <Button
