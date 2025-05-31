@@ -47,8 +47,13 @@ const selectedFilters = ref<Record<string, boolean | string | number>>({});
 
 const { filterGroups, getActiveFilters, resetFilters: _resetFilters } = useFilters();
 
-const handleFilterChange = (key: string, value: boolean | string | number) => {
-  selectedFilters.value[key] = value;
+const handleFilterChange = (key: string, value: boolean | string | number, multiple: boolean) => {
+  if (!multiple) {
+    selectedFilters.value = {};
+  }
+  if(value){
+    selectedFilters.value[key] = value;
+  }
   fetchData();
 };
 

@@ -42,7 +42,7 @@ const isSelected = computed(() => {
       :class="item.type === 'checkbox' ? 'flex items-center gap-2' : ''"
     >
       <Label
-        class="font-normal flex items-start gap-2 w-full"
+        class="font-normal flex items-start gap-2 w-full capitalize"
         @click.prevent="() => emit('update:selected', item.key)"
       >
         <span class="flex-1">{{ t(`filter.${item.key}`) }}</span>

@@ -118,6 +118,25 @@ const fetchTableData = async (
 
     console.log("Using pagination params:", { page, limit });
 
+    const filtersObj = [
+    {
+        "dcat:dataset": {
+            "extraMetadata": []
+        }
+    }
+  ]
+    Object.keys(params.filters).forEach((key) => {
+      console.log(`${key}: ${params.filters[key]}`);
+      filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
+        "@type": "med:Record",
+        [`med:${key}`]: [
+          {
+            "@value": params.filters[key],
+            "@type": "xsd:boolean"
+          }
+        ]
+      })
+    });
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
@@ -127,7 +146,7 @@ const fetchTableData = async (
       page,
       limit,
       filters: params.filters && Object.keys(params.filters).length > 0
-          ? params.filters
+          ? filtersObj
           : undefined,
     });
 

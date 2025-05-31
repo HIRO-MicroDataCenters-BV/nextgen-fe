@@ -240,7 +240,7 @@ export function createTableSearchFilter(params: {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
       dcterms: "http://purl.org/dc/terms/",
-      med: "http://med.example.org/",
+      med: "http://oca.example.org/123/",
       Filters: "http://data-space.org/Filters",
     },
     "@type": "Filters",

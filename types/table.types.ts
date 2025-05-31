@@ -45,4 +45,5 @@ export interface TableDropdownFilterProps {
   label?: string;
   items?: DropdownMenuItem[];
   column?: unknown;
+  multiple?: boolean;
 }

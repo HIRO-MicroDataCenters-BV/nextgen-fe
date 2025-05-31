@@ -11,10 +11,11 @@ const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   id: "",
   label: "",
   items: () => [],
+  multiple: false,
 });
 
 const emit = defineEmits<{
-  "filter-change": [key: string, value: boolean];
+  "filter-change": [key: string, value: boolean, multiple: boolean];
 }>();
 
 const items = ref<DropdownMenuItem[]>(props.items);
@@ -25,14 +26,17 @@ const handleCheckboxChange = (key: string) => {
   if (isSelected) {
     selectedValues.value = selectedValues.value.filter((v) => v !== key);
   } else {
+    if (!props.multiple) {
+      selectedValues.value = [];
+    }
     selectedValues.value = [...selectedValues.value, key];
   }
-  emit("filter-change", key, !isSelected);
+  emit("filter-change", key, !isSelected, props.multiple);
 };
 
 const handleRemoveSelected = (key: string) => {
   selectedValues.value = selectedValues.value.filter((v) => v !== key);
-  emit("filter-change", key, false);
+  emit("filter-change", key, false, props.multiple);
 };
 </script>
 
@@ -53,7 +57,7 @@ const handleRemoveSelected = (key: string) => {
           v-for="item in selectedValues"
           :key="item"
           variant="secondary"
-          class="rounded-sm px-2 text-sm"
+          class="rounded-sm px-2 text-sm capitalize"
         >
           {{ item }}
           <Button
