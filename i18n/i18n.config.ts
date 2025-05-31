@@ -160,6 +160,8 @@ export default defineI18nConfig(() => {
           metadata_content: "Metadata Content",
         },
         action: {
+          save: "Save",
+          edit_dataset: "Edit",
           delete_dataset: "Delete",
           contacts: "Contacts",
           github: "GitHub",

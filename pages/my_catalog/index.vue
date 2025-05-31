@@ -31,8 +31,9 @@ import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
 import type { SearchFilter } from "~/types/api.types";
 
-const { deleteDataset } = useApi();
 
+const { deleteDataset } = useApi();
+const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
 const tableRef = ref();
@@ -95,6 +96,13 @@ const columns: TableColumn[] = [
               tableRef.value.fetchData();
             },
           },
+          {
+            key: "edit_dataset",
+            label: "edit_dataset",
+            action: () => {
+              router.push(`/my_catalog/${id}/edit`);
+            },
+          }
         ],
       });
     },

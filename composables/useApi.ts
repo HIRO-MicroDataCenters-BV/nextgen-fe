@@ -65,10 +65,12 @@ export const useApi = () => {
     options?: {
       showToast?: boolean;
       timeout?: number;
+      hasRawData?: boolean;
     }
   ) => {
     const baseUrl = serviceUrls[service];
     const isFormData = body instanceof FormData;
+    const hasRawData = options?.hasRawData || false;
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;
 
@@ -81,7 +83,7 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-          body: isFormData ? body : JSON.stringify(body),
+          body: isFormData ? body : hasRawData ? body : JSON.stringify(body),
         }),
     };
 
@@ -331,13 +333,14 @@ export const useApi = () => {
      */
     saveDataset: async (
       filename: string,
-      dataset: CatalogDataset
+      dataset: string
     ): Promise<CatalogDataset | null> => {
       const response = await request<CatalogDataset>(
         "catalog",
         `/datasets/${filename}/`,
         "POST",
-        dataset
+        dataset,
+        { showToast: true, hasRawData: true }
       );
       return response || null;
     },

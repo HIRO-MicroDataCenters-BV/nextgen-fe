@@ -21,9 +21,10 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
+import type { CatalogDataset } from "~/types/api.types";
 
 const { t } = useI18n();
-const { uploadMmioFile } = useApi();
+const { uploadMmioFile, saveDataset } = useApi();
 const router = useRouter();
 
 const formSchema = z.object({
@@ -50,13 +51,15 @@ const onCancel = () => {
   console.log("Form cancelled");
 }
 
-const onSubmit = (formValues: Record<string, unknown>) => {
+const onSubmit = async (formValues: Record<string, unknown>) => {
   if (formValues.file) {
-    uploadMmioFile(formValues.file as File);
+    console.log("File: ", formValues.file);
+    const file = formValues.file as File;
+    const name = file.name;
+    await uploadMmioFile(file);
+    await saveDataset(name, formValues.metadata_content as string);
     router.push("/my_catalog");
   }
 };
 
-
-// Для AppHeader: можно вызвать formRef.value.submit() или formRef.value.cancel() из layout
 </script>

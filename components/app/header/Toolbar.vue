@@ -24,14 +24,17 @@ const uploadRef = ref();
 
 const props = defineProps<ToolbarProps>();
 
-const { setAppForm } = useAppForm();
+const { setAppForm, appForm } = useAppForm();
 
-//const emit = defineEmits(["upload-file"]);
+const hasFile = ref(false);
+
+watch(appForm, (newVal) => {
+  hasFile.value = newVal.files.length > 0;
+});
 
 const handleFileUpload = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (file) {
-    console.log(file);
     setAppForm({ files: [file] });
     if (e.target instanceof HTMLInputElement) {
       e.target.value = "";

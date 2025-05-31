@@ -96,8 +96,6 @@ const isMyCatalogCreatePage = computed(
 );
 const isMyCatalogEditPage = computed(
   () =>
-    route.path.startsWith("/my_catalog/") &&
-    route.params.id &&
     route.path.endsWith("/edit")
 );
 const isMyCatalogFormPage = computed(
@@ -133,7 +131,7 @@ const toolbarButtons = computed<ToolbarButton[]>(() => {
     },
     {
       id: "submit",
-      label: t("action.create"),
+      label: isMyCatalogEditPage.value ? t("action.save") : t("action.create"),
       action: {
         type: "submit",
         onConfirm: () => emit("submit"),
