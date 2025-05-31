@@ -21,7 +21,6 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
-import type { CatalogDataset } from "~/types/api.types";
 
 const { t } = useI18n();
 const { uploadMmioFile, saveDataset } = useApi();

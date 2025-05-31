@@ -50,9 +50,7 @@ watch(appForm, (newVal) => {
     hasFile.value = true;
     const file = newVal.files[0];
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
-      //setFieldValue("metadata_content", content);
+    reader.onload = () => {
       setFieldValue("file", file);
     };
     reader.readAsText(file as Blob);
