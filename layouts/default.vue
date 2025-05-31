@@ -34,9 +34,6 @@
 
 <script setup lang="ts">
 const route = useRouter();
-console.log("r", route);
 const currentRouteName = computed(() => route.currentRoute.value.name);
 const isHome = computed(() => currentRouteName.value === "home");
-console.log("currentRouteName", currentRouteName.value);
-//const isHome = computed(() => route.path === "/home");
 </script>

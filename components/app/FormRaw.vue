@@ -44,14 +44,11 @@ const onSubmit = handleSubmit((values) => {
 });
 
 watch(appForm, (newVal) => {
-  console.log(newVal);
   if (newVal.files.length > 0) {
     const file = newVal.files[0];
-    console.log(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
-      console.log(">>", content);
       setFieldValue("metadata_content", content);
     };
     reader.readAsText(file as Blob);

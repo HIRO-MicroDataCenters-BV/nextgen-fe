@@ -233,8 +233,6 @@ export function createTableSearchFilter(params: {
   limit?: number;
   filters?: Record<string, boolean>;
 }): SearchFilter {
-  console.log("Creating search filter with params:", params);
-
   const filter: SearchFilter = {
     "@context": {
       "@vocab": "http://data-space.org/",
@@ -266,8 +264,6 @@ export function createTableSearchFilter(params: {
       "dspace:pageSize": limit,
     });
   }
-
-  console.log("Final search filter:", filter);
   return filter;
 }
 

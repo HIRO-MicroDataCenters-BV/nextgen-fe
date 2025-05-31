@@ -19,7 +19,6 @@ export const useApi = () => {
     search: config.public.apiSearchServiceUrl,
     catalog: config.public.apiCatalogServiceUrl,
   };
-  console.log("serviceUrls", serviceUrls);
 
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
@@ -69,7 +68,6 @@ export const useApi = () => {
     }
   ) => {
     const baseUrl = serviceUrls[service];
-    console.log("baseUrl", baseUrl);
     const isFormData = body instanceof FormData;
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;
@@ -153,8 +151,6 @@ export const useApi = () => {
   async function prepareSearchFilter(
     filter: SearchFilter
   ): Promise<SearchFilter> {
-    console.log("Original filter before compaction:", filter);
-
     // Ensure filters array exists
     if (!filter.filters) {
       filter.filters = [];
@@ -165,7 +161,6 @@ export const useApi = () => {
       filter,
       filter["@context"]
     )) as JsonLdObject;
-    console.log("Compacted filter:", compacted);
 
     // Create a new filter object with the compacted data
     const result: SearchFilter = {
@@ -181,7 +176,6 @@ export const useApi = () => {
         : [],
     };
 
-    console.log("Final prepared filter:", result);
     return result;
   }
 
@@ -244,7 +238,6 @@ export const useApi = () => {
      */
     searchDecentralized: async (filter: SearchFilter) => {
       const preparedFilter = await prepareSearchFilter(filter);
-      console.log("Prepared filter:", preparedFilter, filter);
       return request<SearchResponse>(
         "search",
         `/search/`,

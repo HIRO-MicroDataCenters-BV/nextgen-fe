@@ -6,7 +6,6 @@ const props = defineProps<{
 }>();
 
 const { title, description = "", showAvailableBiobanks = true } = props;
-console.log("props", props);
 </script>
 
 <template>

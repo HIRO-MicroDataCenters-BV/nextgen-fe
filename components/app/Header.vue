@@ -89,7 +89,6 @@ const router = useRouter();
 
 const emit = defineEmits(["save-form", "discard-form", "upload-file"]);
 
-const _isMarketplacePage = computed(() => route.path.startsWith("/marketplace"));
 // Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
 const isMyCatalogIndexPage = computed(() => route.path === "/my_catalog");
 const isMyCatalogCreatePage = computed(
@@ -105,27 +104,7 @@ const isMyCatalogFormPage = computed(
   () => isMyCatalogCreatePage.value || isMyCatalogEditPage.value
 );
 
-const _title = ref(props.title);
-const _description = ref(props.description);
 const showAvailableBiobanks = ref(props.showAvailableBiobanks);
-console.log("showAvailableBiobanks", showAvailableBiobanks.value);
-/*
-const currentPageTitle = computed(() => {
-  if (isMyCatalogCreatePage.value) return t("title.create");
-  if (isMyCatalogEditPage.value) return t("title.edit");
-  if (isMyCatalogIndexPage.value) return t("title.my_catalog");
-  if (isMarketplacePage.value) return t("title.marketplace");
-  return "";
-});
-
-const currentPageDescription = computed(() => {
-  if (isMyCatalogCreatePage.value) return t("subtitle.new_metadata_details");
-  if (isMyCatalogEditPage.value) return t("subtitle.change_metadata_details");
-  if (isMyCatalogIndexPage.value) return t("subtitle.my_catalog");
-  if (isMarketplacePage.value) return t("subtitle.marketplace_description");
-  return "";
-});
-*/
 const navigateToCreateCatalogItem = () => {
   router.push("/my_catalog/create");
 };

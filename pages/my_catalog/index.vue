@@ -81,7 +81,6 @@ const columns: TableColumn[] = [
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
       const id = item.id;
-      console.log(id);
 
       return h(DropdownAction, {
         title: row.getValue("name") as string,
@@ -109,14 +108,10 @@ const fetchTableData = async (
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
 
-  console.log("Received params in fetchTableData:", params);
-
   try {
     // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
-
-    console.log("Using pagination params:", { page, limit });
 
     const filtersObj = [
     {
@@ -126,7 +121,6 @@ const fetchTableData = async (
     }
   ]
     Object.keys(params.filters).forEach((key) => {
-      console.log(`${key}: ${params.filters[key]}`);
       filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
         "@type": "med:Record",
         [`med:${key}`]: [
@@ -149,10 +143,7 @@ const fetchTableData = async (
           ? filtersObj
           : undefined,
     });
-
-    console.log("Created search filter:", JSON.stringify(filter, null, 2));
     const response = await api.searchLocalCatalog(filter as SearchFilter);
-    console.log("API response:", response);
 
     const tableData = transformSearchResponseToTableData(
       response as unknown as JsonLdResponse,
@@ -174,11 +165,9 @@ const fetchTableData = async (
       },
     };
 
-    console.log("Transformed table data:", updatedTableData);
-
     return updatedTableData;
-  } catch (error) {
-    console.error("Error fetching table data:", error);
+  } catch (e) {
+    console.log("Error fetching table data:", e);
     return {
       data: [],
       pagination: {

@@ -58,15 +58,6 @@ const handleFilterChange = (key: string, value: boolean | string | number, multi
 };
 
 const fetchData = async () => {
-  console.log("Fetching data with params:", {
-    page: table.getState().pagination.pageIndex + 1,
-    limit: table.getState().pagination.pageSize,
-    searchValue: searchValue.value,
-    selectedFilterColumn: selectedFilterColumn.value,
-    selectedFilters: selectedFilters.value,
-    activeFilters: getActiveFilters(),
-  });
-
   isLoading.value = true;
 
   const { data: tableData, pagination } = await dataSource({
@@ -91,15 +82,6 @@ const fetchData = async () => {
   const end = start + table.getState().pagination.pageSize;
   data.value = tableData?.slice(start, end) ?? [];
   totalItems.value = pagination?.total_items ?? 0;
-
-  console.log("Processed data:", {
-    start,
-    end,
-    totalItems: totalItems.value,
-    currentPage: table.getState().pagination.pageIndex,
-    pageSize: table.getState().pagination.pageSize,
-    dataLength: data.value.length,
-  });
 };
 
 const selectedFilterColumn = ref("all");
@@ -130,7 +112,6 @@ const currentPage = ref<number>(
 );
 
 const handlePageChange = (page: number) => {
-  console.log("Page changed to:", page);
   currentPage.value = page;
   table.setPageIndex(page);
   fetchData();

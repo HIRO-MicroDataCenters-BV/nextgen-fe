@@ -51,7 +51,6 @@ const columns = [
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
       const id = item.id;
-      console.log("id", id);
 
       return h(
         Button,
@@ -76,16 +75,10 @@ const fetchTableData = async (
 ): Promise<TableDataResponse> => {
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
-
-  console.log("Received params in fetchTableData:", params);
-
   try {
     // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
-
-    console.log("Using pagination params:", { page, limit });
-
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
@@ -99,12 +92,7 @@ const fetchTableData = async (
           ? params.filters
           : undefined,
     });
-    console.log("params", params);
-
-    console.log("Created search filter:", JSON.stringify(filter, null, 2));
     const response = await api.searchDecentralized(filter as SearchFilter);
-    console.log("API response:", response);
-
     const tableData = transformSearchResponseToTableData(
       response as unknown as JsonLdResponse,
       page,
@@ -124,8 +112,6 @@ const fetchTableData = async (
         has_prev: page > 1,
       },
     };
-
-    console.log("Transformed table data:", updatedTableData);
 
     return updatedTableData;
   } catch (error) {

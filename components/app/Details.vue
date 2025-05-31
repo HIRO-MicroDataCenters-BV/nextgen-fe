@@ -84,8 +84,6 @@ interface Props {
 const props = defineProps<Props>();
 const dayjs = useDayjs();
 
-console.log(props.data);
-
 const flattenedData = computed(() => {
   if (!props.data) return [];
   return flattenData(props.data);

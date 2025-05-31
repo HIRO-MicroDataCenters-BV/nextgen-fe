@@ -40,10 +40,8 @@ const action = ref();
           @click="
             () => {
               action = item.action;
-              console.log(item);
               if (item.hasConfirmation) {
                 if (item.key.includes('delete')) {
-                  console.log('delete');
                   isOpenDelete = true;
                 }
               } else {
