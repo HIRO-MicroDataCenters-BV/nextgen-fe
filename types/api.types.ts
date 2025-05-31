@@ -107,8 +107,5 @@ export interface CatalogResponse extends JsonLdObject {
 }
 
 export interface ApiError {
-  "@type": "Error";
-  "dcterms:description": JsonLdValue;
-  "dcterms:title": JsonLdValue;
-  "http:statusCode": number;
+  detail: string;
 }

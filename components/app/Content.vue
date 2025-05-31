@@ -6,6 +6,7 @@ const props = defineProps<{
 }>();
 
 const { title, description = "", showAvailableBiobanks = true } = props;
+const emit = defineEmits(["submit", "change-file"]);
 </script>
 
 <template>
@@ -14,6 +15,8 @@ const { title, description = "", showAvailableBiobanks = true } = props;
       :title="title"
       :description="description"
       :show-available-biobanks="showAvailableBiobanks"
+      @change-file="emit('change-file')"
+      @submit="emit('submit')"
     />
   </div>
   <div class="content-slot">

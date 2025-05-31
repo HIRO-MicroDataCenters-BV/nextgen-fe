@@ -88,21 +88,34 @@ export const useApi = () => {
     try {
       const res = await fetch(`${baseUrl}${url}`, opts);
       clearTimeout(timeoutId);
-
-      const data = await res.json();
+      
+      let data = {}
+      const text = await res.text();
+      console.log(text);
+      if(text != "") {
+        data = JSON.parse(text);
+      }
 
       if (!res.ok) {
         const error = data as ApiError;
+        /*
         const errorMessage =
           error["dcterms:description"]?.["@value"] ||
           error["dcterms:title"]?.["@value"] ||
           "An error occurred";
-
+        */
+       const errorMessage = error.detail
+        console.log(res.status, showToast);
         switch (res.status) {
           case 401:
             token.value = null;
             if (showToast) {
               toaster.show("error", "Unauthorized access. Please login again.");
+            }
+            return null;
+          case 409:
+            if (showToast) {
+              toaster.show("error", "A conflict occurred, already exists.");
             }
             return null;
           case 422:
@@ -399,7 +412,8 @@ export const useApi = () => {
         "catalog",
         "/mmio/",
         "POST",
-        formData
+        formData,
+        { showToast: true }
       );
 
       return response?.Location || null;

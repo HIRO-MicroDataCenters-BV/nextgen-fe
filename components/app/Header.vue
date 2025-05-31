@@ -87,7 +87,7 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 
-const emit = defineEmits(["save-form", "discard-form", "upload-file"]);
+const emit = defineEmits(["submit", "discard", "change-file"]);
 
 // Ensure this is specific enough not to conflict with /my_catalog/create or /my_catalog/:id/edit
 const isMyCatalogIndexPage = computed(() => route.path === "/my_catalog");
@@ -119,7 +119,7 @@ const toolbarButtons = computed<ToolbarButton[]>(() => {
       variant: "outline",
       action: {
         type: "discard",
-        onConfirm: () => emit("discard-form"),
+        onConfirm: () => router.back(),
       },
     },
     {
@@ -128,7 +128,7 @@ const toolbarButtons = computed<ToolbarButton[]>(() => {
       variant: "secondary",
       action: {
         type: "fileUpload",
-        onConfirm: () => emit("upload-file"),
+        onConfirm: () => emit("change-file"),
       },
     },
     {
@@ -136,7 +136,7 @@ const toolbarButtons = computed<ToolbarButton[]>(() => {
       label: t("action.create"),
       action: {
         type: "submit",
-        onConfirm: () => emit("save-form"),
+        onConfirm: () => emit("submit"),
       },
     }
   );

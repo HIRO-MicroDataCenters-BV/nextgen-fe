@@ -43,13 +43,17 @@ const onSubmit = handleSubmit((values) => {
   emit("submit", values);
 });
 
+const hasFile = ref(false);
+
 watch(appForm, (newVal) => {
   if (newVal.files.length > 0) {
+    hasFile.value = true;
     const file = newVal.files[0];
     const reader = new FileReader();
     reader.onload = (e) => {
       const content = e.target?.result as string;
       setFieldValue("metadata_content", content);
+      setFieldValue("file", file);
     };
     reader.readAsText(file as Blob);
   }
@@ -72,6 +76,7 @@ defineExpose({
             v-bind="componentField"
             class="h-[calc(100vh-300px)] resize-none max-w-full overflow-x-auto"
             :placeholder="t('placeholder.enter_metadata_content')"
+            :disabled="hasFile"
           />
         </FormControl>
         <FormMessage />

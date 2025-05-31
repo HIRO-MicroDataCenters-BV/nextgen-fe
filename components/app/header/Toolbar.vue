@@ -12,7 +12,7 @@
       ref="uploadRef"
       type="file"
       class="hidden"
-      accept=".json,.csv"
+      accept=".tar"
       @change="handleFileUpload"
     >
   </div>
