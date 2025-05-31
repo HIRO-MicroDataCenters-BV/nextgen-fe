@@ -91,7 +91,6 @@ export const useApi = () => {
       
       let data = {}
       const text = await res.text();
-      console.log(text);
       if(text != "") {
         data = JSON.parse(text);
       }
@@ -105,7 +104,6 @@ export const useApi = () => {
           "An error occurred";
         */
        const errorMessage = error.detail
-        console.log(res.status, showToast);
         switch (res.status) {
           case 401:
             token.value = null;

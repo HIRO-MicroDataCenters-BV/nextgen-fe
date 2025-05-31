@@ -54,6 +54,9 @@ const handleFilterChange = (key: string, value: boolean | string | number, multi
   if(value){
     selectedFilters.value[key] = value;
   }
+  // Сбрасываем текстовое поле поиска при изменении фильтров
+  searchValue.value = "";
+  applySearchFilter();
   fetchData();
 };
 
@@ -75,13 +78,26 @@ const fetchData = async () => {
 
   isLoading.value = false;
 
+  let filteredData = tableData ?? [];
+  
+  // Применяем текстовую фильтрацию по всем полям
+  if (searchValue.value && searchValue.value.trim()) {
+    const searchTerm = searchValue.value.toLowerCase().trim();
+    filteredData = filteredData.filter((row) => {
+      return Object.values(row).some((value) => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(searchTerm);
+      });
+    });
+  }
+
   // Slice the data based on current page and page size
   const start =
     table.getState().pagination.pageIndex *
     table.getState().pagination.pageSize;
   const end = start + table.getState().pagination.pageSize;
-  data.value = tableData?.slice(start, end) ?? [];
-  totalItems.value = pagination?.total_items ?? 0;
+  data.value = filteredData.slice(start, end);
+  totalItems.value = searchValue.value ? filteredData.length : (pagination?.total_items ?? 0);
 };
 
 const selectedFilterColumn = ref("all");
@@ -200,6 +216,7 @@ const applySearchFilter = () => {
     (filter) => filter.id !== "search"
   );
   if (!searchValue.value) {
+    fetchData();
     return;
   }
   const searchFilter: TableFilter = {
@@ -208,6 +225,7 @@ const applySearchFilter = () => {
     column: selectedFilterColumn.value,
   };
   columnFilters.value.push(searchFilter as unknown as TableFilter);
+  fetchData();
 };
 
 watch(
