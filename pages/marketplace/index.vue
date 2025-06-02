@@ -24,6 +24,7 @@ import Button from "@/components/ui/button/Button.vue";
 import {
   createTableSearchFilter,
   transformSearchResponseToTableData,
+  createFiltersObject,
 } from "~/utils/jsonld";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
@@ -78,48 +79,7 @@ const fetchTableData = async (
   try {
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3); 
-    const filtersObj = [
-    {
-        "dcat:dataset": {
-            "extraMetadata": []
-        }
-    }
-  ]
-    Object.keys(params.filters).forEach((key) => {
-      console.log(key);
-      switch (key) {
-        case "dcat:distribution":
-          filtersObj[0] = {
-            "@type": "dcat:Dataset",
-            "dcat:distribution": {
-              "@type": "dcat:Distribution",
-              "dcat:format": "MMIO"
-            }
-            };
-        break;
-        case "isShared":
-        filtersObj[0] = {
-            "@type": "dcat:Dataset",
-            "isShared": {
-              "@value": true,
-              "@type": "xsd:boolean"
-            }
-            };
-        break;
-        default:
-        filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
-        "@type": "med:Record",
-        [key]: [
-          {
-            "@value": params.filters[key],
-            "@type": "xsd:boolean"
-          }
-        ]
-      })
-          break;
-      }
-      
-    });
+    const filtersObj = createFiltersObject(params.filters);
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
