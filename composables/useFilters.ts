@@ -23,21 +23,21 @@ export const useFilters = () => {
       label: t("filters.sociodemographics"),
       items: [
         {
-          key: "age",
+          key: "med:age",
           label: t("filters.age"),
-          type: "number",
+          type: "checkbox",
           value: null,
         },
         {
-          key: "gender",
+          key: "med:gender",
           label: t("filters.gender"),
-          type: "select",
+          type: "checkbox",
           value: null,
         },
         {
-          key: "ethnicity",
+          key: "med:ethnicity",
           label: t("filters.ethnicity"),
-          type: "select",
+          type: "checkbox",
           value: null,
         },
       ],
@@ -47,55 +47,55 @@ export const useFilters = () => {
       label: t("filters.comorbidities"),
       items: [
         {
-          key: "previous_myocardial_infarction",
+          key: "med:previous_myocardial_infarction",
           label: t("filters.previous_myocardial_infarction"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "stroke",
+          key: "med:stroke",
           label: t("filters.stroke"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "chronic_obstructive_pulmonary_disease",
+          key: "med:chronic_obstructive_pulmonary_disease",
           label: t("filters.chronic_obstructive_pulmonary_disease"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "atrial_fibrillation",
+          key: "med:atrial_fibrillation",
           label: t("filters.atrial_fibrillation"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "peripheral_artery_disease",
+          key: "med:peripheral_artery_disease",
           label: t("filters.peripheral_artery_disease"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "hypertension",
+          key: "med:hypertension",
           label: t("filters.hypertension"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "diabetes",
+          key: "med:diabetes",
           label: t("filters.diabetes"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "hypercholesterolemia",
+          key: "med:hypercholesterolemia",
           label: t("filters.hypercholesterolemia"),
           type: "checkbox",
           value: null,
         },
         {
-          key: "chronic_kidney_disease",
+          key: "med:chronic_kidney_disease",
           label: t("filters.chronic_kidney_disease"),
           type: "checkbox",
           value: null,
@@ -107,27 +107,27 @@ export const useFilters = () => {
       label: t("filters.physical_measurements"),
       items: [
         {
-          key: "height",
+          key: "med:height",
           label: t("filters.height"),
-          type: "number",
+          type: "checkbox",
           value: null,
         },
         {
-          key: "waist_hip_ratio",
+          key: "med:waist_hip_ratio",
           label: t("filters.waist_hip_ratio"),
-          type: "number",
+          type: "checkbox",
           value: null,
         },
         {
-          key: "waist_height_ratio",
+          key: "med:waist_height_ratio",
           label: t("filters.waist_height_ratio"),
-          type: "number",
+          type: "checkbox",
           value: null,
         },
         {
-          key: "sbp",
+          key: "med:sbp",
           label: t("filters.sbp"),
-          type: "number",
+          type: "checkbox",
           value: null,
         },
       ],
@@ -137,13 +137,31 @@ export const useFilters = () => {
       label: t("filters.lifestyle_habits"),
       items: [
         {
-          key: "smoking_history",
+          key: "med:smoking_history",
           label: t("filters.smoking_history"),
           type: "checkbox",
           value: null,
         },
       ],
     },
+    {
+      key: "catalog",
+      label: t("filters.catalog"),
+      items: [
+        {
+          key: "isShared",
+          label: t("filters.is_shared"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "dcat:distribution",
+          label: t("filters.distribution"),
+          type: "checkbox",
+          value: null,
+        }
+      ],
+    }
   ]);
 
   const getActiveFilters = () => {

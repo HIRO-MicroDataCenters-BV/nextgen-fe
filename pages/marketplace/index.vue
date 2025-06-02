@@ -76,9 +76,50 @@ const fetchTableData = async (
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
   try {
-    // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
+    const limit = Math.max(1, params.limit || 3); 
+    const filtersObj = [
+    {
+        "dcat:dataset": {
+            "extraMetadata": []
+        }
+    }
+  ]
+    Object.keys(params.filters).forEach((key) => {
+      console.log(key);
+      switch (key) {
+        case "dcat:distribution":
+          filtersObj[0] = {
+            "@type": "dcat:Dataset",
+            "dcat:distribution": {
+              "@type": "dcat:Distribution",
+              "dcat:format": "MMIO"
+            }
+            };
+        break;
+        case "isShared":
+        filtersObj[0] = {
+            "@type": "dcat:Dataset",
+            "isShared": {
+              "@value": true,
+              "@type": "xsd:boolean"
+            }
+            };
+        break;
+        default:
+        filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
+        "@type": "med:Record",
+        [key]: [
+          {
+            "@value": params.filters[key],
+            "@type": "xsd:boolean"
+          }
+        ]
+      })
+          break;
+      }
+      
+    });
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
@@ -87,9 +128,8 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters:
-        params.filters && Object.keys(params.filters).length > 0
-          ? params.filters
+      filters: params.filters && Object.keys(params.filters).length > 0
+          ? filtersObj
           : undefined,
     });
     const response = await api.searchDecentralized(filter as SearchFilter);

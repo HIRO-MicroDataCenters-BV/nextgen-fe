@@ -59,7 +59,7 @@ const handleRemoveSelected = (key: string) => {
           variant="secondary"
           class="rounded-sm px-2 text-sm capitalize"
         >
-          {{ item }}
+          {{ t(`filter.${item}`) }}
           <Button
             variant="ghost"
             size="icon"

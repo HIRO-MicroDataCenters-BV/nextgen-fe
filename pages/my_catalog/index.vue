@@ -128,16 +128,40 @@ const fetchTableData = async (
         }
     }
   ]
-    Object.keys(params.filters).forEach((key) => {
-      filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
+  Object.keys(params.filters).forEach((key) => {
+      console.log(key);
+      switch (key) {
+        case "dcat:distribution":
+          filtersObj[0] = {
+            "@type": "dcat:Dataset",
+            "dcat:distribution": {
+              "@type": "dcat:Distribution",
+              "dcat:format": "MMIO"
+            }
+            };
+        break;
+        case "isShared":
+        filtersObj[0] = {
+            "@type": "dcat:Dataset",
+            "isShared": {
+              "@value": true,
+              "@type": "xsd:boolean"
+            }
+            };
+        break;
+        default:
+        filtersObj[0]["dcat:dataset"]["extraMetadata"].push({
         "@type": "med:Record",
-        [`med:${key}`]: [
+        [key]: [
           {
             "@value": params.filters[key],
             "@type": "xsd:boolean"
           }
         ]
       })
+          break;
+      }
+      
     });
     const filter = createTableSearchFilter({
       name: params.name,
