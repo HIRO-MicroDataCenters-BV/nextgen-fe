@@ -145,6 +145,30 @@ export const useFilters = () => {
       ],
     },
     {
+      key: "distribution",
+      label: t("filters.distribution"),
+      items: [
+        {
+          key: "distribution_csv",
+          label: t("filters.distribution_csv"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_dicom",
+          label: t("filters.distribution_dicom"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_mmio",
+          label: t("filters.distribution_mmio"),
+          type: "checkbox",
+          value: null,
+        },
+      ],
+    },
+    {
       key: "catalog",
       label: t("filters.catalog"),
       items: [
@@ -154,12 +178,6 @@ export const useFilters = () => {
           type: "checkbox",
           value: null,
         },
-        {
-          key: "dcat:distribution",
-          label: t("filters.distribution"),
-          type: "checkbox",
-          value: null,
-        }
       ],
     }
   ]);

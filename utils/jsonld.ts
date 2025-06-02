@@ -235,12 +235,14 @@ export function createFiltersObject(filters: Record<string, unknown>): Array<Rec
 
   Object.keys(filters).forEach((key) => {
     switch (key) {
-      case "dcat:distribution":
+      case "distribution_csv":
+      case "distribution_dicom":
+      case "distribution_mmio":
         filtersObj[0] = {
           "@type": "dcat:Dataset",
           "dcat:distribution": {
             "@type": "dcat:Distribution",
-            "dcat:format": "MMIO"
+            "dcat:format": key.replace("distribution_", "").toUpperCase(),
           }
         };
         break;

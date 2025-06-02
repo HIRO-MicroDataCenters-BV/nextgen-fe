@@ -59,7 +59,11 @@ export default defineI18nConfig(() => {
           marketplace: "Marketplace",
         },
         filter: {
-          "dcat:distribution": "Distribution",
+          distribution: "Distribution",
+          distribution_csv: "CSV",
+          distribution_mmio: "MMIO",
+          distribution_dicom: "DICOM",
+          is_deleted: "Is Deleted",
           is_shared: "Is Shared",
           catalog: "Catalog",
           status: "Status",
@@ -232,7 +236,67 @@ export default defineI18nConfig(() => {
             item: [
               {
                 description:
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus interdum hendrerit ex vitae sodales. Donec id leo ipsum. Phasellus volutpat aliquet mauris, et blandit nulla laoreet vitae.",
+                  "Workshop on legal and privacy concerns",
+              },
+              {
+                description:
+                  "Data and governance landscape mapped. Project organisation and guidelines, definitions and planning, initial specifications",
+              },
+              {
+                description:
+                  "Blueprint for annotation methods",
+              },
+              {
+                description:
+                  "Initial development of genomics analytical tools, Pathfinder development, Initial exploration of ethical issues, drivers and barriers",
+              },
+              {
+                description:
+                  "Overview of regulatory and legal concerns for all tools",
+              },
+              {
+                description:
+                  "NextGen platform specification (blueprint), vs genomic analysis tools, privacy assessment.",
+              },
+              {
+                description:
+                  "Synthetic data approach",
+              },
+              {
+                description:
+                  "Health economics questionnaire finalize",
+              },
+              {
+                description:
+                  "NextGen platform prototype available",
+              },
+              {
+                description:
+                  "NextGen prototype ready for pilot preparation, data sets, next steps ethics, barriers and drivers, dissemination and communication fully deployed",
+              },
+              {
+                description:
+                  "Identify main concerns for drivers, barriers and Cost-Benefit Analysis",
+              },
+              {
+                description:
+                  "NextGen platform sandbox available to consortium",
+              },
+              {
+                description:
+                  "Health economics data collection complete",
+              },
+              {
+                description:
+                  "Pilot deployment, first assessments of multimodal workflows including genomics, federated AI/ML data analytic platform,pathfinder operational for piloting.",
+              },
+              {
+                description:
+                  "Full assessment of pilots, final update tools and methods, clinical validation, pathfinder finalisations.",
+              },
+              {
+                description:
+                  "Project finalisation, final delivery platform, full legal and ethical compliance, sustainability plan based on drivers, barriers, cost-benefit analysis",
               },
             ],
             title: "Roadmap",
