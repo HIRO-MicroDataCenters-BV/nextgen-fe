@@ -61,6 +61,10 @@ const columns = [
     },
   },
   {
+    id: "biobank",
+    cell: ({ row }) => row.getValue("biobank"),
+  },
+  {
     id: "description",
     cell: ({ row }) => row.getValue("description"),
   },

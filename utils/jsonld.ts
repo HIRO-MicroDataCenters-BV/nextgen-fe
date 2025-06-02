@@ -185,7 +185,7 @@ export function transformSearchResponseToTableData(
 
         catalogDatasets.forEach((dataset) => {
           if (dataset["@type"] === "dcat:Dataset") {
-            datasets.push(dataset);
+            datasets.push({...dataset, ...{"dspace:biobank": item["dcterms:title"]}});
           }
         });
       }
@@ -203,10 +203,11 @@ export function transformSearchResponseToTableData(
       }
     });
   }
+  console.log("datasets",datasets);
 
   const transformedData = datasets.map(transformDatasetToTableRow);
   const totalPages = Math.ceil(transformedData.length / currentLimit);
-
+  console.log("tras",transformedData);
   return {
     data: transformedData,
     pagination: {
