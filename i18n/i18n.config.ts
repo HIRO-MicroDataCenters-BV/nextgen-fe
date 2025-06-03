@@ -243,7 +243,6 @@ export default defineI18nConfig(() => {
         },
         home: {
           contacts:{
-            email: "info@nextgentools.eu",
             linkedin: "NextGen LinkedIn",
             youtube: "NextGen YouTube",
             twitter: "NextGen X (Twitter)",

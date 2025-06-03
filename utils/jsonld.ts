@@ -205,7 +205,7 @@ export function transformSearchResponseToTableData(
   }
   console.log("datasets",datasets);
 
-  const transformedData = datasets.map((dataset: any) => transformDatasetToTableRow(dataset));
+  const transformedData = datasets.map((dataset: unknown) => transformDatasetToTableRow(dataset));
   const totalPages = Math.ceil(transformedData.length / currentLimit);
   console.log("tras",transformedData);
   return {
@@ -256,7 +256,7 @@ export function createFiltersObject(filters: Record<string, unknown>): Array<Rec
         };
         break;
       default:
-        ((filtersObj[0]["dcat:dataset"] as any)["extraMetadata"] as Array<Record<string, unknown>>).push({
+        ((filtersObj[0]["dcat:dataset"] as unknown)["extraMetadata"] as Array<Record<string, unknown>>).push({
           "@type": "med:Record",
           [key]: [
             {
