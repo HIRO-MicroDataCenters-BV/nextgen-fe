@@ -26,7 +26,6 @@
 </template>
 
 <script lang="ts" setup>
-const dayjs = useDayjs();
 const { roadmap } = useRoadmap();
 </script>
 

@@ -38,6 +38,8 @@ export default defineI18nConfig(() => {
           change_metadata_details: "Change metadata details.",
           marketplace_description:
             "Decentralised search across all institutional catalogs",
+          short_description:
+            "Genomic Data for Personalised Medicine.",
         },
         text: {
           available_biobank_description:
@@ -59,10 +61,16 @@ export default defineI18nConfig(() => {
           marketplace: "Marketplace",
         },
         filter: {
+          
           distribution: "Distribution",
           distribution_csv: "CSV",
           distribution_mmio: "MMIO",
           distribution_dicom: "DICOM",
+          distribution_nifti: "NIfTI",
+          distribution_xml: "XML",
+          distribution_vcf: "VCF",
+          distribution_plink: "PLINK",
+          "distribution_jpg/png": "JPG/PNG",
           is_deleted: "Is Deleted",
           is_shared: "Is Shared",
           catalog: "Catalog",
@@ -97,8 +105,10 @@ export default defineI18nConfig(() => {
           "med:waist_hip_ratio": "Waist-Hip Ratio",
           "med:waist_height_ratio": "Waist-Height Ratio",
           "med:sbp": "Systolic Blood Pressure",
-          
+          "med:sex": "Sex",
+          "med:asthma": "Asthma",
           "med:smoking_history": "Smoking History",
+          "med:pulse_rate": "Pulse Rate",
           filter_types: {
             checkbox: "Yes/No",
             select: "Select",
@@ -232,6 +242,12 @@ export default defineI18nConfig(() => {
           required_date: "This field must be a valid date",
         },
         home: {
+          contacts:{
+            email: "info@nextgentools.eu",
+            linkedin: "NextGen LinkedIn",
+            youtube: "NextGen YouTube",
+            twitter: "NextGen X (Twitter)",
+          },
           roadmap: {
             item: [
               {

@@ -40,6 +40,12 @@ export const useFilters = () => {
           type: "checkbox",
           value: null,
         },
+        {
+          key: "med:sex",
+          label: t("filters.sex"),
+          type: "checkbox",
+          value: null,
+        },
       ],
     },
     {
@@ -100,6 +106,12 @@ export const useFilters = () => {
           type: "checkbox",
           value: null,
         },
+        {
+          key: "med:asthma",
+          label: t("filters.asthma"),
+          type: "checkbox",
+          value: null,
+        },
       ],
     },
     {
@@ -127,6 +139,12 @@ export const useFilters = () => {
         {
           key: "med:sbp",
           label: t("filters.sbp"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "med:pulse_rate",
+          label: t("filters.pulse_rate"),
           type: "checkbox",
           value: null,
         },
@@ -166,6 +184,37 @@ export const useFilters = () => {
           type: "checkbox",
           value: null,
         },
+        {
+          key: "distribution_nifti",
+          label: t("filters.distribution_nifti"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_jpg/png",
+          label: t("filters.distribution_jpg/png"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_xml",
+          label: t("filters.distribution_xml"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_vcf",
+          label: t("filters.distribution_vcf"),
+          type: "checkbox",
+          value: null,
+        },
+        {
+          key: "distribution_plink",
+          label: t("filters.distribution_plink"),
+          type: "checkbox",
+          value: null,
+        },
+        
       ],
     },
     {
