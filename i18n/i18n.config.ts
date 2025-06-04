@@ -55,6 +55,8 @@ export default defineI18nConfig(() => {
           settings: "Settings",
           help: "Help",
           logout: "Logout",
+          hus_catalog: "HUS Catalog",
+          ki_catalog: "KI Catalog",
         },
         sidebar: {
           home: "Home",

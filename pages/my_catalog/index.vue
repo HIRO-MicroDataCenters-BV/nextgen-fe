@@ -1,16 +1,7 @@
 <template>
-  <AppContent
-    :title="t('title.my_catalog')"
-    :description="t('subtitle.my_catalog')"
-  >
-    <AppTable
-      ref="tableRef"
-      :title="'my_catalog'"
-      :columns="columns"
-      :data-source="fetchTableData"
-      :page-size="10"
-      :enable-pagination="true"
-    />
+  <AppContent :title="t(`menu.${catalogName}`)" :description="t('subtitle.my_catalog')">
+    <AppTable ref="tableRef" :title="t(`menu.${catalogName}`)" :columns="columns" :data-source="fetchTableData"
+      :page-size="10" :enable-pagination="true" />
   </AppContent>
 </template>
 
@@ -32,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
 import type { SearchFilter } from "~/types/api.types";
 
+const config = useRuntimeConfig();
+const catalogName = config.public.catalogName;
+
 
 const { deleteDataset } = useApi();
 const router = useRouter();
@@ -41,7 +35,7 @@ const tableRef = ref();
 const { setPage } = useApp();
 setPage({
   section: "my_catalog",
-  title: t("title.my_catalog"),
+  title: t(`menu.${catalogName}`),
   subtitle: t("subtitle.my_catalog"),
 });
 
@@ -54,7 +48,7 @@ const columns: TableColumn[] = [
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
       const id = item.id
-      
+
       return h(
         Button,
         {
@@ -132,8 +126,8 @@ const fetchTableData = async (
       page,
       limit,
       filters: params.filters && Object.keys(params.filters).length > 0
-          ? filtersObj
-          : undefined,
+        ? filtersObj
+        : undefined,
     });
     const response = await api.searchLocalCatalog(filter as SearchFilter);
 

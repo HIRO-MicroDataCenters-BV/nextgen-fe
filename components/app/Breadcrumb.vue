@@ -18,6 +18,9 @@
 import { useRoute, RouterLink } from "vue-router";
 import { useI18n } from "vue-i18n";
 
+const config = useRuntimeConfig();
+const catalogName = config.public.catalogName;
+
 interface BreadcrumbItemType {
   path: string;
   label: string;
@@ -39,7 +42,7 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
 
     let label = "";
     if (segment.toLowerCase() === "my_catalog") {
-      label = t("breadcrumb.my_catalog", "My Catalog");
+      label = t("breadcrumb.my_catalog", t(`menu.${catalogName}`));
     } else if (segment.toLowerCase() === "marketplace") {
       label = t("breadcrumb.marketplace", "Marketplace");
     } else if (segment.toLowerCase() === "create") {

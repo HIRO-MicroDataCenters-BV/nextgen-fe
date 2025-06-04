@@ -27,6 +27,7 @@ export interface UserProfile {
 export function useMenu() {
   const { t } = useI18n();
   const route = useRoute();
+  const config = useRuntimeConfig();
 
   // App version
   const version = ref("v1.0.0");
@@ -37,6 +38,9 @@ export function useMenu() {
     email: "john.doe@example.com",
     avatar: "/images/logo.svg", // Temporary avatar image
   });
+
+  const catalogName = config.public.catalogName;
+  console.log("publ",config.public);
 
   // Menu structure
   const menuItems = ref<MenuStructure>({
@@ -61,7 +65,7 @@ export function useMenu() {
       },
       {
         id: "my_catalog",
-        title: t("menu.my_catalog"),
+        title: t(`menu.${catalogName}`),
         icon: "lucide:folder",
         url: "/my_catalog",
         items: [],
