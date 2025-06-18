@@ -42,14 +42,16 @@
                               </a>
                             </li>
                             <li class="mb-1">
-                              <a href="https://www.linkedin.com/company/nextgen-cvd-dataspace"
+                              <a
+href="https://www.linkedin.com/company/nextgen-cvd-dataspace"
                                 class="flex gap-2 items-center justify-start">
                                 <Icon name="lucide:linkedin" />
                                 <span>{{ $t("home.contacts.linkedin") }}</span>
                               </a>
                             </li>
                             <li class="mb-1">
-                              <a href="https://www.youtube.com/@NextGenCVDDataspace"
+                              <a
+href="https://www.youtube.com/@NextGenCVDDataspace"
                                 class="flex gap-2 items-center justify-start">
                                 <Icon name="lucide:youtube" />
                                 <span>{{ $t("home.contacts.youtube") }}</span>
@@ -70,7 +72,7 @@
               </HoverCard>
               <Button variant="secondary" as="a" href="https://github.com/HIRO-MicroDataCenters-BV">{{
                 $t("action.github")
-                }}</Button>
+              }}</Button>
             </div>
             <AppColorModeSwitch />
           </div>
@@ -84,11 +86,6 @@
 </template>
 
 <script setup lang="ts">
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 const route = useRouter();
 const currentRouteName = computed(() => route.currentRoute.value.name);
 const isHome = computed(() => currentRouteName.value === "home");

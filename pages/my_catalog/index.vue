@@ -1,6 +1,7 @@
 <template>
   <AppContent :title="t(`menu.${catalogName}`)" :description="t('subtitle.my_catalog')">
-    <AppTable ref="tableRef" :title="t(`menu.${catalogName}`)" :columns="columns" :data-source="fetchTableData"
+    <AppTable
+ref="tableRef" :title="t(`menu.${catalogName}`)" :columns="columns" :data-source="fetchTableData"
       :page-size="10" :enable-pagination="true" />
   </AppContent>
 </template>
