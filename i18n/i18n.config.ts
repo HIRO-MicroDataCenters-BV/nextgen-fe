@@ -38,6 +38,8 @@ export default defineI18nConfig(() => {
           change_metadata_details: "Change metadata details.",
           marketplace_description:
             "Decentralised search across all institutional catalogs",
+          short_description:
+            "Genomic Data for Personalised Medicine.",
         },
         text: {
           available_biobank_description:
@@ -53,12 +55,27 @@ export default defineI18nConfig(() => {
           settings: "Settings",
           help: "Help",
           logout: "Logout",
+          hus_catalog: "HUS Catalog",
+          ki_catalog: "KI Catalog",
         },
         sidebar: {
           home: "Home",
           marketplace: "Marketplace",
         },
         filter: {
+          
+          distribution: "Distribution",
+          distribution_csv: "CSV",
+          distribution_mmio: "MMIO",
+          distribution_dicom: "DICOM",
+          distribution_nifti: "NIfTI",
+          distribution_xml: "XML",
+          distribution_vcf: "VCF",
+          distribution_plink: "PLINK",
+          "distribution_jpg/png": "JPG/PNG",
+          is_deleted: "Is Deleted",
+          is_shared: "Is Shared",
+          catalog: "Catalog",
           status: "Status",
           isDeleted: "Is Deleted",
           isShared: "Is Shared",
@@ -70,27 +87,30 @@ export default defineI18nConfig(() => {
           hasDistribution: "Has Distribution",
           hasSeries: "Has Series",
           sociodemographics: "Sociodemographics",
-          age: "Age",
-          gender: "Gender",
-          ethnicity: "Ethnicity",
           comorbidities: "Comorbidities",
-          previous_myocardial_infarction: "Previous Myocardial Infarction",
-          stroke: "Stroke",
-          chronic_obstructive_pulmonary_disease:
-            "Chronic Obstructive Pulmonary Disease",
-          atrial_fibrillation: "Atrial Fibrillation",
-          peripheral_artery_disease: "Peripheral Artery Disease",
-          hypertension: "Hypertension",
-          diabetes: "Diabetes",
-          hypercholesterolemia: "Hypercholesterolemia",
-          chronic_kidney_disease: "Chronic Kidney Disease",
           physical_measurements: "Physical Measurements",
-          height: "Height",
-          waist_hip_ratio: "Waist-Hip Ratio",
-          waist_height_ratio: "Waist-Height Ratio",
-          sbp: "Systolic Blood Pressure",
           lifestyle_habits: "Lifestyle Habits",
-          smoking_history: "Smoking History",
+          "med:age": "Age",
+          "med:gender": "Gender",
+          "med:ethnicity": "Ethnicity",
+          "med:previous_myocardial_infarction": "Previous Myocardial Infarction",
+          "med:stroke": "Stroke",
+          "med:chronic_obstructive_pulmonary_disease":
+            "Chronic Obstructive Pulmonary Disease",
+          "med:atrial_fibrillation": "Atrial Fibrillation",
+          "med:peripheral_artery_disease": "Peripheral Artery Disease",
+          "med:hypertension": "Hypertension",
+          "med:diabetes": "Diabetes",
+          "med:hypercholesterolemia": "Hypercholesterolemia",
+          "med:chronic_kidney_disease": "Chronic Kidney Disease",
+          "med:height": "Height",
+          "med:waist_hip_ratio": "Waist-Hip Ratio",
+          "med:waist_height_ratio": "Waist-Height Ratio",
+          "med:sbp": "Systolic Blood Pressure",
+          "med:sex": "Sex",
+          "med:asthma": "Asthma",
+          "med:smoking_history": "Smoking History",
+          "med:pulse_rate": "Pulse Rate",
           filter_types: {
             checkbox: "Yes/No",
             select: "Select",
@@ -224,11 +244,76 @@ export default defineI18nConfig(() => {
           required_date: "This field must be a valid date",
         },
         home: {
+          contacts:{
+            linkedin: "NextGen LinkedIn",
+            youtube: "NextGen YouTube",
+            twitter: "NextGen X (Twitter)",
+          },
           roadmap: {
             item: [
               {
                 description:
-                  "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus interdum hendrerit ex vitae sodales. Donec id leo ipsum. Phasellus volutpat aliquet mauris, et blandit nulla laoreet vitae.",
+                  "Workshop on legal and privacy concerns",
+              },
+              {
+                description:
+                  "Data and governance landscape mapped. Project organisation and guidelines, definitions and planning, initial specifications",
+              },
+              {
+                description:
+                  "Blueprint for annotation methods",
+              },
+              {
+                description:
+                  "Initial development of genomics analytical tools, Pathfinder development, Initial exploration of ethical issues, drivers and barriers",
+              },
+              {
+                description:
+                  "Overview of regulatory and legal concerns for all tools",
+              },
+              {
+                description:
+                  "NextGen platform specification (blueprint), vs genomic analysis tools, privacy assessment.",
+              },
+              {
+                description:
+                  "Synthetic data approach",
+              },
+              {
+                description:
+                  "Health economics questionnaire finalize",
+              },
+              {
+                description:
+                  "NextGen platform prototype available",
+              },
+              {
+                description:
+                  "NextGen prototype ready for pilot preparation, data sets, next steps ethics, barriers and drivers, dissemination and communication fully deployed",
+              },
+              {
+                description:
+                  "Identify main concerns for drivers, barriers and Cost-Benefit Analysis",
+              },
+              {
+                description:
+                  "NextGen platform sandbox available to consortium",
+              },
+              {
+                description:
+                  "Health economics data collection complete",
+              },
+              {
+                description:
+                  "Pilot deployment, first assessments of multimodal workflows including genomics, federated AI/ML data analytic platform,pathfinder operational for piloting.",
+              },
+              {
+                description:
+                  "Full assessment of pilots, final update tools and methods, clinical validation, pathfinder finalisations.",
+              },
+              {
+                description:
+                  "Project finalisation, final delivery platform, full legal and ethical compliance, sustainability plan based on drivers, barriers, cost-benefit analysis",
               },
             ],
             title: "Roadmap",

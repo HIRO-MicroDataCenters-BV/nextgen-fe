@@ -24,6 +24,7 @@ import Button from "@/components/ui/button/Button.vue";
 import {
   createTableSearchFilter,
   transformSearchResponseToTableData,
+  createFiltersObject,
 } from "~/utils/jsonld";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
@@ -60,6 +61,10 @@ const columns = [
     },
   },
   {
+    id: "biobank",
+    cell: ({ row }) => row.getValue("biobank"),
+  },
+  {
     id: "description",
     cell: ({ row }) => row.getValue("description"),
   },
@@ -76,9 +81,9 @@ const fetchTableData = async (
   const params = paramsAsUnknown as TableFetchParams;
   const api = useApi();
   try {
-    // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
+    const limit = Math.max(1, params.limit || 3); 
+    const filtersObj = createFiltersObject(params.filters);
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
@@ -87,9 +92,8 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters:
-        params.filters && Object.keys(params.filters).length > 0
-          ? params.filters
+      filters: params.filters && Object.keys(params.filters).length > 0
+          ? filtersObj
           : undefined,
     });
     const response = await api.searchDecentralized(filter as SearchFilter);
