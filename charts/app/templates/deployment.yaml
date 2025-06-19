@@ -36,7 +36,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.service.port }}
+              containerPort: {{ .Values.service.containerPort }}
               protocol: TCP
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -45,6 +45,8 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
+            - name: CATALOG_NAME
+              value: "{{ .Values.backend.catalogName }}"
             - name: API_SEARCH_SERVICE_URL
               value: "{{ .Values.backend.searchServiceURL }}"
             - name: API_CATALOG_SERVICE_URL
