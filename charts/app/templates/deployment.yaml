@@ -45,11 +45,11 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           env:
-            - name: CATALOG_NAME
+            - name: NUXT_PUBLIC_CATALOG_NAME
               value: "{{ .Values.backend.catalogName }}"
-            - name: API_SEARCH_SERVICE_URL
+            - name: NUXT_PUBLIC_API_SEARCH_SERVICE_URL
               value: "{{ .Values.backend.searchServiceURL }}"
-            - name: API_CATALOG_SERVICE_URL
+            - name: NUXT_PUBLIC_API_CATALOG_SERVICE_URL
               value: "{{ .Values.backend.catalogServiceURL }}"
       {{- with .Values.nodeSelector }}
       nodeSelector:
