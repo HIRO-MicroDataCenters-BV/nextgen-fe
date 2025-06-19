@@ -6,40 +6,31 @@ set -o nounset
 ROOT="${GITHUB_WORKSPACE}"
 CHART_NAME="app"
 
-VERSION_APP_PATH="${ROOT}/VERSION"
-VERSION_CHART_PATH="${ROOT}/VERSION_CHART"
-VERSION_DOCKER_PATH="${ROOT}/VERSION_DOCKER"
-DOCKER_IMAGES_PATH="${ROOT}/DOCKER_IMAGES"
+VERSION_APP_PATH="./VERSION_APP"
+VERSION_CHART_PATH="./VERSION_CHART"
+VERSION_DOCKER_PATH="./VERSION_DOCKER"
+DOCKER_IMAGES_PATH="./DOCKER_IMAGES"
 
 #                                         App                           Docker                            Chart
 # branch, pr (e.g. "main", "mybranch"):   4.2.0.dev3-mybranch-411fa4aa  4.2.0-dev.3.mybranch.411fa4aa     4.2.0-dev.3.mybranch.411fa4aa
 # tag (free text, e.g. "mytag"):          4.2.0.dev3-mytag-411fa4aa     4.2.0-dev.3.mytag.411fa4aa        4.2.0-dev.3.mytag.411fa4aa
 # tag (release, e.g. "4.2.0"):            4.2.0                         4.2.0,4.2.0-411fa4aa              4.2.0
 make_version() {
-  GIT_SHA="$1"
+  GIT_SHA=$(git log -1 --pretty=%H)
   SHORT_SHA=$(echo "$GIT_SHA" | cut -c1-8)
+
+  VERSION_BASE_HASH=$(git log --follow -1 --pretty=%H VERSION)
+  VERSION_BASE=$(cat VERSION)
+  GIT_COUNT=$(git rev-list --count "$VERSION_BASE_HASH"..HEAD)
 
   BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF##*/}}  # Branch or pr or tag
   TAG=$( [[ $GITHUB_REF == refs/tags/* ]] && echo "${GITHUB_REF##refs/tags/}" || echo "" )
-
-  git fetch --tags --force
-  git fetch --prune --unshallow || true
-
-  LAST_RELEASE=$(get_last_release "$GIT_SHA")
-  if [[ -n "$LAST_RELEASE" ]];
-  then
-    VERSION_BASE="$LAST_RELEASE"
-    LAST_RELEASE_HASH=$(git rev-list -n 1 "$LAST_RELEASE")
-    GIT_COUNT=$(git rev-list --count "$LAST_RELEASE_HASH".."$GIT_SHA")
-  else
-    VERSION_BASE="0.1.0"
-    GIT_COUNT="0"
-  fi
 
   echo "GIT_SHA: $GIT_SHA"
   echo "SHORT_SHA: $SHORT_SHA"
   echo "BRANCH: $BRANCH"
   echo "TAG: $TAG"
+  echo "VERSION_BASE_HASH: $VERSION_BASE_HASH"
   echo "VERSION_BASE: $VERSION_BASE"
   echo "GIT_COUNT: $GIT_COUNT"
 
@@ -72,14 +63,6 @@ make_version() {
   echo -n "${VERSION_CHART}"  > "${VERSION_CHART_PATH}"
 }
 
-get_last_release() {
-  GIT_SHA="$1"
-
-  LAST_RELEASE=$(git tag --list --merged "$GIT_SHA" --sort=-v:refname | grep -E "^[0-9]+\.[0-9]+\.[0-9]+$" | head -n 1)
-
-  echo "$LAST_RELEASE"
-}
-
 make_docker_images_with_tags() {
   DOCKER_IMAGE_NAME="$1"
   DOCKER_IMAGE_TAGS=$(cat "${VERSION_DOCKER_PATH}")
@@ -98,17 +81,13 @@ make_docker_images_with_tags() {
   echo -n "${RESULT}" > "${DOCKER_IMAGES_PATH}"
 }
 
-patch_versions_in_project_files() {
+patch_helm_chart() {
   DOCKER_IMAGE_NAME="$1"
 
-  PACKAGE_JSON_PATH="${ROOT}/package.json"
-  CHART_PATH="${ROOT}/charts/${CHART_NAME}"
+  CHART_PATH="./server/charts/${CHART_NAME}"
 
-  VERSION_APP=$(cat "${VERSION_APP_PATH}")
   DOCKER_IMAGE_TAG=$(rev "${VERSION_DOCKER_PATH}" | cut -d ',' -f 1 | rev)
   VERSION_CHART=$(cat "${VERSION_CHART_PATH}")
-
-  sed -i "s#\"version\": \".*\"#\"version\": \"$VERSION_APP\"#" "${PACKAGE_JSON_PATH}"
 
   sed -i "s#repository: \"\"#repository: \"$DOCKER_IMAGE_NAME\"#" "${CHART_PATH}/values.yaml"
   sed -i "s#tag: \"\"#tag: \"$DOCKER_IMAGE_TAG\"#" "${CHART_PATH}/values.yaml"
@@ -117,12 +96,13 @@ patch_versions_in_project_files() {
 }
 
 main() {
-  GIT_SHA="$1"
-  DOCKER_IMAGE_NAME="$2"
+  DOCKER_IMAGE_NAME="$1"
 
-  make_version "$GIT_SHA"
+  cd "$ROOT"
+
+  make_version
   make_docker_images_with_tags "$DOCKER_IMAGE_NAME"
-  patch_versions_in_project_files "$DOCKER_IMAGE_NAME"
+  patch_helm_chart "$DOCKER_IMAGE_NAME"
 }
 
 main "$@"
