@@ -23,11 +23,6 @@ jobs:
       contents: write
       packages: write
     runs-on: ubuntu-latest
-
-    env:
-      DOCKER_IMAGE_NAME: ${{ vars.DOCKER_IMAGE_NAME }}
-      REGISTRY: ${{ vars.REGISTRY }}
-
     steps:
       - uses: actions/checkout@v4
         with:
