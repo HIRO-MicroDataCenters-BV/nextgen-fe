@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  app:
+  - apiVersion: v2
+    appVersion: 0.1.0-dev.3.fix-helm-chart.26c57c6e
+    created: "2025-06-19T07:37:08.309367394Z"
+    description: A frontend web service template for reuse.
+    digest: dd262497dd767cbab45efe9eecfd1663af2629e69b0e3579bd615a0625e5600c
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
+    version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
+generated: "2025-06-19T07:37:08.308880727Z"
