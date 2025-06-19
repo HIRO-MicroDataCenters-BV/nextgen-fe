@@ -44,6 +44,11 @@ spec:
             {{- toYaml .Values.readinessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: API_SEARCH_SERVICE_URL
+              value: "{{ .Values.backend.searchServiceURL }}"
+            - name: API_CATALOG_SERVICE_URL
+              value: "{{ .Values.backend.catalogServiceURL }}"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

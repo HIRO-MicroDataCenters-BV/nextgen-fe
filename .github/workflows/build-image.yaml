@@ -3,11 +3,19 @@ name: Build and push docker image
 on:
   push:
     branches:
-      - main
-      - develop
+      - '**'
     tags:
-      - "**"
+      - '**'
+    paths-ignore:
+      - 'releases/**'
+  pull_request:
+    branches:
+      - '**'
   workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  DOCKER_IMAGE_NAME: hiro-microdatacenters-bv/nextgen-fe
 
 jobs:
   build:
@@ -21,8 +29,9 @@ jobs:
       REGISTRY: ${{ vars.REGISTRY }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -36,8 +45,8 @@ jobs:
         run: |
           cd "${{ github.workspace }}"
           chmod +x ./tools/version.sh
-          ./tools/version.sh "${{ github.sha }}" "${{ env.DOCKER_IMAGE_NAME }}"
-          echo "VERSION_APP=$(cat "./VERSION")" >> $GITHUB_ENV
+          ./tools/version.sh "${{ env.REGISTRY }}/${{ env.DOCKER_IMAGE_NAME }}"
+          echo "VERSION_APP=$(cat "./VERSION_APP")" >> $GITHUB_ENV
           echo "DOCKER_IMAGES=$(cat "./DOCKER_IMAGES")" >> $GITHUB_ENV
           echo "DOCKER_TAGS=$(cat "./VERSION_DOCKER")" >> $GITHUB_ENV
 
