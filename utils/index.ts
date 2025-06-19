@@ -33,6 +33,7 @@ export {
   transformDatasetToTableRow,
   transformSearchResponseToTableData,
   createTableSearchFilter,
+  createFiltersObject,
   findDatasetInJsonLd,
   convertJsonLdDatasetToJson,
 } from "./jsonld";

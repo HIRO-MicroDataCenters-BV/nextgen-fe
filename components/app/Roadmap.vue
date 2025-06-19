@@ -1,6 +1,6 @@
 <template>
   <div class="roadmap">
-    <div>
+    <div class="roadmap-title">
       <h3 class="text-2xl font-semibold">
         {{ $t("home.roadmap.title") }}
       </h3>
@@ -9,16 +9,11 @@
       </h4>
       <Separator class="mb-4" />
     </div>
-    <div v-for="item in roadmap" :key="item.id" class="roadmap-item">
+    <div v-for="item, i in roadmap" :key="item.id" class="roadmap-item">
       <div class="roadmap-item-content grid grid-cols-2 gap-4">
-        <div>
+        <div class=" px-2 w-16">
           <p>
-            {{
-              $t("hint.quarter", {
-                quarter: dayjs(item.deadline).quarter(),
-                year: dayjs(item.deadline).format("YYYY"),
-              })
-            }}
+            {{ i+1 }}
           </p>
         </div>
         <div>
@@ -31,8 +26,11 @@
 </template>
 
 <script lang="ts" setup>
-const dayjs = useDayjs();
 const { roadmap } = useRoadmap();
 </script>
 
-<style></style>
+<style>
+.roadmap-item-content {
+  grid-template-columns: 4em 1fr;
+}
+</style>

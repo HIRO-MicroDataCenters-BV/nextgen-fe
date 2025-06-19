@@ -52,6 +52,7 @@ export default defineNuxtConfig({
     public: {
       apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL,
       apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL,
+      catalogName: process.env.CATALOG_NAME,
     },
   },
   vite: {
