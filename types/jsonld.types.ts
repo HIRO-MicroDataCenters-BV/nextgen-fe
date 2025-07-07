@@ -107,9 +107,9 @@ export interface SearchFilter {
   "@context": {
     "@vocab": string;
     dcat: string;
-    dcterms: string;
+    dcterms?: string;
     dspace?: string;
-    med: string;
+    med?: string;
     Filters?: "Filters" | string;
   };
   "@type": string;

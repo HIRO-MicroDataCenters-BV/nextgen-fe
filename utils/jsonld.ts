@@ -69,45 +69,45 @@ export function transformDatasetToTableRow(
   // Get themes
   const themes = Array.isArray(dataset["dcat:theme"])
     ? dataset["dcat:theme"].map((theme: JsonLdObject) =>
-        getLanguageValue(theme["skos:prefLabel"] as JsonLdLanguageValue)
-      )
+      getLanguageValue(theme["skos:prefLabel"] as JsonLdLanguageValue)
+    )
     : dataset["dcat:theme"]
-    ? [
+      ? [
         getLanguageValue(
           (dataset["dcat:theme"] as JsonLdObject)[
-            "skos:prefLabel"
+          "skos:prefLabel"
           ] as JsonLdLanguageValue
         ),
       ]
-    : [];
+      : [];
 
   // Get distribution info
   const distribution = dataset["dcat:distribution"]
     ? {
-        availability: getLanguageValue(
-          (dataset["dcat:distribution"] as JsonLdDistribution)[
-            "dcatap:availability"
-          ]["skos:prefLabel"] as JsonLdLanguageValue
-        ),
-        description: getLanguageValue(
-          (dataset["dcat:distribution"] as JsonLdDistribution)[
-            "dcterms:description"
-          ] as JsonLdLanguageValue
-        ),
-        accessURL: (dataset["dcat:distribution"] as JsonLdDistribution)[
-          "dcat:accessURL"
-        ]["@id"],
-        byteSize: getJsonLdValue(
-          (dataset["dcat:distribution"] as JsonLdDistribution)[
-            "dcat:byteSize"
-          ] as JsonLdLongValue
-        ),
-        format: getJsonLdValue(
-          (dataset["dcat:distribution"] as JsonLdDistribution)[
-            "dcat:format"
-          ] as JsonLdStringValue
-        ),
-      }
+      availability: getLanguageValue(
+        (dataset["dcat:distribution"] as JsonLdDistribution)[
+        "dcatap:availability"
+        ]["skos:prefLabel"] as JsonLdLanguageValue
+      ),
+      description: getLanguageValue(
+        (dataset["dcat:distribution"] as JsonLdDistribution)[
+        "dcterms:description"
+        ] as JsonLdLanguageValue
+      ),
+      accessURL: (dataset["dcat:distribution"] as JsonLdDistribution)[
+        "dcat:accessURL"
+      ]["@id"],
+      byteSize: getJsonLdValue(
+        (dataset["dcat:distribution"] as JsonLdDistribution)[
+        "dcat:byteSize"
+        ] as JsonLdLongValue
+      ),
+      format: getJsonLdValue(
+        (dataset["dcat:distribution"] as JsonLdDistribution)[
+        "dcat:format"
+        ] as JsonLdStringValue
+      ),
+    }
     : null;
   // Transform dataset to table row format
   const result: DatasetMetadata = {
@@ -173,7 +173,7 @@ export function transformSearchResponseToTableData(
 
   // Extract datasets from catalogs
   const datasets: JsonLdObject[] = [];
-  
+
   // Handle response with @graph structure
   if (response["@graph"]) {
     const graph = response["@graph"];
@@ -185,7 +185,7 @@ export function transformSearchResponseToTableData(
 
         catalogDatasets.forEach((dataset) => {
           if (dataset["@type"] === "dcat:Dataset") {
-            datasets.push({...dataset, ...{"dspace:biobank": item["dcterms:title"]}});
+            datasets.push({ ...dataset, ...{ "dspace:biobank": item["dcterms:title"] } });
           }
         });
       }
@@ -203,11 +203,11 @@ export function transformSearchResponseToTableData(
       }
     });
   }
-  console.log("datasets",datasets);
+  console.log("datasets", datasets);
 
   const transformedData = datasets.map((dataset: unknown) => transformDatasetToTableRow(dataset));
   const totalPages = Math.ceil(transformedData.length / currentLimit);
-  console.log("tras",transformedData);
+  console.log("tras", transformedData);
   return {
     data: transformedData,
     pagination: {
@@ -342,7 +342,7 @@ export function findDatasetInJsonLd(jsonLdData: unknown): unknown | null {
       // If dcat:dataset is a single object, return it
       return datasets;
     }
-    
+
     // Check if the item itself is a dataset (for direct catalog structure)
     if (item["@type"] === "dcat:Dataset") {
       return item;
@@ -456,33 +456,33 @@ export function convertJsonLdDatasetToJson(
     if (dataset["dcat:keyword"]) {
       result.keywords = Array.isArray(dataset["dcat:keyword"])
         ? dataset["dcat:keyword"].map((k) =>
-            getJsonLdValue(k as JsonLdStringValue)
-          )
+          getJsonLdValue(k as JsonLdStringValue)
+        )
         : [getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue)];
     }
 
     if (dataset["dcat:theme"]) {
       result.themes = Array.isArray(dataset["dcat:theme"])
         ? dataset["dcat:theme"].map((theme: JsonLdObject) => ({
-            id: theme["@id"],
+          id: theme["@id"],
+          label: getLanguageValue(
+            theme["skos:prefLabel"] as JsonLdLanguageValue,
+            preferredLanguage
+          ),
+          raw: includeRawData ? theme : undefined,
+        }))
+        : [
+          {
+            id: (dataset["dcat:theme"] as JsonLdObject)["@id"],
             label: getLanguageValue(
-              theme["skos:prefLabel"] as JsonLdLanguageValue,
+              (dataset["dcat:theme"] as JsonLdObject)[
+              "skos:prefLabel"
+              ] as JsonLdLanguageValue,
               preferredLanguage
             ),
-            raw: includeRawData ? theme : undefined,
-          }))
-        : [
-            {
-              id: (dataset["dcat:theme"] as JsonLdObject)["@id"],
-              label: getLanguageValue(
-                (dataset["dcat:theme"] as JsonLdObject)[
-                  "skos:prefLabel"
-                ] as JsonLdLanguageValue,
-                preferredLanguage
-              ),
-              raw: includeRawData ? dataset["dcat:theme"] : undefined,
-            },
-          ];
+            raw: includeRawData ? dataset["dcat:theme"] : undefined,
+          },
+        ];
     }
 
     if (dataset["dcterms:publisher"]) {
@@ -525,7 +525,7 @@ export function convertJsonLdDatasetToJson(
     result._raw = dataset;
   }
 
-  console.log("result",result);
+  console.log("result", result);
 
   return result;
 }
