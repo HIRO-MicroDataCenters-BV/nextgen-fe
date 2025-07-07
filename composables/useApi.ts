@@ -83,17 +83,17 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-          body: isFormData ? body : hasRawData ? body : JSON.stringify(body),
-        }),
+        body: isFormData ? body as BodyInit : hasRawData ? body as BodyInit : JSON.stringify(body),
+      }),
     };
 
     try {
       const res = await fetch(`${baseUrl}${url}`, opts);
       clearTimeout(timeoutId);
-      
+
       let data = {}
       const text = await res.text();
-      if(text != "") {
+      if (text != "") {
         data = JSON.parse(text);
       }
 
@@ -105,7 +105,7 @@ export const useApi = () => {
           error["dcterms:title"]?.["@value"] ||
           "An error occurred";
         */
-       const errorMessage = error.detail
+        const errorMessage = error.detail
         switch (res.status) {
           case 401:
             token.value = null;
@@ -181,12 +181,12 @@ export const useApi = () => {
       "@type": "Filters",
       filters: Array.isArray(compacted.filters)
         ? (compacted.filters as Array<{
-            "@type": string;
-            [key: string]: unknown;
-          }>)
+          "@type": string;
+          [key: string]: unknown;
+        }>)
         : compacted.filters
-        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
-        : [],
+          ? [compacted.filters as { "@type": string;[key: string]: unknown }]
+          : [],
     };
 
     return result;
@@ -260,6 +260,28 @@ export const useApi = () => {
     },
 
     /**
+     * Performs a distributed search across federated catalogs
+     * @param filter - Search filter object with JSON-LD context
+     * @returns Promise with search results from distributed catalogs
+     * @example
+     * const api = useApi();
+     * const results = await api.searchDistributed({
+     *   "@context": { "@vocab": "http://data-space.org/" },
+     *   "@type": "Filters",
+     *   filters: []
+     * });
+     */
+    searchDistributed: async (filter: SearchFilter) => {
+      const preparedFilter = await prepareSearchFilter(filter);
+      return request<SearchResponse>(
+        "search",
+        `/distributed-search/`,
+        "POST",
+        preparedFilter
+      );
+    },
+
+    /**
      * Creates a basic search filter with the provided context and filters
      * @param context - JSON-LD context object
      * @param filters - Array of filter objects
@@ -294,13 +316,14 @@ export const useApi = () => {
      * const catalog = await api.getLocalCatalog();
      */
     getLocalCatalog: async (
-      filter?: SearchFilter
+      filter: SearchFilter
     ): Promise<CatalogResponse | null> => {
+      const preparedFilter = await prepareSearchFilter(filter);
       const response = await request<CatalogResponse>(
         "catalog",
         "/catalog/",
         "POST",
-        filter ? JSON.stringify(filter) : "{}"
+        preparedFilter
       );
       return response || null;
     },

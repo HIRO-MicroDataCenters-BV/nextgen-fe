@@ -1,15 +1,6 @@
 <template>
-  <AppContent
-    :title="t('title.marketplace')"
-    :description="t('subtitle.marketplace')"
-    :show-available-biobanks="true"
-  >
-    <AppTable
-      :title="'marketplace'"
-      :columns="columns"
-      :data-source="fetchTableData"
-      :page-size="10"
-    />
+  <AppContent :title="t('title.marketplace')" :description="t('subtitle.marketplace')" :show-available-biobanks="true">
+    <AppTable :title="'marketplace'" :columns="columns" :data-source="fetchTableData" :page-size="10" />
   </AppContent>
 </template>
 
@@ -82,7 +73,7 @@ const fetchTableData = async (
   const api = useApi();
   try {
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 3); 
+    const limit = Math.max(1, params.limit || 3);
     const filtersObj = createFiltersObject(params.filters);
     const filter = createTableSearchFilter({
       name: params.name,
@@ -93,10 +84,10 @@ const fetchTableData = async (
       page,
       limit,
       filters: params.filters && Object.keys(params.filters).length > 0
-          ? filtersObj
-          : undefined,
+        ? filtersObj
+        : undefined,
     });
-    const response = await api.searchDecentralized(filter as SearchFilter);
+    const response = await api.searchDistributed(filter as SearchFilter);
     const tableData = transformSearchResponseToTableData(
       response as unknown as JsonLdResponse,
       page,
