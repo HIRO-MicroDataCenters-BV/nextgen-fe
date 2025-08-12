@@ -40,11 +40,12 @@ readinessProbe:
     port: http
 
 nodeSelector:
-  node-id: hus
+  role: hus
+
+namespace: nextgen
 
 ingress:
   host: nextgen.hiro-develop.nl
-  nodeId: hus
 
 backend:
   catalogName: "HUS Catalog"
