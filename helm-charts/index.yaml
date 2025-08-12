@@ -12,6 +12,16 @@ entries:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1.tgz
     version: 0.1.1
   - apiVersion: v2
+    appVersion: 0.1.1-dev.1.daemonset-to-dep.71685194
+    created: "2025-08-12T11:33:47.748797994Z"
+    description: A frontend web service template for reuse.
+    digest: d7e48d0cc1c7de31594ee4b6dab98e1d70bd8e40c8d4fede9a1c6b0bce87d3a0
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.1.daemonset-to-dep.71685194.tgz
+    version: 0.1.1-dev.1.daemonset-to-dep.71685194
+  - apiVersion: v2
     appVersion: 0.1.1-dev.0.main.fa1c720a
     created: "2025-07-25T07:36:53.846577735Z"
     description: A frontend web service template for reuse.
@@ -131,4 +141,4 @@ entries:
     urls:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
     version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
-generated: "2025-07-25T07:38:00.042851994Z"
+generated: "2025-08-12T11:33:47.748295755Z"
