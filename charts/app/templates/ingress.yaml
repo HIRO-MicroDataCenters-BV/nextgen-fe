@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: ds-frontend.{{ .Values.ingress.nodeId }}.{{ .Values.ingress.host }}
+    - host: ds-frontend.{{ .Values.namespace }}.{{ .Values.ingress.host }}
       http:
         paths:
           - path: /
@@ -21,5 +21,5 @@ spec:
                   number: {{ .Values.service.port }}
   tls:
     - hosts:
-        - ds-frontend.{{ .Values.ingress.nodeId }}.{{ .Values.ingress.host }}
+        - ds-frontend.{{ .Values.namespace }}.{{ .Values.ingress.host }}
       secretName: {{ include "app.fullname" . }}-tls-secret
