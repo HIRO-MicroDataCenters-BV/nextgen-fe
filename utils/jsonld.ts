@@ -20,7 +20,6 @@ export function getJsonLdValue(
   if (!value) return "";
 
   if (Array.isArray(value)) {
-    // Get first value from array
     return value[0]?.["@value"] || "";
   }
 
@@ -71,7 +70,6 @@ function getLanguageValue(
 export function transformDatasetToTableRow(
   dataset: JsonLdObject
 ): DatasetMetadata {
-  // Get themes (handle both with and without skos:prefLabel)
   const themes = Array.isArray(dataset["dcat:theme"])
     ? dataset["dcat:theme"]
         .map((theme: JsonLdObject) =>
@@ -92,13 +90,11 @@ export function transformDatasetToTableRow(
       ].filter((theme) => theme !== "")
     : [];
 
-  // Get distribution info (handle both single object and array)
   const getDistributionInfo = (
     dist: JsonLdDistribution | JsonLdDistribution[] | undefined
   ) => {
     if (!dist) return null;
 
-    // If array, take the first distribution
     const distribution = Array.isArray(dist) ? dist[0] : dist;
     if (!distribution) return null;
 
@@ -137,7 +133,6 @@ export function transformDatasetToTableRow(
       | JsonLdDistribution[]
       | undefined
   );
-  // Transform dataset to table row format
   const result: DatasetMetadata = {
     id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
     name: getLanguageValue(dataset["dcterms:title"] as JsonLdLanguageValue),
@@ -201,10 +196,8 @@ export function transformSearchResponseToTableData(
     };
   }
 
-  // Extract datasets from catalogs
   const datasets: JsonLdObject[] = [];
 
-  // Handle response with @graph structure
   if (response["@graph"]) {
     const graph = response["@graph"];
     graph.forEach((item: JsonLdObject) => {
@@ -223,9 +216,7 @@ export function transformSearchResponseToTableData(
         });
       }
     });
-  }
-  // Handle direct catalog structure (new format)
-  else if (
+  } else if (
     (response as unknown as JsonLdObject)["@type"] === "dcat:Catalog" &&
     (response as unknown as JsonLdObject)["dcat:dataset"]
   ) {
@@ -354,7 +345,6 @@ export function createTableSearchFilter(params: {
     filters: [],
   };
 
-  // Add boolean filters if provided
   if (params.filters) {
     filter.filters = params.filters;
   }
@@ -363,7 +353,6 @@ export function createTableSearchFilter(params: {
   const DISABLE_PAGINATION = true;
 
   if (!DISABLE_PAGINATION) {
-    // Add pagination filter
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 10);
 
@@ -386,23 +375,17 @@ export function findDatasetInJsonLd(jsonLdData: unknown): JsonLdObject | null {
 
   const data = jsonLdData as JsonLdObject;
 
-  // Check if data has @graph array
   const graph = data["@graph"] ? (data["@graph"] as JsonLdObject[]) : [data];
 
-  // Iterate through graph items
   for (const item of graph) {
-    // Check if item has dcat:dataset property
     if (item["dcat:dataset"]) {
       const datasets = item["dcat:dataset"];
-      // If dcat:dataset is an array, return the first dataset
       if (Array.isArray(datasets) && datasets.length > 0) {
         return datasets[0] as JsonLdObject;
       }
-      // If dcat:dataset is a single object, return it
       return datasets as JsonLdObject;
     }
 
-    // Check if the item itself is a dataset (for direct catalog structure)
     if (item["@type"] === "dcat:Dataset") {
       return item;
     }
@@ -442,17 +425,14 @@ export function convertJsonLdDatasetToJson(
       : [dataset["@type"] || ""],
   };
 
-  // Process each property in the dataset
   Object.entries(dataset).forEach(([key, value]) => {
     if (key.startsWith("@")) {
-      // Skip @id and @type as they're already processed
       if (key !== "@id" && key !== "@type") {
         result[key] = value;
       }
       return;
     }
 
-    // Convert property name to camelCase for convenience
     const camelKey = key
       .replace(/[:-]/g, "_")
       .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -467,10 +447,8 @@ export function convertJsonLdDatasetToJson(
     );
 
     if (excludeOriginalData) {
-      // Only provide camelCase version when excluding original data
       result[camelKey] = processedValue;
     } else {
-      // Provide both original and camelCase versions
       result[key] = processedValue;
       if (camelKey !== key) {
         result[camelKey] = processedValue;
@@ -478,7 +456,6 @@ export function convertJsonLdDatasetToJson(
     }
   });
 
-  // Add structured data for common properties only if not excluding original data
   if (!excludeOriginalData) {
     if (dataset["dcterms:title"]) {
       result.title = getLanguageValue(
@@ -565,7 +542,6 @@ export function convertJsonLdDatasetToJson(
     }
 
     if (dataset["dcat:distribution"]) {
-      // Handle both single distribution and array of distributions
       const distributions = Array.isArray(dataset["dcat:distribution"])
         ? dataset["dcat:distribution"]
         : [dataset["dcat:distribution"]];
@@ -608,7 +584,6 @@ export function convertJsonLdDatasetToJson(
         raw: includeRawData ? dist : undefined,
       };
 
-      // If there are multiple distributions, add them as an array
       if (distributions.length > 1) {
         result.distributions = distributions.map((d) => ({
           id: d["@id"] || "",
@@ -648,7 +623,6 @@ export function convertJsonLdDatasetToJson(
     }
   }
 
-  // Include raw data if requested
   if (includeRawData) {
     result._raw = dataset;
   }
@@ -671,7 +645,6 @@ function processJsonLdValue(
 ): unknown {
   if (!value) return null;
 
-  // Prevent infinite recursion
   if (depth > 10) return value;
 
   if (Array.isArray(value)) {
@@ -691,7 +664,6 @@ function processJsonLdValue(
   if (typeof value === "object" && value !== null) {
     const obj = value as Record<string, unknown>;
 
-    // Handle JSON-LD value objects
     if ("@value" in obj) {
       if ("@language" in obj) {
         return getLanguageValue(
@@ -702,7 +674,6 @@ function processJsonLdValue(
       return getJsonLdValue(obj as unknown as JsonLdValue);
     }
 
-    // Handle nested JSON-LD objects (deep traversal)
     if ("@id" in obj || "@type" in obj) {
       return convertJsonLdDatasetToJson(obj as JsonLdObject, {
         preferredLanguage,
@@ -712,10 +683,8 @@ function processJsonLdValue(
       });
     }
 
-    // Handle regular objects (deep traversal)
     const result: Record<string, unknown> = {};
     Object.entries(obj).forEach(([key, val]) => {
-      // Convert property name to camelCase for convenience
       const camelKey = key
         .replace(/[:-]/g, "_")
         .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
@@ -730,10 +699,8 @@ function processJsonLdValue(
       );
 
       if (excludeOriginalData) {
-        // Only provide camelCase version when excluding original data
         result[camelKey] = processedValue;
       } else {
-        // Provide both original and camelCase versions
         result[key] = processedValue;
         if (camelKey !== key) {
           result[camelKey] = processedValue;

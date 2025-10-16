@@ -41,46 +41,53 @@ const handleRemoveSelected = (key: string) => {
 </script>
 
 <template>
-  <DropdownMenu>
-    <DropdownMenuTrigger as-child>
-      <Button variant="secondary" role="combobox" class="justify-between px-2">
-        <div class="flex items-center gap-2">
-          {{ t(`action.${label}`) }}
-        </div>
-        <Icon
-          name="lucide:chevron-down"
-          class="ml-2 h-4 w-4 shrink-0 opacity-50"
-        />
-      </Button>
-      <div v-if="selectedValues.length > 0" class="flex gap-2">
-        <Badge
-          v-for="item in selectedValues"
-          :key="item"
+  <div class="flex items-center gap-2 flex-wrap">
+    <DropdownMenu>
+      <DropdownMenuTrigger as-child>
+        <Button
           variant="secondary"
-          class="rounded-sm px-2 text-sm capitalize"
+          role="combobox"
+          class="justify-between px-2"
         >
-          {{ t(`filter.${item}`) }}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="p-0 h-auto w-auto"
-            @click="handleRemoveSelected(item)"
-          >
-            <Icon name="lucide:x" class="h-2 w-2" />
-          </Button>
-        </Badge>
-      </div>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent class="w-[200px]">
-      <AppMenuItem
-        v-for="item in items"
-        :key="item.key"
-        :item="item"
-        :selected-values="selectedValues"
-        @update:selected="handleCheckboxChange"
-      />
-    </DropdownMenuContent>
-  </DropdownMenu>
+          <div class="flex items-center gap-2">
+            {{ t(`action.${label}`) }}
+          </div>
+          <Icon
+            name="lucide:chevron-down"
+            class="ml-2 h-4 w-4 shrink-0 opacity-50"
+          />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent class="w-[200px]">
+        <AppMenuItem
+          v-for="item in items"
+          :key="item.key"
+          :item="item"
+          :selected-values="selectedValues"
+          @update:selected="handleCheckboxChange"
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+
+    <div v-if="selectedValues.length > 0" class="flex gap-2 flex-wrap">
+      <Badge
+        v-for="item in selectedValues"
+        :key="item"
+        variant="secondary"
+        class="rounded-sm px-2 text-sm capitalize"
+      >
+        {{ t(`filter.${item}`) }}
+        <Button
+          variant="ghost"
+          size="icon"
+          class="p-0 h-auto w-auto ml-1"
+          @click.stop="handleRemoveSelected(item)"
+        >
+          <Icon name="lucide:x" class="h-3 w-3" />
+        </Button>
+      </Badge>
+    </div>
+  </div>
 </template>
 
 <style scoped></style>

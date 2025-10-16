@@ -59,10 +59,13 @@ const handleFilterChange = (
   if (!multiple) {
     selectedFilters.value = {};
   }
+
   if (value) {
     selectedFilters.value[key] = value;
+  } else {
+    delete selectedFilters.value[key];
   }
-  // Сбрасываем текстовое поле поиска при изменении фильтров
+
   searchValue.value = "";
   applySearchFilter();
   fetchData();
