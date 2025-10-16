@@ -16,7 +16,6 @@ export default defineNuxtConfig({
     "dayjs-nuxt",
     "@nuxtjs/color-mode",
     "@vueuse/nuxt",
-    "nuxt-api-party",
     "nuxt-proxy-request",
   ],
   icon: {
@@ -42,6 +41,11 @@ export default defineNuxtConfig({
     classSuffix: "",
     storage: "localStorage",
     storageKey: "nuxt-color-mode",
+  },
+  i18n: {
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
   },
   shadcn: {
     prefix: "",
