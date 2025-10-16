@@ -4,6 +4,6 @@
 const router = useRouter();
 
 onMounted(() => {
-  router.push("/marketplace");
+  router.push("/home");
 });
 </script>

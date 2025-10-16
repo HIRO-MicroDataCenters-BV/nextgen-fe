@@ -133,6 +133,10 @@ export function transformDatasetToTableRow(
       | JsonLdDistribution[]
       | undefined
   );
+  const datasetType = dataset["dcterms:type"]
+    ? ((dataset["dcterms:type"] as JsonLdObject)["@id"] as string)
+    : undefined;
+
   const result: DatasetMetadata = {
     id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
     name: getLanguageValue(dataset["dcterms:title"] as JsonLdLanguageValue),
@@ -158,6 +162,7 @@ export function transformDatasetToTableRow(
     ),
     keyword: getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue),
     themes,
+    datasetType,
     distribution,
   };
 

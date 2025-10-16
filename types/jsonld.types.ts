@@ -78,6 +78,7 @@ export interface DatasetMetadata {
   metadataFilename: string;
   keyword: string;
   themes: string[];
+  datasetType?: string;
   distribution: {
     availability: string;
     description: string;

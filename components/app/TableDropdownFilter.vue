@@ -33,11 +33,6 @@ const handleCheckboxChange = (key: string) => {
   }
   emit("filter-change", key, !isSelected, props.multiple);
 };
-
-const handleRemoveSelected = (key: string) => {
-  selectedValues.value = selectedValues.value.filter((v) => v !== key);
-  emit("filter-change", key, false, props.multiple);
-};
 </script>
 
 <template>
@@ -68,25 +63,6 @@ const handleRemoveSelected = (key: string) => {
         />
       </DropdownMenuContent>
     </DropdownMenu>
-
-    <div v-if="selectedValues.length > 0" class="flex gap-2 flex-wrap">
-      <Badge
-        v-for="item in selectedValues"
-        :key="item"
-        variant="secondary"
-        class="rounded-sm px-2 text-sm capitalize"
-      >
-        {{ t(`filter.${item}`) }}
-        <Button
-          variant="ghost"
-          size="icon"
-          class="p-0 h-auto w-auto ml-1"
-          @click.stop="handleRemoveSelected(item)"
-        >
-          <Icon name="lucide:x" class="h-3 w-3" />
-        </Button>
-      </Badge>
-    </div>
   </div>
 </template>
 

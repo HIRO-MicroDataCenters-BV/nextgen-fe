@@ -38,6 +38,8 @@ const props = withDefaults(defineProps<TableProps>(), {
 
 const { dataSource, columns, pageSize, title } = props;
 
+const { page } = useApp();
+
 const { t } = useI18n();
 const data = shallowRef<TableRowData[]>([]);
 const totalItems = ref(0);
@@ -71,10 +73,21 @@ const handleFilterChange = (
   fetchData();
 };
 
+const handleRemoveFilter = (key: string) => {
+  delete selectedFilters.value[key];
+  fetchData();
+};
+
+const handleClearAllFilters = () => {
+  selectedFilters.value = {};
+  searchValue.value = "";
+  applySearchFilter();
+};
+
 const fetchData = async () => {
-  if (Object.keys(selectedFilters.value).length == 0) {
-    console.log("no filters");
+  if (Object.keys(selectedFilters.value).length === 0) {
     isLoading.value = false;
+    data.value = [];
     return;
   }
   isLoading.value = true;
@@ -94,6 +107,20 @@ const fetchData = async () => {
   isLoading.value = false;
 
   let filteredData = tableData ?? [];
+
+  if (selectedType.value === "datasets") {
+    filteredData = filteredData.filter((row) => {
+      const datasetType = row.datasetType as string | undefined;
+      return (
+        !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
+      );
+    });
+  } else if (selectedType.value === "applications") {
+    filteredData = filteredData.filter((row) => {
+      const datasetType = row.datasetType as string | undefined;
+      return datasetType === "http://purl.org/dc/dcmitype/Software";
+    });
+  }
 
   if (searchValue.value && searchValue.value.trim()) {
     const searchTerm = searchValue.value.toLowerCase().trim();
@@ -121,6 +148,7 @@ const selectedFilterColumn = ref("all");
 const searchValue = ref("");
 
 const route = useRoute();
+const selectedType = ref("datasets");
 /*
 const router = useRouter();
 */
@@ -322,13 +350,31 @@ const filterItems = ref<DropdownMenuItem[]>(
   }))
 );
 
+const handleTypeTabChange = (type: string | number) => {
+  selectedType.value = String(type);
+  fetchData();
+};
+
 defineExpose({ fetchData });
 </script>
 
 <template>
   <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)]">
-    <div class="mb-8">
+    <div class="mb-4 flex items-center justify-between gap-2">
       <!-- table filters -->
+      <Tabs
+        :model-value="selectedType"
+        @update:model-value="handleTypeTabChange"
+      >
+        <TabsList class="flex mx-auto justify-center items-center mx-auto">
+          <TabsTrigger value="datasets">
+            {{ $t("action.datasets") }}
+          </TabsTrigger>
+          <TabsTrigger value="applications">
+            {{ $t("action.applications") }}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div class="flex gap-2 items-center">
         <div class="flex-auto flex flex-wrap gap-2">
@@ -356,6 +402,37 @@ defineExpose({ fetchData });
         </div>
       </div>
     </div>
+    <div class="filters-list">
+      <div
+        v-if="Object.keys(selectedFilters).length > 0"
+        class="flex gap-2 items-center flex-wrap my-4 mb-6"
+      >
+        <Button
+          variant="default"
+          size="sm"
+          class="rounded-sm px-2 text-sm py-0 font-normal h-6"
+          @click="handleClearAllFilters"
+        >
+          {{ t("action.clear_filters") }}
+        </Button>
+        <Badge
+          v-for="(value, key) in selectedFilters"
+          :key="key"
+          variant="secondary"
+          class="rounded-sm px-2 text-sm capitalize h-6"
+        >
+          {{ t(`filter.${key}`) }}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="p-0 h-auto w-auto ml-1"
+            @click.stop="handleRemoveFilter(key as string)"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
+        </Badge>
+      </div>
+    </div>
     <!-- end table filters -->
     <AppTablePreloader v-if="isLoading" />
     <div
@@ -363,11 +440,11 @@ defineExpose({ fetchData });
       class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
     >
       <Table
+        v-if="Object.keys(selectedFilters).length > 0"
         :data-source="dataSource"
         :columns="columns"
         :page-size="pageSize"
         :title="title"
-        v-if="Object.keys(selectedFilters).length > 0"
       >
         <TableHeader
           class="sticky top-0 bg-gray-50 z-10 outline outline-1 outline-gray-200"

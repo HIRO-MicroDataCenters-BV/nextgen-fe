@@ -1,0 +1,30 @@
+<template>
+  <div class="flex items-center gap-2">
+    <img
+      v-if="source"
+      :src="`/images/icons/${source}.png`"
+      class="size-8"
+    /><span class="uppercase text-sm font-medium">{{ source }}</span
+    ><span class="text-sm text-muted-foreground">{{ fullSource[source] }}</span>
+  </div>
+</template>
+
+<script lang="ts" setup>
+const { page } = useApp();
+console.log("page", page.value);
+const source = ref(page.value.source);
+
+watch(page, (newVal) => {
+  console.log("newVal", newVal);
+  source.value = newVal.source;
+});
+
+const fullSource = {
+  umcu: "Athero-Express Biobank Study",
+  ki: "Kliniek Informatie",
+  hus: "Hospital Information System",
+  uva: "University of Amsterdam",
+  tum: "Technical University of Munich",
+};
+</script>
+<style></style>

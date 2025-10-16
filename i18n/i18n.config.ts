@@ -179,6 +179,8 @@ export default defineI18nConfig(() => {
           metadata_content: "Metadata Content",
         },
         action: {
+          datasets: "Datasets",
+          applications: "Applications",
           save: "Save",
           edit_dataset: "Edit",
           delete_dataset: "Delete",
@@ -187,7 +189,7 @@ export default defineI18nConfig(() => {
           add_dataset: "Add Dataset",
           previous: "Previous",
           next: "Next",
-          clear_filters: "Clear Filters",
+          clear_filters: "Clear all",
           available_biobanks: "Available Biobanks",
           create: "Create",
           edit: "Edit",
