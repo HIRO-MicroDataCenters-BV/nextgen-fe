@@ -38,8 +38,7 @@ export default defineI18nConfig(() => {
           change_metadata_details: "Change metadata details.",
           marketplace_description:
             "Decentralised search across all institutional catalogs",
-          short_description:
-            "Genomic Data for Personalised Medicine.",
+          short_description: "Genomic Data for Personalised Medicine.",
         },
         text: {
           available_biobank_description:
@@ -55,7 +54,7 @@ export default defineI18nConfig(() => {
           settings: "Settings",
           help: "Help",
           logout: "Logout",
-          hus_catalog: "HUS Catalog",
+          hus_catalog: "My Catalog",
           ki_catalog: "KI Catalog",
         },
         sidebar: {
@@ -63,7 +62,6 @@ export default defineI18nConfig(() => {
           marketplace: "Marketplace",
         },
         filter: {
-          
           distribution: "Distribution",
           distribution_csv: "CSV",
           distribution_mmio: "MMIO",
@@ -93,7 +91,8 @@ export default defineI18nConfig(() => {
           "med:age": "Age",
           "med:gender": "Gender",
           "med:ethnicity": "Ethnicity",
-          "med:previous_myocardial_infarction": "Previous Myocardial Infarction",
+          "med:previous_myocardial_infarction":
+            "Previous Myocardial Infarction",
           "med:stroke": "Stroke",
           "med:chronic_obstructive_pulmonary_disease":
             "Chronic Obstructive Pulmonary Disease",
@@ -244,7 +243,7 @@ export default defineI18nConfig(() => {
           required_date: "This field must be a valid date",
         },
         home: {
-          contacts:{
+          contacts: {
             linkedin: "NextGen LinkedIn",
             youtube: "NextGen YouTube",
             twitter: "NextGen X (Twitter)",
@@ -252,16 +251,14 @@ export default defineI18nConfig(() => {
           roadmap: {
             item: [
               {
-                description:
-                  "Workshop on legal and privacy concerns",
+                description: "Workshop on legal and privacy concerns",
               },
               {
                 description:
                   "Data and governance landscape mapped. Project organisation and guidelines, definitions and planning, initial specifications",
               },
               {
-                description:
-                  "Blueprint for annotation methods",
+                description: "Blueprint for annotation methods",
               },
               {
                 description:
@@ -276,16 +273,13 @@ export default defineI18nConfig(() => {
                   "NextGen platform specification (blueprint), vs genomic analysis tools, privacy assessment.",
               },
               {
-                description:
-                  "Synthetic data approach",
+                description: "Synthetic data approach",
               },
               {
-                description:
-                  "Health economics questionnaire finalize",
+                description: "Health economics questionnaire finalize",
               },
               {
-                description:
-                  "NextGen platform prototype available",
+                description: "NextGen platform prototype available",
               },
               {
                 description:
@@ -296,12 +290,10 @@ export default defineI18nConfig(() => {
                   "Identify main concerns for drivers, barriers and Cost-Benefit Analysis",
               },
               {
-                description:
-                  "NextGen platform sandbox available to consortium",
+                description: "NextGen platform sandbox available to consortium",
               },
               {
-                description:
-                  "Health economics data collection complete",
+                description: "Health economics data collection complete",
               },
               {
                 description:

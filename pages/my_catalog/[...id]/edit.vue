@@ -30,9 +30,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
-import {
-  convertJsonLdDatasetToJson,
-} from "~/utils/jsonld";
+import { convertJsonLdDatasetToJson } from "~/utils/jsonld";
 
 const { t } = useI18n();
 const { uploadMmioFile, saveDataset, getDataset } = useApi();
@@ -58,15 +56,14 @@ const initialValues = {
 
 const onChangeFile = (file: File) => {
   console.log("File changed: ", file);
-}
+};
 const onSubmitDirect = () => {
   formRef.value.submit();
-}
-
+};
 
 const onCancel = () => {
   console.log("Form cancelled");
-}
+};
 
 const onSubmit = async (formValues: Record<string, unknown>) => {
   if (formValues.file) {
@@ -75,7 +72,10 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
     await uploadMmioFile(file);
     await saveDataset(name, formValues.metadata_content as string);
   }
-  if(formValues.metadata_content != initialValues.metadata_content && formValues.metadata_content != "") {
+  if (
+    formValues.metadata_content != initialValues.metadata_content &&
+    formValues.metadata_content != ""
+  ) {
     await saveDataset(id as string, formValues.metadata_content as string);
     router.push("/my_catalog");
   }
@@ -90,18 +90,21 @@ onMounted(async () => {
   if (dataset) {
     console.log("Dataset: ", dataset);
     setTimeout(() => {
-      formRef.value.setFieldValue("metadata_content", JSON.stringify(dataset, null, 2));
+      formRef.value.setFieldValue(
+        "metadata_content",
+        JSON.stringify(dataset, null, 2)
+      );
     }, 0);
     const converted = convertJsonLdDatasetToJson(dataset, {
-        preferredLanguage: "en",
-        includeRawData: false,
-        flattenArrays: true,
-        excludeOriginalData: true,
+      preferredLanguage: "en",
+      includeRawData: false,
+      flattenArrays: true,
+      excludeOriginalData: true,
     });
     setPage({
       title: converted.title as string,
       subtitle: converted.description as string,
-    })
+    });
     console.log("Dataset: ", dataset);
   }
   loading.value = false;

@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   id: "",
   label: "",
   items: () => [],
-  multiple: false,
+  multiple: true,
 });
 
 const emit = defineEmits<{

@@ -45,13 +45,21 @@ const isLoading = ref(true);
 
 const selectedFilters = ref<Record<string, boolean | string | number>>({});
 
-const { filterGroups, getActiveFilters, resetFilters: _resetFilters } = useFilters();
+const {
+  filterGroups,
+  getActiveFilters,
+  resetFilters: _resetFilters,
+} = useFilters();
 
-const handleFilterChange = (key: string, value: boolean | string | number, multiple: boolean) => {
+const handleFilterChange = (
+  key: string,
+  value: boolean | string | number,
+  multiple: boolean
+) => {
   if (!multiple) {
     selectedFilters.value = {};
   }
-  if(value){
+  if (value) {
     selectedFilters.value[key] = value;
   }
   // Сбрасываем текстовое поле поиска при изменении фильтров
@@ -79,7 +87,7 @@ const fetchData = async () => {
   isLoading.value = false;
 
   let filteredData = tableData ?? [];
-  
+
   // Применяем текстовую фильтрацию по всем полям
   if (searchValue.value && searchValue.value.trim()) {
     const searchTerm = searchValue.value.toLowerCase().trim();
@@ -97,7 +105,9 @@ const fetchData = async () => {
     table.getState().pagination.pageSize;
   const end = start + table.getState().pagination.pageSize;
   data.value = filteredData.slice(start, end);
-  totalItems.value = searchValue.value ? filteredData.length : (pagination?.total_items ?? 0);
+  totalItems.value = searchValue.value
+    ? filteredData.length
+    : pagination?.total_items ?? 0;
 };
 
 const selectedFilterColumn = ref("all");
@@ -309,7 +319,7 @@ defineExpose({ fetchData });
 </script>
 
 <template>
-  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-220px)]">
+  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)]">
     <div class="mb-8">
       <!-- table filters -->
 
@@ -388,7 +398,7 @@ defineExpose({ fetchData });
       </Table>
     </div>
 
-    <AppTablePagination
+    <!-- <AppTablePagination
       :current-page="currentPage"
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
@@ -396,7 +406,7 @@ defineExpose({ fetchData });
       :can-previous-page="currentPage > 0"
       :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
       @page-change="handlePageChange"
-    />
+    /> -->
     <AppDialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"
