@@ -30,12 +30,17 @@ export function getJsonLdValue(
 /**
  * Extract value from JSON-LD object by path
  */
-export function getJsonLdValueByPath(obj: JsonLdObject, path: string): string {
+export function getJsonLdValueByPath(
+  obj: JsonLdObject | undefined | null,
+  path: string
+): string {
+  if (!obj) return "";
+
   const parts = path.split(".");
   let current: unknown = obj;
 
   for (const part of parts) {
-    if (!current) return "";
+    if (!current || typeof current !== "object") return "";
     current = current[part as keyof typeof current];
   }
 
@@ -66,49 +71,72 @@ function getLanguageValue(
 export function transformDatasetToTableRow(
   dataset: JsonLdObject
 ): DatasetMetadata {
-  // Get themes
+  // Get themes (handle both with and without skos:prefLabel)
   const themes = Array.isArray(dataset["dcat:theme"])
-    ? dataset["dcat:theme"].map((theme: JsonLdObject) =>
-      getLanguageValue(theme["skos:prefLabel"] as JsonLdLanguageValue)
-    )
+    ? dataset["dcat:theme"]
+        .map((theme: JsonLdObject) =>
+          theme["skos:prefLabel"]
+            ? getLanguageValue(theme["skos:prefLabel"] as JsonLdLanguageValue)
+            : ""
+        )
+        .filter((theme) => theme !== "")
     : dataset["dcat:theme"]
-      ? [
-        getLanguageValue(
-          (dataset["dcat:theme"] as JsonLdObject)[
-          "skos:prefLabel"
-          ] as JsonLdLanguageValue
-        ),
-      ]
-      : [];
+    ? [
+        (dataset["dcat:theme"] as JsonLdObject)["skos:prefLabel"]
+          ? getLanguageValue(
+              (dataset["dcat:theme"] as JsonLdObject)[
+                "skos:prefLabel"
+              ] as JsonLdLanguageValue
+            )
+          : "",
+      ].filter((theme) => theme !== "")
+    : [];
 
-  // Get distribution info
-  const distribution = dataset["dcat:distribution"]
-    ? {
-      availability: getLanguageValue(
-        (dataset["dcat:distribution"] as JsonLdDistribution)[
-        "dcatap:availability"
-        ]["skos:prefLabel"] as JsonLdLanguageValue
-      ),
-      description: getLanguageValue(
-        (dataset["dcat:distribution"] as JsonLdDistribution)[
-        "dcterms:description"
-        ] as JsonLdLanguageValue
-      ),
-      accessURL: (dataset["dcat:distribution"] as JsonLdDistribution)[
-        "dcat:accessURL"
-      ]["@id"],
-      byteSize: getJsonLdValue(
-        (dataset["dcat:distribution"] as JsonLdDistribution)[
-        "dcat:byteSize"
-        ] as JsonLdLongValue
-      ),
-      format: getJsonLdValue(
-        (dataset["dcat:distribution"] as JsonLdDistribution)[
-        "dcat:format"
-        ] as JsonLdStringValue
-      ),
-    }
-    : null;
+  // Get distribution info (handle both single object and array)
+  const getDistributionInfo = (
+    dist: JsonLdDistribution | JsonLdDistribution[] | undefined
+  ) => {
+    if (!dist) return null;
+
+    // If array, take the first distribution
+    const distribution = Array.isArray(dist) ? dist[0] : dist;
+    if (!distribution) return null;
+
+    return {
+      availability: distribution["dcatap:availability"]?.["skos:prefLabel"]
+        ? getLanguageValue(
+            distribution["dcatap:availability"][
+              "skos:prefLabel"
+            ] as JsonLdLanguageValue
+          )
+        : "",
+      description: distribution["dcterms:description"]
+        ? getLanguageValue(
+            distribution["dcterms:description"] as JsonLdLanguageValue
+          )
+        : "",
+      accessURL: distribution["dcat:accessURL"]?.["@id"] || "",
+      byteSize: distribution["dcat:byteSize"]
+        ? getJsonLdValue(distribution["dcat:byteSize"] as JsonLdLongValue)
+        : "",
+      format: distribution["dcat:format"]
+        ? getJsonLdValue(distribution["dcat:format"] as JsonLdStringValue)
+        : distribution["dcterms:format"]?.["skos:prefLabel"]
+        ? getLanguageValue(
+            distribution["dcterms:format"][
+              "skos:prefLabel"
+            ] as JsonLdLanguageValue
+          )
+        : "",
+    };
+  };
+
+  const distribution = getDistributionInfo(
+    dataset["dcat:distribution"] as
+      | JsonLdDistribution
+      | JsonLdDistribution[]
+      | undefined
+  );
   // Transform dataset to table row format
   const result: DatasetMetadata = {
     id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
@@ -119,10 +147,12 @@ export function transformDatasetToTableRow(
     biobank: getJsonLdValueByPath(dataset, "dspace:biobank"),
     last_update: getJsonLdValueByPath(dataset, "dcterms:modified"),
     issued: getJsonLdValueByPath(dataset, "dcterms:issued"),
-    publisher: getJsonLdValueByPath(
-      dataset["dcterms:publisher"] as JsonLdObject,
-      "foaf:name"
-    ),
+    publisher: dataset["dcterms:publisher"]
+      ? getJsonLdValueByPath(
+          dataset["dcterms:publisher"] as JsonLdObject,
+          "foaf:name"
+        )
+      : "",
     license: getJsonLdValueByPath(dataset, "dcterms:license"),
     isDeleted:
       getJsonLdValue(dataset["isDeleted"] as JsonLdBooleanValue) === "true",
@@ -177,27 +207,37 @@ export function transformSearchResponseToTableData(
   // Handle response with @graph structure
   if (response["@graph"]) {
     const graph = response["@graph"];
-    graph.forEach((item) => {
+    graph.forEach((item: JsonLdObject) => {
       if (item["@type"] === "dcat:Catalog" && item["dcat:dataset"]) {
         const catalogDatasets = Array.isArray(item["dcat:dataset"])
-          ? item["dcat:dataset"]
-          : [item["dcat:dataset"]];
+          ? (item["dcat:dataset"] as JsonLdObject[])
+          : [item["dcat:dataset"] as JsonLdObject];
 
-        catalogDatasets.forEach((dataset) => {
+        catalogDatasets.forEach((dataset: JsonLdObject) => {
           if (dataset["@type"] === "dcat:Dataset") {
-            datasets.push({ ...dataset, ...{ "dspace:biobank": item["dcterms:title"] } });
+            datasets.push({
+              ...dataset,
+              ...{ "dspace:biobank": item["dcterms:title"] },
+            } as JsonLdObject);
           }
         });
       }
     });
   }
   // Handle direct catalog structure (new format)
-  else if ((response as unknown)["@type"] === "dcat:Catalog" && (response as unknown)["dcat:dataset"]) {
-    const catalogDatasets = Array.isArray((response as unknown)["dcat:dataset"])
-      ? (response as unknown)["dcat:dataset"]
-      : [(response as unknown)["dcat:dataset"]];
+  else if (
+    (response as unknown as JsonLdObject)["@type"] === "dcat:Catalog" &&
+    (response as unknown as JsonLdObject)["dcat:dataset"]
+  ) {
+    const catalogDatasets = Array.isArray(
+      (response as unknown as JsonLdObject)["dcat:dataset"]
+    )
+      ? ((response as unknown as JsonLdObject)[
+          "dcat:dataset"
+        ] as JsonLdObject[])
+      : [(response as unknown as JsonLdObject)["dcat:dataset"] as JsonLdObject];
 
-    catalogDatasets.forEach((dataset) => {
+    catalogDatasets.forEach((dataset: JsonLdObject) => {
       if (dataset["@type"] === "dcat:Dataset") {
         datasets.push(dataset);
       }
@@ -205,7 +245,9 @@ export function transformSearchResponseToTableData(
   }
   console.log("datasets", datasets);
 
-  const transformedData = datasets.map((dataset: unknown) => transformDatasetToTableRow(dataset));
+  const transformedData = datasets.map((dataset: JsonLdObject) =>
+    transformDatasetToTableRow(dataset)
+  );
   const totalPages = Math.ceil(transformedData.length / currentLimit);
   console.log("tras", transformedData);
   return {
@@ -224,13 +266,15 @@ export function transformSearchResponseToTableData(
 /**
  * Create filters object for API requests
  */
-export function createFiltersObject(filters: Record<string, unknown>): Array<Record<string, unknown>> {
+export function createFiltersObject(
+  filters: Record<string, unknown>
+): Array<Record<string, unknown>> {
   const filtersObj: Array<Record<string, unknown>> = [
     {
       "dcat:dataset": {
-        "extraMetadata": [] as Array<Record<string, unknown>>
-      }
-    }
+        extraMetadata: [] as Array<Record<string, unknown>>,
+      },
+    },
   ];
 
   Object.keys(filters).forEach((key) => {
@@ -243,28 +287,41 @@ export function createFiltersObject(filters: Record<string, unknown>): Array<Rec
           "dcat:distribution": {
             "@type": "dcat:Distribution",
             "dcat:format": key.replace("distribution_", "").toUpperCase(),
-          }
+          },
         };
         break;
       case "isShared":
         filtersObj[0] = {
           "@type": "dcat:Dataset",
-          "isShared": {
+          isShared: {
             "@value": true,
-            "@type": "xsd:boolean"
-          }
+            "@type": "xsd:boolean",
+          },
         };
         break;
       default:
-        ((filtersObj[0]["dcat:dataset"] as unknown)["extraMetadata"] as Array<Record<string, unknown>>).push({
-          "@type": "med:Record",
-          [key]: [
-            {
-              "@value": filters[key],
-              "@type": "xsd:boolean"
-            }
-          ]
-        });
+        if (
+          filtersObj[0]["dcat:dataset"] &&
+          typeof filtersObj[0]["dcat:dataset"] === "object"
+        ) {
+          const dcatDataset = filtersObj[0]["dcat:dataset"] as Record<
+            string,
+            unknown
+          >;
+          if (Array.isArray(dcatDataset["extraMetadata"])) {
+            (
+              dcatDataset["extraMetadata"] as Array<Record<string, unknown>>
+            ).push({
+              "@type": "med:Record",
+              [key]: [
+                {
+                  "@value": filters[key],
+                  "@type": "xsd:boolean",
+                },
+              ],
+            });
+          }
+        }
         break;
     }
   });
@@ -324,11 +381,13 @@ export function createTableSearchFilter(params: {
  * @param jsonLdData - JSON-LD data structure
  * @returns The dcat:dataset object if found, null otherwise
  */
-export function findDatasetInJsonLd(jsonLdData: unknown): unknown | null {
+export function findDatasetInJsonLd(jsonLdData: unknown): JsonLdObject | null {
   if (!jsonLdData) return null;
 
+  const data = jsonLdData as JsonLdObject;
+
   // Check if data has @graph array
-  const graph = (jsonLdData as unknown)["@graph"] || [jsonLdData];
+  const graph = data["@graph"] ? (data["@graph"] as JsonLdObject[]) : [data];
 
   // Iterate through graph items
   for (const item of graph) {
@@ -337,10 +396,10 @@ export function findDatasetInJsonLd(jsonLdData: unknown): unknown | null {
       const datasets = item["dcat:dataset"];
       // If dcat:dataset is an array, return the first dataset
       if (Array.isArray(datasets) && datasets.length > 0) {
-        return datasets[0];
+        return datasets[0] as JsonLdObject;
       }
       // If dcat:dataset is a single object, return it
-      return datasets;
+      return datasets as JsonLdObject;
     }
 
     // Check if the item itself is a dataset (for direct catalog structure)
@@ -456,67 +515,136 @@ export function convertJsonLdDatasetToJson(
     if (dataset["dcat:keyword"]) {
       result.keywords = Array.isArray(dataset["dcat:keyword"])
         ? dataset["dcat:keyword"].map((k) =>
-          getJsonLdValue(k as JsonLdStringValue)
-        )
+            getJsonLdValue(k as JsonLdStringValue)
+          )
         : [getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue)];
     }
 
     if (dataset["dcat:theme"]) {
       result.themes = Array.isArray(dataset["dcat:theme"])
-        ? dataset["dcat:theme"].map((theme: JsonLdObject) => ({
-          id: theme["@id"],
-          label: getLanguageValue(
-            theme["skos:prefLabel"] as JsonLdLanguageValue,
-            preferredLanguage
-          ),
-          raw: includeRawData ? theme : undefined,
-        }))
-        : [
-          {
-            id: (dataset["dcat:theme"] as JsonLdObject)["@id"],
-            label: getLanguageValue(
-              (dataset["dcat:theme"] as JsonLdObject)[
-              "skos:prefLabel"
-              ] as JsonLdLanguageValue,
-              preferredLanguage
-            ),
-            raw: includeRawData ? dataset["dcat:theme"] : undefined,
-          },
-        ];
+        ? dataset["dcat:theme"]
+            .map((theme: JsonLdObject) => ({
+              id: theme["@id"] || "",
+              label: theme["skos:prefLabel"]
+                ? getLanguageValue(
+                    theme["skos:prefLabel"] as JsonLdLanguageValue,
+                    preferredLanguage
+                  )
+                : "",
+              raw: includeRawData ? theme : undefined,
+            }))
+            .filter((theme) => theme.label !== "")
+        : (dataset["dcat:theme"] as JsonLdObject)["skos:prefLabel"]
+        ? [
+            {
+              id: (dataset["dcat:theme"] as JsonLdObject)["@id"] || "",
+              label: getLanguageValue(
+                (dataset["dcat:theme"] as JsonLdObject)[
+                  "skos:prefLabel"
+                ] as JsonLdLanguageValue,
+                preferredLanguage
+              ),
+              raw: includeRawData ? dataset["dcat:theme"] : undefined,
+            },
+          ]
+        : [];
     }
 
     if (dataset["dcterms:publisher"]) {
       const publisher = dataset["dcterms:publisher"] as JsonLdObject;
       result.publisher = {
-        id: publisher["@id"],
-        name: getJsonLdValue(publisher["foaf:name"] as JsonLdStringValue),
-        identifier: getJsonLdValue(
-          publisher["dcterms:identifier"] as JsonLdStringValue
-        ),
+        id: publisher["@id"] || "",
+        name: publisher["foaf:name"]
+          ? getJsonLdValue(publisher["foaf:name"] as JsonLdStringValue)
+          : "",
+        identifier: publisher["dcterms:identifier"]
+          ? getJsonLdValue(publisher["dcterms:identifier"] as JsonLdStringValue)
+          : "",
         raw: includeRawData ? publisher : undefined,
       };
     }
 
     if (dataset["dcat:distribution"]) {
-      const dist = dataset["dcat:distribution"] as JsonLdDistribution;
+      // Handle both single distribution and array of distributions
+      const distributions = Array.isArray(dataset["dcat:distribution"])
+        ? dataset["dcat:distribution"]
+        : [dataset["dcat:distribution"]];
+
+      const dist = distributions[0] as JsonLdDistribution;
+
       result.distribution = {
-        id: dist["@id"],
-        description: getLanguageValue(
-          dist["dcterms:description"] as JsonLdLanguageValue,
-          preferredLanguage
-        ),
-        accessURL: dist["dcat:accessURL"]["@id"],
-        format: getJsonLdValue(dist["dcat:format"] as JsonLdStringValue),
-        byteSize: getJsonLdValue(dist["dcat:byteSize"] as JsonLdLongValue),
-        availability: {
-          id: dist["dcatap:availability"]["@id"],
-          label: getLanguageValue(
-            dist["dcatap:availability"]["skos:prefLabel"] as JsonLdLanguageValue,
-            preferredLanguage
-          ),
-        },
+        id: dist["@id"] || "",
+        description: dist["dcterms:description"]
+          ? getLanguageValue(
+              dist["dcterms:description"] as JsonLdLanguageValue,
+              preferredLanguage
+            )
+          : "",
+        accessURL: dist["dcat:accessURL"]?.["@id"] || "",
+        format: dist["dcat:format"]
+          ? getJsonLdValue(dist["dcat:format"] as JsonLdStringValue)
+          : dist["dcterms:format"]?.["skos:prefLabel"]
+          ? getLanguageValue(
+              dist["dcterms:format"]["skos:prefLabel"] as JsonLdLanguageValue,
+              preferredLanguage
+            )
+          : "",
+        byteSize: dist["dcat:byteSize"]
+          ? getJsonLdValue(dist["dcat:byteSize"] as JsonLdLongValue)
+          : "",
+        availability: dist["dcatap:availability"]
+          ? {
+              id: dist["dcatap:availability"]["@id"] || "",
+              label: dist["dcatap:availability"]["skos:prefLabel"]
+                ? getLanguageValue(
+                    dist["dcatap:availability"][
+                      "skos:prefLabel"
+                    ] as JsonLdLanguageValue,
+                    preferredLanguage
+                  )
+                : "",
+            }
+          : null,
         raw: includeRawData ? dist : undefined,
       };
+
+      // If there are multiple distributions, add them as an array
+      if (distributions.length > 1) {
+        result.distributions = distributions.map((d) => ({
+          id: d["@id"] || "",
+          description: d["dcterms:description"]
+            ? getLanguageValue(
+                d["dcterms:description"] as JsonLdLanguageValue,
+                preferredLanguage
+              )
+            : "",
+          accessURL: d["dcat:accessURL"]?.["@id"] || "",
+          format: d["dcat:format"]
+            ? getJsonLdValue(d["dcat:format"] as JsonLdStringValue)
+            : d["dcterms:format"]?.["skos:prefLabel"]
+            ? getLanguageValue(
+                d["dcterms:format"]["skos:prefLabel"] as JsonLdLanguageValue,
+                preferredLanguage
+              )
+            : "",
+          byteSize: d["dcat:byteSize"]
+            ? getJsonLdValue(d["dcat:byteSize"] as JsonLdLongValue)
+            : "",
+          availability: d["dcatap:availability"]
+            ? {
+                id: d["dcatap:availability"]["@id"] || "",
+                label: d["dcatap:availability"]["skos:prefLabel"]
+                  ? getLanguageValue(
+                      d["dcatap:availability"][
+                        "skos:prefLabel"
+                      ] as JsonLdLanguageValue,
+                      preferredLanguage
+                    )
+                  : "",
+              }
+            : null,
+        }));
+      }
     }
   }
 
@@ -566,7 +694,10 @@ function processJsonLdValue(
     // Handle JSON-LD value objects
     if ("@value" in obj) {
       if ("@language" in obj) {
-        return getLanguageValue(obj as unknown as JsonLdLanguageValue, preferredLanguage);
+        return getLanguageValue(
+          obj as unknown as JsonLdLanguageValue,
+          preferredLanguage
+        );
       }
       return getJsonLdValue(obj as unknown as JsonLdValue);
     }
