@@ -11,7 +11,7 @@
             src="/favicon-310x310.png"
             alt="Logo"
             class="w-20 h-20 mb-4 rounded-xl shadow-md"
-          />
+          >
           <h1 class="text-3xl font-bold text-primary mb-2">
             {{ t("app.title") }}
           </h1>

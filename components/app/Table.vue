@@ -38,11 +38,8 @@ const props = withDefaults(defineProps<TableProps>(), {
 
 const { dataSource, columns, pageSize, title } = props;
 
-const { page } = useApp();
-
 const { t } = useI18n();
 const data = shallowRef<TableRowData[]>([]);
-const totalItems = ref(0);
 const isLoading = ref(true);
 
 const selectedFilters = ref<Record<string, boolean | string | number>>({});
@@ -65,7 +62,8 @@ const handleFilterChange = (
   if (value) {
     selectedFilters.value[key] = value;
   } else {
-    delete selectedFilters.value[key];
+    const { [key]: _, ...rest } = selectedFilters.value;
+    selectedFilters.value = rest;
   }
 
   searchValue.value = "";
@@ -74,7 +72,8 @@ const handleFilterChange = (
 };
 
 const handleRemoveFilter = (key: string) => {
-  delete selectedFilters.value[key];
+  const { [key]: _, ...rest } = selectedFilters.value;
+  selectedFilters.value = rest;
   fetchData();
 };
 
@@ -91,7 +90,7 @@ const fetchData = async () => {
     return;
   }
   isLoading.value = true;
-  const { data: tableData, pagination } = await dataSource({
+  const { data: tableData } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
@@ -171,12 +170,6 @@ const currentPage = ref<number>(
     ? parseInt(route.query.page)
     : 0
 );
-
-const handlePageChange = (page: number) => {
-  currentPage.value = page;
-  table.setPageIndex(page);
-  fetchData();
-};
 
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];

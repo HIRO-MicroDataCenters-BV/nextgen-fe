@@ -1,12 +1,9 @@
 <script setup lang="ts">
-const props = defineProps<{
+defineProps<{
   title: string;
   description?: string;
   showAvailableBiobanks?: boolean;
 }>();
-
-const { title, description = "", showAvailableBiobanks = true } = props;
-const emit = defineEmits(["submit", "change-file"]);
 </script>
 
 <template>
