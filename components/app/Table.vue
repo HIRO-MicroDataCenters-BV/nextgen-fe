@@ -72,8 +72,12 @@ const handleFilterChange = (
 };
 
 const fetchData = async () => {
+  if (Object.keys(selectedFilters.value).length == 0) {
+    console.log("no filters");
+    isLoading.value = false;
+    return;
+  }
   isLoading.value = true;
-
   const { data: tableData, pagination } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
@@ -91,7 +95,6 @@ const fetchData = async () => {
 
   let filteredData = tableData ?? [];
 
-  // Применяем текстовую фильтрацию по всем полям
   if (searchValue.value && searchValue.value.trim()) {
     const searchTerm = searchValue.value.toLowerCase().trim();
     filteredData = filteredData.filter((row) => {
@@ -101,8 +104,7 @@ const fetchData = async () => {
       });
     });
   }
-
-  // Slice the data based on current page and page size
+  /*
   const start =
     table.getState().pagination.pageIndex *
     table.getState().pagination.pageSize;
@@ -111,6 +113,8 @@ const fetchData = async () => {
   totalItems.value = searchValue.value
     ? filteredData.length
     : pagination?.total_items ?? 0;
+  */
+  data.value = filteredData;
 };
 
 const selectedFilterColumn = ref("all");
@@ -363,8 +367,11 @@ defineExpose({ fetchData });
         :columns="columns"
         :page-size="pageSize"
         :title="title"
+        v-if="Object.keys(selectedFilters).length > 0"
       >
-        <TableHeader class="sticky top-0 bg-sidebar-background">
+        <TableHeader
+          class="sticky top-0 bg-gray-50 z-10 outline outline-1 outline-gray-200"
+        >
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
@@ -399,6 +406,23 @@ defineExpose({ fetchData });
           </TableRow>
         </TableBody>
       </Table>
+      <div v-else class="flex-grow flex items-center justify-center">
+        <div class="flex flex-col items-center justify-center">
+          <div
+            class="w-[48px] h-[48px] flex items-center justify-center border rounded-md mb-4"
+          >
+            <Icon name="lucide:search-slash" size="24" />
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-medium mb-2">
+              {{ t("hint.no_datasets_found") }}
+            </p>
+            <p class="text-sm text-muted-foreground">
+              {{ t("hint.try_changing_search_query_or_filters") }}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- <AppTablePagination

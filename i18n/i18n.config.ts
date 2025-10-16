@@ -221,6 +221,7 @@ export default defineI18nConfig(() => {
           in: "In",
           all: "All",
           no_results: "No results found",
+          no_datasets_found: "No datasets found",
           of: "of",
           rows_selected: "row(s) selected",
           page: "Page",
@@ -230,6 +231,8 @@ export default defineI18nConfig(() => {
           out_of: "out of",
           no_found: "No found",
           quarter: "Q{quarter}, {year}",
+          try_changing_search_query_or_filters:
+            "Try changing search query or filters, filters is required",
         },
         validation: {
           required: "This field is required",
