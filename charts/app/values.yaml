@@ -49,5 +49,5 @@ ingress:
 
 backend:
   catalogName: "HUS Catalog"
-  searchServiceURL: https://ds-search.hus.nextgen.hiro-develop.nl
-  catalogServiceURL: https://ds-catalog.hus.nextgen.hiro-develop.nl
+  searchServiceURL: https://ds-gateway.uva.nextgen.hiro-develop.nl/search
+  catalogServiceURL: https://ds-gateway.ki.nextgen.hiro-develop.nl/catalog
