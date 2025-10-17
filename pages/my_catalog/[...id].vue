@@ -28,6 +28,7 @@ const datasetId = route.params.id;
 
 onMounted(async () => {
   try {
+    /*
     const filter = createTableSearchFilter({
       filters: [
         {
@@ -39,7 +40,9 @@ onMounted(async () => {
         },
       ],
     });
-    const response = await api.searchLocalCatalog(filter as SearchFilter);
+    */
+    const response = await api.getDataset(datasetId as string);
+    console.log("Response: ", response);
     const dataset = findDatasetInJsonLd(response);
 
     if (dataset) {
@@ -54,8 +57,11 @@ onMounted(async () => {
 
       if (data) {
         setPage({
-          title: data.title || "Dataset",
-          subtitle: data.description || "",
+          ...page.value,
+          ...{
+            title: (data.title as string) || "Dataset",
+            subtitle: (data.description as string) || "",
+          },
         });
       }
     }

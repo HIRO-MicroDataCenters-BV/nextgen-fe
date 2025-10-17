@@ -18,7 +18,7 @@
             <div
               class="flex items-center gap-2 ml-auto items-center justify-between"
             >
-              <AppHeaderSource />
+              <AppHeaderSource v-if="!isHome" />
               <div v-if="isHome" class="flex items-end gap-2">
                 <HoverCard>
                   <HoverCardTrigger as-child>
@@ -33,7 +33,7 @@
                           src="/images/logo.svg"
                           class="size-10"
                           alt="cog-logo"
-                        >
+                        />
                         <div class="space-y-1">
                           <div class="mb-2">
                             <h4 class="text-sm font-semibold">

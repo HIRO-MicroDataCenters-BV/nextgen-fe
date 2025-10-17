@@ -19,7 +19,7 @@ const { menu, user } = useMenu();
                 <div
                   class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
                 >
-                  <img src="/images/logo.svg" class="size-10" alt="cog-logo" >
+                  <img src="/images/logo.svg" class="size-10" alt="cog-logo" />
                 </div>
                 <div class="grid flex-1 text-left text-sm leading-tight">
                   <span class="truncate font-semibold">{{
@@ -38,7 +38,7 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.main" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url">
+                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
@@ -93,7 +93,7 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.secondary" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url">
+                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
@@ -146,7 +146,7 @@ const { menu, user } = useMenu();
       <div class="mb-2 border-b border-sidebar-border">
         <div class="flex items-center space-x-3">
           <div class="flex-shrink-0">
-            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" >
+            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium truncate">{{ user.name }}</p>
