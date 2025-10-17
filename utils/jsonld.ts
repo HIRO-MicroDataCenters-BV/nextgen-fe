@@ -400,6 +400,108 @@ export function findDatasetInJsonLd(jsonLdData: unknown): JsonLdObject | null {
 }
 
 /**
+ * Flatten nested object into flat structure with "/" separated paths
+ */
+function flattenObject(
+  obj: unknown,
+  preferredLanguage: string = "en",
+  prefix: string = "",
+  result: Record<string, string> = {}
+): Record<string, string> {
+  if (!obj || typeof obj !== "object") {
+    return result;
+  }
+
+  const processValue = (value: unknown): string => {
+    if (!value) return "";
+
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return String(value);
+    }
+
+    if (typeof value === "object" && value !== null) {
+      const objValue = value as Record<string, unknown>;
+
+      if ("@value" in objValue) {
+        if ("@language" in objValue) {
+          return getLanguageValue(
+            objValue as unknown as JsonLdLanguageValue,
+            preferredLanguage
+          );
+        }
+        return getJsonLdValue(objValue as unknown as JsonLdValue);
+      }
+
+      if ("@id" in objValue && Object.keys(objValue).length === 1) {
+        return objValue["@id"] as string;
+      }
+    }
+
+    return "";
+  };
+
+  const entries = Object.entries(obj as Record<string, unknown>);
+
+  for (const [key, value] of entries) {
+    if (key.startsWith("@")) {
+      continue;
+    }
+
+    const currentPath = prefix ? `${prefix}/${key}` : key;
+    const camelPath = currentPath
+      .replace(/[:-]/g, "_")
+      .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+
+    if (Array.isArray(value)) {
+      if (value.length === 0) continue;
+
+      const firstItem = value[0];
+      if (typeof firstItem === "object" && firstItem !== null) {
+        const itemObj = firstItem as Record<string, unknown>;
+        if ("@value" in itemObj || "@id" in itemObj) {
+          const processed = processValue(firstItem);
+          if (processed) {
+            result[camelPath] = processed;
+          }
+        } else {
+          flattenObject(firstItem, preferredLanguage, currentPath, result);
+        }
+      } else {
+        const processed = processValue(firstItem);
+        if (processed) {
+          result[camelPath] = processed;
+        }
+      }
+    } else if (typeof value === "object" && value !== null) {
+      const objValue = value as Record<string, unknown>;
+
+      if (
+        "@value" in objValue ||
+        ("@id" in objValue && Object.keys(objValue).length === 1)
+      ) {
+        const processed = processValue(value);
+        if (processed) {
+          result[camelPath] = processed;
+        }
+      } else {
+        flattenObject(value, preferredLanguage, currentPath, result);
+      }
+    } else {
+      const processed = processValue(value);
+      if (processed) {
+        result[camelPath] = processed;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Convert JSON-LD dataset to convenient JSON format for template rendering
  * @param dataset - JSON-LD dataset object
  * @param options - Conversion options
@@ -418,7 +520,6 @@ export function convertJsonLdDatasetToJson(
     preferredLanguage = "en",
     includeRawData = false,
     flattenArrays = true,
-    excludeOriginalData = false,
   } = options;
 
   if (!dataset) return {};
@@ -426,205 +527,48 @@ export function convertJsonLdDatasetToJson(
   const result: Record<string, unknown> = {
     id: dataset["@id"] || "",
     type: Array.isArray(dataset["@type"])
-      ? dataset["@type"]
-      : [dataset["@type"] || ""],
+      ? dataset["@type"].join(", ")
+      : dataset["@type"] || "",
   };
 
-  Object.entries(dataset).forEach(([key, value]) => {
-    if (key.startsWith("@")) {
-      if (key !== "@id" && key !== "@type") {
-        result[key] = value;
+  if (flattenArrays) {
+    const flattened = flattenObject(dataset, preferredLanguage);
+    Object.assign(result, flattened);
+  } else {
+    Object.entries(dataset).forEach(([key, value]) => {
+      if (key.startsWith("@")) {
+        if (key !== "@id" && key !== "@type") {
+          result[key] = value;
+        }
+        return;
       }
-      return;
-    }
 
-    const camelKey = key
-      .replace(/[:-]/g, "_")
-      .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      const camelKey = key
+        .replace(/[:-]/g, "_")
+        .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 
-    const processedValue = processJsonLdValue(
-      value,
-      preferredLanguage,
-      flattenArrays,
-      includeRawData,
-      0,
-      excludeOriginalData
-    );
+      const processedValue = processJsonLdValue(
+        value,
+        preferredLanguage,
+        flattenArrays,
+        includeRawData,
+        0,
+        false
+      );
 
-    if (excludeOriginalData) {
-      result[camelKey] = processedValue;
-    } else {
       result[key] = processedValue;
       if (camelKey !== key) {
         result[camelKey] = processedValue;
       }
-    }
-  });
+    });
+  }
 
-  if (!excludeOriginalData) {
+  if (flattenArrays) {
     if (dataset["dcterms:title"]) {
-      result.title = getLanguageValue(
-        dataset["dcterms:title"] as JsonLdLanguageValue,
-        preferredLanguage
-      );
+      result.title = result.dctermsTitle || "";
     }
-
     if (dataset["dcterms:description"]) {
-      result.description = getLanguageValue(
-        dataset["dcterms:description"] as JsonLdLanguageValue,
-        preferredLanguage
-      );
-    }
-
-    if (dataset["dcterms:identifier"]) {
-      result.identifier = getJsonLdValue(
-        dataset["dcterms:identifier"] as JsonLdStringValue
-      );
-    }
-
-    if (dataset["dcterms:modified"]) {
-      result.lastModified = getJsonLdValue(
-        dataset["dcterms:modified"] as JsonLdStringValue
-      );
-    }
-
-    if (dataset["dcterms:issued"]) {
-      result.issued = getJsonLdValue(
-        dataset["dcterms:issued"] as JsonLdStringValue
-      );
-    }
-
-    if (dataset["dcat:keyword"]) {
-      result.keywords = Array.isArray(dataset["dcat:keyword"])
-        ? dataset["dcat:keyword"].map((k) =>
-            getJsonLdValue(k as JsonLdStringValue)
-          )
-        : [getJsonLdValue(dataset["dcat:keyword"] as JsonLdStringValue)];
-    }
-
-    if (dataset["dcat:theme"]) {
-      result.themes = Array.isArray(dataset["dcat:theme"])
-        ? dataset["dcat:theme"]
-            .map((theme: JsonLdObject) => ({
-              id: theme["@id"] || "",
-              label: theme["skos:prefLabel"]
-                ? getLanguageValue(
-                    theme["skos:prefLabel"] as JsonLdLanguageValue,
-                    preferredLanguage
-                  )
-                : "",
-              raw: includeRawData ? theme : undefined,
-            }))
-            .filter((theme) => theme.label !== "")
-        : (dataset["dcat:theme"] as JsonLdObject)["skos:prefLabel"]
-        ? [
-            {
-              id: (dataset["dcat:theme"] as JsonLdObject)["@id"] || "",
-              label: getLanguageValue(
-                (dataset["dcat:theme"] as JsonLdObject)[
-                  "skos:prefLabel"
-                ] as JsonLdLanguageValue,
-                preferredLanguage
-              ),
-              raw: includeRawData ? dataset["dcat:theme"] : undefined,
-            },
-          ]
-        : [];
-    }
-
-    if (dataset["dcterms:publisher"]) {
-      const publisher = dataset["dcterms:publisher"] as JsonLdObject;
-      result.publisher = {
-        id: publisher["@id"] || "",
-        name: publisher["foaf:name"]
-          ? getJsonLdValue(publisher["foaf:name"] as JsonLdStringValue)
-          : "",
-        identifier: publisher["dcterms:identifier"]
-          ? getJsonLdValue(publisher["dcterms:identifier"] as JsonLdStringValue)
-          : "",
-        raw: includeRawData ? publisher : undefined,
-      };
-    }
-
-    if (dataset["dcat:distribution"]) {
-      const distributions = Array.isArray(dataset["dcat:distribution"])
-        ? dataset["dcat:distribution"]
-        : [dataset["dcat:distribution"]];
-
-      const dist = distributions[0] as JsonLdDistribution;
-
-      result.distribution = {
-        id: dist["@id"] || "",
-        description: dist["dcterms:description"]
-          ? getLanguageValue(
-              dist["dcterms:description"] as JsonLdLanguageValue,
-              preferredLanguage
-            )
-          : "",
-        accessURL: dist["dcat:accessURL"]?.["@id"] || "",
-        format: dist["dcat:format"]
-          ? getJsonLdValue(dist["dcat:format"] as JsonLdStringValue)
-          : dist["dcterms:format"]?.["skos:prefLabel"]
-          ? getLanguageValue(
-              dist["dcterms:format"]["skos:prefLabel"] as JsonLdLanguageValue,
-              preferredLanguage
-            )
-          : "",
-        byteSize: dist["dcat:byteSize"]
-          ? getJsonLdValue(dist["dcat:byteSize"] as JsonLdLongValue)
-          : "",
-        availability: dist["dcatap:availability"]
-          ? {
-              id: dist["dcatap:availability"]["@id"] || "",
-              label: dist["dcatap:availability"]["skos:prefLabel"]
-                ? getLanguageValue(
-                    dist["dcatap:availability"][
-                      "skos:prefLabel"
-                    ] as JsonLdLanguageValue,
-                    preferredLanguage
-                  )
-                : "",
-            }
-          : null,
-        raw: includeRawData ? dist : undefined,
-      };
-
-      if (distributions.length > 1) {
-        result.distributions = distributions.map((d) => ({
-          id: d["@id"] || "",
-          description: d["dcterms:description"]
-            ? getLanguageValue(
-                d["dcterms:description"] as JsonLdLanguageValue,
-                preferredLanguage
-              )
-            : "",
-          accessURL: d["dcat:accessURL"]?.["@id"] || "",
-          format: d["dcat:format"]
-            ? getJsonLdValue(d["dcat:format"] as JsonLdStringValue)
-            : d["dcterms:format"]?.["skos:prefLabel"]
-            ? getLanguageValue(
-                d["dcterms:format"]["skos:prefLabel"] as JsonLdLanguageValue,
-                preferredLanguage
-              )
-            : "",
-          byteSize: d["dcat:byteSize"]
-            ? getJsonLdValue(d["dcat:byteSize"] as JsonLdLongValue)
-            : "",
-          availability: d["dcatap:availability"]
-            ? {
-                id: d["dcatap:availability"]["@id"] || "",
-                label: d["dcatap:availability"]["skos:prefLabel"]
-                  ? getLanguageValue(
-                      d["dcatap:availability"][
-                        "skos:prefLabel"
-                      ] as JsonLdLanguageValue,
-                      preferredLanguage
-                    )
-                  : "",
-              }
-            : null,
-        }));
-      }
+      result.description = result.dctermsDescription || "";
     }
   }
 

@@ -9,6 +9,7 @@
 </template>
 
 <script lang="ts" setup>
+import type { SearchFilter } from "~/types/api.types";
 import {
   findDatasetInJsonLd,
   convertJsonLdDatasetToJson,
@@ -38,7 +39,7 @@ onMounted(async () => {
         },
       ],
     });
-    const response = await api.searchDecentralized(filter);
+    const response = await api.searchDistributed(filter as SearchFilter);
     const dataset = findDatasetInJsonLd(response);
 
     if (dataset) {
@@ -53,8 +54,11 @@ onMounted(async () => {
 
       if (data) {
         setPage({
-          title: data.title || "Dataset",
-          subtitle: data.description || "",
+          ...page.value,
+          ...{
+            title: (data.title as string) || "Dataset",
+            subtitle: (data.description as string) || "",
+          },
         });
       }
     }
