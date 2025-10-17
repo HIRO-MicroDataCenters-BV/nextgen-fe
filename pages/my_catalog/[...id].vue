@@ -9,11 +9,9 @@
 </template>
 
 <script lang="ts" setup>
-import type { SearchFilter } from "~/types/api.types";
 import {
   findDatasetInJsonLd,
   convertJsonLdDatasetToJson,
-  createTableSearchFilter,
 } from "~/utils/jsonld";
 
 // // const { t } = useI18n();
