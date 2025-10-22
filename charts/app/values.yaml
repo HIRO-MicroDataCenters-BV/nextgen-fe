@@ -48,6 +48,6 @@ ingress:
   host: nextgen.hiro-develop.nl
 
 backend:
-  catalogName: "HUS Catalog"
+  catalogName: "hus_catalog"
   searchServiceURL: https://ds-gateway.uva.nextgen.hiro-develop.nl/search
   catalogServiceURL: https://ds-gateway.ki.nextgen.hiro-develop.nl/catalog
