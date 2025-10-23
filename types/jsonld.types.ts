@@ -25,30 +25,40 @@ export interface JsonLdLanguageValue {
  * Complex JSON-LD object types
  */
 export interface JsonLdPublisher {
-  "@id": string;
-  "@type": "foaf:Person";
-  "dcterms:identifier": JsonLdStringValue;
-  "foaf:name": JsonLdStringValue;
+  "@id"?: string;
+  "@type"?: "foaf:Person" | string | string[];
+  "dcterms:identifier"?: JsonLdStringValue;
+  "foaf:name"?: JsonLdStringValue | JsonLdStringValue[];
+  [key: string]: unknown;
 }
 
 export interface JsonLdTheme {
-  "@id": string;
-  "@type": "skos:Concept";
-  "skos:prefLabel": JsonLdLanguageValue;
+  "@id"?: string;
+  "@type"?: "skos:Concept";
+  "skos:prefLabel"?: JsonLdLanguageValue;
+  [key: string]: unknown;
 }
 
 export interface JsonLdDistribution {
-  "@id": string;
-  "@type": "dcat:Distribution";
-  "dcatap:availability": {
-    "@id": string;
-    "@type": "skos:Concept";
-    "skos:prefLabel": JsonLdLanguageValue;
+  "@id"?: string;
+  "@type"?: "dcat:Distribution";
+  "dcatap:availability"?: {
+    "@id"?: string;
+    "@type"?: "skos:Concept";
+    "skos:prefLabel"?: JsonLdLanguageValue;
   };
-  "dcterms:description": JsonLdLanguageValue;
-  "dcat:accessURL": { "@id": string };
-  "dcat:byteSize": JsonLdLongValue;
-  "dcat:format": JsonLdStringValue;
+  "dcterms:description"?: JsonLdLanguageValue;
+  "dcterms:format"?: {
+    "@id"?: string;
+    "@type"?: "dcterms:MediaTypeOrExtent";
+    "skos:prefLabel"?: JsonLdLanguageValue;
+  };
+  "dcterms:title"?: JsonLdStringValue;
+  "dcat:accessURL"?: { "@id"?: string };
+  "dcat:byteSize"?: JsonLdLongValue;
+  "dcat:format"?: JsonLdStringValue;
+  "spdx:checksum"?: unknown;
+  [key: string]: unknown;
 }
 
 /**
@@ -68,6 +78,7 @@ export interface DatasetMetadata {
   metadataFilename: string;
   keyword: string;
   themes: string[];
+  datasetType?: string;
   distribution: {
     availability: string;
     description: string;

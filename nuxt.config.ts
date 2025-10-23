@@ -14,9 +14,8 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "nuxt-zod-i18n",
     "dayjs-nuxt",
-    "@nuxtjs/color-mode",
+    //"@nuxtjs/color-mode",
     "@vueuse/nuxt",
-    "nuxt-api-party",
     "nuxt-proxy-request",
   ],
   icon: {
@@ -35,6 +34,7 @@ export default defineNuxtConfig({
     defaultLocale: "en",
     plugins: ["utc", "timezone", "quarterOfYear"],
   },
+  /*
   colorMode: {
     preference: "system",
     fallback: "light",
@@ -43,6 +43,12 @@ export default defineNuxtConfig({
     storage: "localStorage",
     storageKey: "nuxt-color-mode",
   },
+  */
+  i18n: {
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
+  },
   shadcn: {
     prefix: "",
     componentDir: "./components/ui",
@@ -50,9 +56,13 @@ export default defineNuxtConfig({
   css: ["~/assets/css/tailwind.css"],
   runtimeConfig: {
     public: {
-      apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL,
-      apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL,
-      catalogName: process.env.CATALOG_NAME,
+      apiSearchServiceUrl:
+        process.env.API_SEARCH_SERVICE_URL ||
+        "https://ds-gateway.uva.nextgen.hiro-develop.nl/search",
+      apiCatalogServiceUrl:
+        process.env.API_CATALOG_SERVICE_URL ||
+        "https://ds-gateway.ki.nextgen.hiro-develop.nl/catalog",
+      catalogName: process.env.CATALOG_NAME || "hus_catalog",
     },
   },
   vite: {

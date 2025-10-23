@@ -3,19 +3,22 @@ name: Build and push docker image
 on:
   push:
     branches:
-      - '**'
+      - "**"
     tags:
-      - '**'
+      - "**"
     paths-ignore:
-      - 'releases/**'
+      - "releases/**"
   pull_request:
     branches:
-      - '**'
+      - "**"
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   DOCKER_IMAGE_NAME: hiro-microdatacenters-bv/nextgen-fe
+  NUXT_PUBLIC_API_SEARCH_SERVICE_URL: ${{ vars.NUXT_PUBLIC_API_SEARCH_SERVICE_URL }}
+  NUXT_PUBLIC_API_CATALOG_SERVICE_URL: ${{ vars.NUXT_PUBLIC_API_CATALOG_SERVICE_URL }}
+  NUXT_PUBLIC_CATALOG_NAME: ${{ vars.NUXT_PUBLIC_CATALOG_NAME }}
 
 jobs:
   build:

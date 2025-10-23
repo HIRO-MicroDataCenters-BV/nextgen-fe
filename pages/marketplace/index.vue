@@ -1,6 +1,15 @@
 <template>
-  <AppContent :title="t('title.marketplace')" :description="t('subtitle.marketplace')" :show-available-biobanks="true">
-    <AppTable :title="'marketplace'" :columns="columns" :data-source="fetchTableData" :page-size="10" />
+  <AppContent
+    :title="t('title.marketplace')"
+    :description="t('subtitle.marketplace')"
+    :show-available-biobanks="true"
+  >
+    <AppTable
+      :title="'marketplace'"
+      :columns="columns"
+      :data-source="fetchTableData"
+      :page-size="10"
+    />
   </AppContent>
 </template>
 
@@ -30,6 +39,7 @@ setPage({
   section: "marketplace",
   title: t("title.marketplace"),
   subtitle: t("subtitle.marketplace"),
+  source: "uva",
 });
 
 const baseUrl = page.value.section;
@@ -83,9 +93,10 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters: params.filters && Object.keys(params.filters).length > 0
-        ? filtersObj
-        : undefined,
+      filters:
+        params.filters && Object.keys(params.filters).length > 0
+          ? filtersObj
+          : undefined,
     });
     const response = await api.searchDistributed(filter as SearchFilter);
     const tableData = transformSearchResponseToTableData(

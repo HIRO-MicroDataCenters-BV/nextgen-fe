@@ -40,7 +40,7 @@ export function useMenu() {
   });
 
   const catalogName = config.public.catalogName;
-  console.log("publ",config.public);
+  console.log("publ", config.public);
 
   // Menu structure
   const menuItems = ref<MenuStructure>({
@@ -58,7 +58,7 @@ export function useMenu() {
       {
         id: "marketplace",
         title: t("menu.marketplace"),
-        icon: "lucide:shopping-bag",
+        icon: "lucide:store",
         url: "/marketplace",
         items: [],
         isActive: route.path === "/marketplace",
@@ -66,7 +66,7 @@ export function useMenu() {
       {
         id: "my_catalog",
         title: t(`menu.${catalogName}`),
-        icon: "lucide:folder",
+        icon: "lucide:library-big",
         url: "/my_catalog",
         items: [],
         isActive: route.path === "/my_catalog",

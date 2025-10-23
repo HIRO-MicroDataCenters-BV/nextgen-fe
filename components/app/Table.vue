@@ -40,30 +40,57 @@ const { dataSource, columns, pageSize, title } = props;
 
 const { t } = useI18n();
 const data = shallowRef<TableRowData[]>([]);
-const totalItems = ref(0);
 const isLoading = ref(true);
 
 const selectedFilters = ref<Record<string, boolean | string | number>>({});
 
-const { filterGroups, getActiveFilters, resetFilters: _resetFilters } = useFilters();
+const {
+  filterGroups,
+  getActiveFilters,
+  resetFilters: _resetFilters,
+} = useFilters();
 
-const handleFilterChange = (key: string, value: boolean | string | number, multiple: boolean) => {
+const handleFilterChange = (
+  key: string,
+  value: boolean | string | number,
+  multiple: boolean
+) => {
   if (!multiple) {
     selectedFilters.value = {};
   }
-  if(value){
+
+  if (value) {
     selectedFilters.value[key] = value;
+  } else {
+    const { [key]: _, ...rest } = selectedFilters.value;
+    selectedFilters.value = rest;
   }
-  // Сбрасываем текстовое поле поиска при изменении фильтров
+
   searchValue.value = "";
   applySearchFilter();
   fetchData();
 };
 
-const fetchData = async () => {
-  isLoading.value = true;
+const handleRemoveFilter = (key: string) => {
+  const { [key]: _, ...rest } = selectedFilters.value;
+  selectedFilters.value = rest;
+  fetchData();
+};
 
-  const { data: tableData, pagination } = await dataSource({
+const handleClearAllFilters = () => {
+  selectedFilters.value = {};
+  searchValue.value = "";
+  applySearchFilter();
+};
+
+const fetchData = async () => {
+  if (Object.keys(selectedFilters.value).length === 0) {
+    isLoading.value = false;
+    data.value = [];
+    return;
+  }
+  isLoading.value = true;
+  const { data: tableData } = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
@@ -79,8 +106,21 @@ const fetchData = async () => {
   isLoading.value = false;
 
   let filteredData = tableData ?? [];
-  
-  // Применяем текстовую фильтрацию по всем полям
+
+  if (selectedType.value === "datasets") {
+    filteredData = filteredData.filter((row) => {
+      const datasetType = row.datasetType as string | undefined;
+      return (
+        !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
+      );
+    });
+  } else if (selectedType.value === "applications") {
+    filteredData = filteredData.filter((row) => {
+      const datasetType = row.datasetType as string | undefined;
+      return datasetType === "http://purl.org/dc/dcmitype/Software";
+    });
+  }
+
   if (searchValue.value && searchValue.value.trim()) {
     const searchTerm = searchValue.value.toLowerCase().trim();
     filteredData = filteredData.filter((row) => {
@@ -90,20 +130,24 @@ const fetchData = async () => {
       });
     });
   }
-
-  // Slice the data based on current page and page size
+  /*
   const start =
     table.getState().pagination.pageIndex *
     table.getState().pagination.pageSize;
   const end = start + table.getState().pagination.pageSize;
   data.value = filteredData.slice(start, end);
-  totalItems.value = searchValue.value ? filteredData.length : (pagination?.total_items ?? 0);
+  totalItems.value = searchValue.value
+    ? filteredData.length
+    : pagination?.total_items ?? 0;
+  */
+  data.value = filteredData;
 };
 
 const selectedFilterColumn = ref("all");
 const searchValue = ref("");
 
 const route = useRoute();
+const selectedType = ref("datasets");
 /*
 const router = useRouter();
 */
@@ -126,12 +170,6 @@ const currentPage = ref<number>(
     ? parseInt(route.query.page)
     : 0
 );
-
-const handlePageChange = (page: number) => {
-  currentPage.value = page;
-  table.setPageIndex(page);
-  fetchData();
-};
 
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];
@@ -305,13 +343,31 @@ const filterItems = ref<DropdownMenuItem[]>(
   }))
 );
 
+const handleTypeTabChange = (type: string | number) => {
+  selectedType.value = String(type);
+  fetchData();
+};
+
 defineExpose({ fetchData });
 </script>
 
 <template>
-  <div class="w-full flex flex-col px-12 py-4 h-[calc(100vh-220px)]">
-    <div class="mb-8">
+  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)]">
+    <div class="mb-4 flex items-center justify-between gap-2">
       <!-- table filters -->
+      <Tabs
+        :model-value="selectedType"
+        @update:model-value="handleTypeTabChange"
+      >
+        <TabsList class="flex mx-auto justify-center items-center mx-auto">
+          <TabsTrigger value="datasets">
+            {{ $t("action.datasets") }}
+          </TabsTrigger>
+          <TabsTrigger value="applications">
+            {{ $t("action.applications") }}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div class="flex gap-2 items-center">
         <div class="flex-auto flex flex-wrap gap-2">
@@ -339,6 +395,37 @@ defineExpose({ fetchData });
         </div>
       </div>
     </div>
+    <div class="filters-list">
+      <div
+        v-if="Object.keys(selectedFilters).length > 0"
+        class="flex gap-2 items-center flex-wrap my-4 mb-6"
+      >
+        <Button
+          variant="default"
+          size="sm"
+          class="rounded-sm px-2 text-sm py-0 font-normal h-6"
+          @click="handleClearAllFilters"
+        >
+          {{ t("action.clear_filters") }}
+        </Button>
+        <Badge
+          v-for="(value, key) in selectedFilters"
+          :key="key"
+          variant="secondary"
+          class="rounded-sm px-2 text-sm capitalize h-6"
+        >
+          {{ t(`filter.${key}`) }}
+          <Button
+            variant="ghost"
+            size="icon"
+            class="p-0 h-auto w-auto ml-1"
+            @click.stop="handleRemoveFilter(key as string)"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
+        </Badge>
+      </div>
+    </div>
     <!-- end table filters -->
     <AppTablePreloader v-if="isLoading" />
     <div
@@ -346,12 +433,15 @@ defineExpose({ fetchData });
       class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
     >
       <Table
+        v-if="Object.keys(selectedFilters).length > 0"
         :data-source="dataSource"
         :columns="columns"
         :page-size="pageSize"
         :title="title"
       >
-        <TableHeader class="sticky top-0 bg-sidebar-background">
+        <TableHeader
+          class="sticky top-0 bg-gray-50 z-10 outline outline-1 outline-gray-200"
+        >
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
@@ -386,9 +476,26 @@ defineExpose({ fetchData });
           </TableRow>
         </TableBody>
       </Table>
+      <div v-else class="flex-grow flex items-center justify-center">
+        <div class="flex flex-col items-center justify-center">
+          <div
+            class="w-[48px] h-[48px] flex items-center justify-center border rounded-md mb-4"
+          >
+            <Icon name="lucide:search-slash" size="24" />
+          </div>
+          <div class="text-center">
+            <p class="text-sm font-medium mb-2">
+              {{ t("hint.no_datasets_found") }}
+            </p>
+            <p class="text-sm text-muted-foreground">
+              {{ t("hint.try_changing_search_query_or_filters") }}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <AppTablePagination
+    <!-- <AppTablePagination
       :current-page="currentPage"
       :total-pages="Math.ceil(totalItems / pageSize)"
       :total-items="totalItems"
@@ -396,7 +503,7 @@ defineExpose({ fetchData });
       :can-previous-page="currentPage > 0"
       :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
       @page-change="handlePageChange"
-    />
+    /> -->
     <AppDialogDataset
       :open="openAddDataset"
       @on-close="() => (openAddDataset = false)"

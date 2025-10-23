@@ -1,7 +1,16 @@
 <template>
-  <AppContent :title="t(`menu.${catalogName}`)" :description="t('subtitle.my_catalog')">
-    <AppTable ref="tableRef" :title="t(`menu.${catalogName}`)" :columns="columns" :data-source="fetchTableData"
-      :page-size="10" :enable-pagination="true" />
+  <AppContent
+    :title="t(`menu.${catalogName}`)"
+    :description="t('subtitle.my_catalog')"
+  >
+    <AppTable
+      ref="tableRef"
+      :title="t(`menu.${catalogName}`)"
+      :columns="columns"
+      :data-source="fetchTableData"
+      :page-size="10"
+      :enable-pagination="true"
+    />
   </AppContent>
 </template>
 
@@ -26,7 +35,6 @@ import type { SearchFilter } from "~/types/api.types";
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
-
 const { deleteDataset } = useApi();
 const router = useRouter();
 const { t } = useI18n();
@@ -37,8 +45,8 @@ setPage({
   section: "my_catalog",
   title: t(`menu.${catalogName}`),
   subtitle: t("subtitle.my_catalog"),
+  source: "ki",
 });
-
 
 // Defining columns for the table
 const columns: TableColumn[] = [
@@ -47,7 +55,7 @@ const columns: TableColumn[] = [
     header: () => t("label.data_product_name"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
-      const id = item.id
+      const id = item.id;
 
       return h(
         Button,
@@ -97,7 +105,7 @@ const columns: TableColumn[] = [
             action: () => {
               router.push(`/my_catalog/${id}/edit`);
             },
-          }
+          },
         ],
       });
     },
@@ -125,9 +133,10 @@ const fetchTableData = async (
       all: params.all,
       page,
       limit,
-      filters: params.filters && Object.keys(params.filters).length > 0
-        ? filtersObj
-        : undefined,
+      filters:
+        params.filters && Object.keys(params.filters).length > 0
+          ? filtersObj
+          : undefined,
     });
     const response = await api.getLocalCatalog(filter as SearchFilter);
 

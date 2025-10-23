@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NuxtLink } from '#components';
+import { NuxtLink } from "#components";
 
 const { t } = useI18n();
 const { menu, user } = useMenu();
@@ -7,7 +7,7 @@ const { menu, user } = useMenu();
 
 <template>
   <Sidebar collapsible="icon">
-    <SidebarHeader>
+    <SidebarHeader class="border-b border-gray-200">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
@@ -38,7 +38,7 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.main" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url">
+                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
@@ -93,7 +93,7 @@ const { menu, user } = useMenu();
           <template v-for="item in menu.secondary" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url">
+                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
