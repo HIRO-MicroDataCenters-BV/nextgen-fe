@@ -207,9 +207,12 @@ export default defineI18nConfig(() => {
           back_to_catalog: "Back to Catalog",
           for_researchers: "For Researchers",
           for_data_providers: "For Data Providers",
+          items_selected: "Items selected",
+          clear_all: "Clear all",
+          pass_to_training: "Pass to Training",
         },
         placeholder: {
-          search: "Search...",
+          search: "Search {type}...",
           select_filter: "Select filter",
           select_license: "Select license",
           pick_date: "Pick a date",

@@ -5,10 +5,9 @@
     :show-available-biobanks="true"
   >
     <AppTable
-      :title="'marketplace'"
+      title="marketplace"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="10"
     />
   </AppContent>
 </template>

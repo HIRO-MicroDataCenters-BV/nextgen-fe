@@ -2,6 +2,7 @@
 import type {
   ColumnFiltersState,
   ExpandedState,
+  Row,
   VisibilityState,
 } from "@tanstack/vue-table";
 import {
@@ -28,17 +29,22 @@ interface TableProps {
   dataSource: (params: unknown) => Promise<TableDataResponse>;
   columns?: TableColumn[];
   pageSize?: number;
+  selectionEnabled?: boolean;
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
   title: "",
   columns: () => [],
   pageSize: 10,
+  selectionEnabled: true,
 });
 
 const { dataSource, columns, pageSize, title } = props;
 
 const { t } = useI18n();
+const emit = defineEmits<{
+  (e: "selection-change", value: Array<string>): void;
+}>();
 const data = shallowRef<TableRowData[]>([]);
 const isLoading = ref(true);
 
@@ -84,6 +90,8 @@ const handleClearAllFilters = () => {
 };
 
 const fetchData = async () => {
+  rowSelection.value = {};
+  //selectedFilters.value = { "med:age": true };
   if (Object.keys(selectedFilters.value).length === 0) {
     isLoading.value = false;
     data.value = [];
@@ -130,16 +138,6 @@ const fetchData = async () => {
       });
     });
   }
-  /*
-  const start =
-    table.getState().pagination.pageIndex *
-    table.getState().pagination.pageSize;
-  const end = start + table.getState().pagination.pageSize;
-  data.value = filteredData.slice(start, end);
-  totalItems.value = searchValue.value
-    ? filteredData.length
-    : pagination?.total_items ?? 0;
-  */
   data.value = filteredData;
 };
 
@@ -181,7 +179,12 @@ const getColumns = (cols: TableColumn[] | undefined) => {
   }));
 };
 
+const selectedRows = ref<Row<TableRowData>[]>([]);
+
 const mappedColumns = ref(getColumns(columns));
+const isSelectionVisible = computed(
+  () => props.selectionEnabled && selectedType.value === "datasets"
+);
 const table = useVueTable({
   data,
   columns: mappedColumns.value,
@@ -190,6 +193,9 @@ const table = useVueTable({
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getExpandedRowModel: getExpandedRowModel(),
+  getRowId: (row) => String((row as TableRowData).id),
+  enableRowSelection: true,
+  enableMultiRowSelection: true,
   onColumnFiltersChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, columnFilters),
   onColumnVisibilityChange: (updaterOrValue) =>
@@ -330,6 +336,19 @@ onMounted(() => {
   fetchData();
 });
 
+watch(
+  rowSelection,
+  () => {
+    const ids = table
+      .getSelectedRowModel()
+      .rows.map((r) => String((r.original as TableRowData).id));
+    console.debug("ids", ids);
+    selectedRows.value = table.getSelectedRowModel().rows;
+    emit("selection-change", ids);
+  },
+  { deep: true }
+);
+
 const filterItems = ref<DropdownMenuItem[]>(
   filterGroups.value.map((group) => ({
     key: group.key,
@@ -348,11 +367,22 @@ const handleTypeTabChange = (type: string | number) => {
   fetchData();
 };
 
+const handlePassToTraining = () => {
+  console.log("pass to training");
+  selectedRows.value = [];
+  rowSelection.value = {};
+};
+
+const handleClearAll = () => {
+  console.log("clear all");
+  rowSelection.value = {};
+};
+
 defineExpose({ fetchData });
 </script>
 
 <template>
-  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)]">
+  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)] relative">
     <div class="mb-4 flex items-center justify-between gap-2">
       <!-- table filters -->
       <Tabs
@@ -361,9 +391,11 @@ defineExpose({ fetchData });
       >
         <TabsList class="flex mx-auto justify-center items-center mx-auto">
           <TabsTrigger value="datasets">
+            <Icon name="lucide:table-2" />
             {{ $t("action.datasets") }}
           </TabsTrigger>
           <TabsTrigger value="applications">
+            <Icon name="lucide:box" />
             {{ $t("action.applications") }}
           </TabsTrigger>
         </TabsList>
@@ -376,7 +408,7 @@ defineExpose({ fetchData });
               v-model="searchValue"
               class="w-64 pl-8"
               type="search"
-              :placeholder="t('placeholder.search')"
+              :placeholder="t('placeholder.search', { type: selectedType })"
               @update:model-value="applySearchFilter"
             />
             <span
@@ -446,6 +478,18 @@ defineExpose({ fetchData });
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
           >
+            <TableHead v-if="isSelectionVisible">
+              <div class="flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  :checked="table.getIsAllRowsSelected()"
+                  :indeterminate="table.getIsSomeRowsSelected()"
+                  aria-label="select all"
+                  class="cursor-pointer border-primary size-4 !rounded-md"
+                  @change="table.getToggleAllRowsSelectedHandler()($event)"
+                />
+              </div>
+            </TableHead>
             <TableHead v-for="header in headerGroup.headers" :key="header.id">
               <FlexRender
                 v-if="!header.isPlaceholder"
@@ -459,6 +503,18 @@ defineExpose({ fetchData });
           <template v-if="table.getRowModel().rows?.length">
             <template v-for="row in table.getRowModel().rows" :key="row.id">
               <TableRow :data-state="row.getIsSelected() && 'selected'">
+                <TableCell v-if="isSelectionVisible">
+                  <div class="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      :checked="row.getIsSelected()"
+                      :disabled="!row.getCanSelect()"
+                      aria-label="select row"
+                      class="cursor-pointer border-primary size-4 rounded-md [&:checked]:bg-primary [&:checked]:text-primary-foreground"
+                      @change="row.getToggleSelectedHandler()($event)"
+                    />
+                  </div>
+                </TableCell>
                 <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                   <FlexRender
                     :render="cell.column.columnDef.cell"
@@ -470,7 +526,10 @@ defineExpose({ fetchData });
           </template>
 
           <TableRow v-else>
-            <TableCell :colspan="mappedColumns.length" class="h-24 text-center">
+            <TableCell
+              :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
+              class="h-24 text-center"
+            >
               {{ t("hint.no_results") }}
             </TableCell>
           </TableRow>
@@ -494,6 +553,12 @@ defineExpose({ fetchData });
         </div>
       </div>
     </div>
+    <AppTableRowMenu
+      v-if="selectedRows.length > 0"
+      :rows="selectedRows"
+      @on-pass-to-training="handlePassToTraining"
+      @on-clear-all="handleClearAll"
+    />
 
     <!-- <AppTablePagination
       :current-page="currentPage"

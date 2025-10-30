@@ -8,8 +8,7 @@
       :title="t(`menu.${catalogName}`)"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="10"
-      :enable-pagination="true"
+      :selection-enabled="false"
     />
   </AppContent>
 </template>
