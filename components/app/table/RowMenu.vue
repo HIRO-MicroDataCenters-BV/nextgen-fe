@@ -5,16 +5,16 @@
         <template v-for="item in items" :key="item.label">
           <MenubarTrigger
             v-if="item.type === 'button'"
-            @click="item.action"
             class="bg-transparent! hover:bg-gray-800! text-white! cursor-pointer flex items-center gap-1"
+            @click="item.action"
             ><Icon :name="item.icon" class="size-4" />
             {{ item.label }}</MenubarTrigger
           >
 
           <MenubarTrigger
             v-else-if="item.type === 'counter'"
-            @click="item.action"
             class="bg-transparent! text-white!"
+            @click="item.action"
             >{{ selectedCount }} {{ item.label }}</MenubarTrigger
           >
           <MenubarSeparator />

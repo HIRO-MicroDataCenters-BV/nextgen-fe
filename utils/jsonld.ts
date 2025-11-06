@@ -457,7 +457,7 @@ function flattenObject(
     const currentPath = prefix ? `${prefix}/${key}` : key;
     const camelPath = currentPath
       .replace(/[:-]/g, "_")
-      .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
     if (Array.isArray(value)) {
       if (value.length === 0) continue;
@@ -548,7 +548,7 @@ export function convertJsonLdDatasetToJson(
 
       const camelKey = key
         .replace(/[:-]/g, "_")
-        .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
       const processedValue = processJsonLdValue(
         value,
@@ -639,7 +639,7 @@ function processJsonLdValue(
     Object.entries(obj).forEach(([key, val]) => {
       const camelKey = key
         .replace(/[:-]/g, "_")
-        .replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+        .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
 
       const processedValue = processJsonLdValue(
         val,
@@ -746,7 +746,7 @@ export function convertJsonLdForTraining(input: unknown): {
   const keyFromIri = (iri: string): string => {
     const bySlash = iri.split("/");
     const last = bySlash[bySlash.length - 1];
-    return last.replace(/[^A-Za-z0-9_\-]/g, "_");
+    return last.replace(/[^A-Za-z0-9_-]/g, "_");
   };
 
   const normalizeExtraMetadata = (extra: unknown): Record<string, boolean> => {
@@ -922,7 +922,7 @@ export function createDatasetJsonLd(
   };
 
   const datasetId = `https://example.com/dataset/${filename.replace(
-    /[^A-Za-z0-9_\-]/g,
+    /[^A-Za-z0-9_-]/g,
     "-"
   )}`;
 

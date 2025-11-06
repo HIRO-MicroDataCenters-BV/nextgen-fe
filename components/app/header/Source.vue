@@ -5,7 +5,7 @@
         v-if="source"
         :src="`/images/icons/${source}.png`"
         class="size-8"
-      /><span class="uppercase text-sm font-medium">{{ source }}</span>
+      ><span class="uppercase text-sm font-medium">{{ source }}</span>
     </div>
     <div>
       <span class="text-sm text-muted-foreground">{{

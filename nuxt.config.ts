@@ -67,4 +67,13 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+  nitro: {
+    esbuild: {
+      options: {
+        target: "node18",
+        format: "esm",
+      },
+    },
+    minify: false,
+  },
 });
