@@ -42,6 +42,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Button from "@/components/ui/button/Button.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Textarea from "@/components/ui/textarea/Textarea.vue";
+import { useApi } from "@/composables/useApi";
 
 export interface FormFieldOption {
   value: string;
@@ -55,6 +58,12 @@ export interface FormFieldDefinition {
   placeholder?: string;
   hint?: string | null;
   options?: FormFieldOption[];
+  dataSource?: () => Promise<unknown>;
+  fieldOptions?: {
+    dataPath?: string;
+    valueKey?: string;
+    labelKey?: string;
+  };
   validation?: z.ZodTypeAny;
   disabled?: boolean;
   accept?: string;
@@ -84,12 +93,94 @@ const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
 const df = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const { uploadMmioFile, deleteMmioFile } = useApi();
+
+const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
+const uploadingFiles = ref<Record<string, boolean>>({});
 
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
 const { handleSubmit, values, meta, resetForm, setFieldValue } = useForm({
   validationSchema: typedSchema,
   initialValues: props.initialValues || {},
+});
+
+const fieldOptions = ref<Record<string, FormFieldOption[]>>({});
+const loadingOptions = ref<Record<string, boolean>>({});
+
+const getNestedValue = (obj: unknown, path: string): unknown => {
+  if (!path) return obj;
+  const keys = path.split(".");
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (current && typeof current === "object" && key in (current as Record<string, unknown>)) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return null;
+    }
+  }
+  return current;
+};
+
+const loadFieldOptions = async (field: FormFieldDefinition) => {
+  if (!field.dataSource || field.type !== "select") return;
+
+  if (loadingOptions.value[field.name]) return;
+  loadingOptions.value[field.name] = true;
+
+  try {
+    const response = await field.dataSource();
+    let data: unknown = response;
+
+    if (field.fieldOptions?.dataPath) {
+      data = getNestedValue(response, field.fieldOptions.dataPath);
+    }
+
+    if (!data) {
+      console.warn(`No data found at path ${field.fieldOptions?.dataPath || "root"} for field ${field.name}`);
+      return;
+    }
+
+    if (!Array.isArray(data)) {
+      console.warn(`Data at path ${field.fieldOptions?.dataPath || "root"} is not an array for field ${field.name}`);
+      return;
+    }
+
+    const valueKey = field.fieldOptions?.valueKey || "value";
+    const labelKey = field.fieldOptions?.labelKey || "label";
+
+    fieldOptions.value[field.name] = data.map((item) => {
+      if (typeof item === "string" || typeof item === "number") {
+        return {
+          value: String(item),
+          label: String(item),
+        };
+      }
+      if (item && typeof item === "object") {
+        const itemObj = item as Record<string, unknown>;
+        return {
+          value: String(itemObj[valueKey] ?? ""),
+          label: String(itemObj[labelKey] ?? itemObj[valueKey] ?? ""),
+        };
+      }
+      return {
+        value: String(item),
+        label: String(item),
+      };
+    });
+  } catch (error) {
+    console.error(`Error loading options for field ${field.name}:`, error);
+  } finally {
+    loadingOptions.value[field.name] = false;
+  }
+};
+
+onMounted(() => {
+  props.fields.forEach((field) => {
+    if (field.dataSource && field.type === "select") {
+      loadFieldOptions(field);
+    }
+  });
 });
 
 const showDiscardDialog = ref(false);
@@ -127,6 +218,59 @@ const confirmDiscard = () => {
   router.back();
 };
 
+const handleFileChange = async (fieldName: string, files: FileList | null) => {
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  const file = files[0];
+  uploadingFiles.value[fieldName] = true;
+
+  try {
+    const location = await uploadMmioFile(file);
+
+    if (location) {
+      const filename = location.split("/").pop() || file.name;
+      uploadedFiles.value[fieldName] = { filename, file };
+      setFieldValue(fieldName, file);
+
+      console.log("Original file data:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      });
+      console.log("API response:", { Location: location, filename });
+    }
+  } catch (error) {
+    console.error("File upload error:", error);
+  } finally {
+    uploadingFiles.value[fieldName] = false;
+  }
+};
+
+const handleFileDelete = async (fieldName: string) => {
+  const uploaded = uploadedFiles.value[fieldName];
+  if (!uploaded) return;
+
+  try {
+    const success = await deleteMmioFile(uploaded.filename);
+    if (success) {
+      const newUploadedFiles = Object.fromEntries(
+        Object.entries(uploadedFiles.value).filter(([key]) => key !== fieldName)
+      );
+      uploadedFiles.value = newUploadedFiles;
+      setFieldValue(fieldName, undefined);
+      const input = document.getElementById(fieldName) as HTMLInputElement;
+      if (input) {
+        input.value = "";
+      }
+    }
+  } catch (error) {
+    console.error("File delete error:", error);
+  }
+};
+
 const isFieldVisible = (field: FormFieldDefinition): boolean => {
   if (!field.conditions || field.conditions.length === 0) return true;
   return field.conditions.every((condition) => {
@@ -140,6 +284,8 @@ defineExpose({
   resetForm,
   values,
   meta,
+  getUploadedFile: (fieldName: string) =>
+    uploadedFiles.value[fieldName]?.filename,
 });
 </script>
 
@@ -185,17 +331,21 @@ defineExpose({
               />
             </FormControl>
           </template>
-          <template v-else-if="field.type === 'select' && field.options">
+          <template v-else-if="field.type === 'select'">
             <Select
               v-bind="componentField"
-              :disabled="field.disabled"
+              :disabled="
+                field.disabled || props.disabled || loadingOptions[field.name]
+              "
               class="w-full"
             >
               <FormControl>
                 <SelectTrigger class="w-full">
                   <SelectValue
                     :placeholder="
-                      field.placeholder || t('placeholder.select_option')
+                      loadingOptions[field.name]
+                        ? t('placeholder.loading')
+                        : field.placeholder || t('placeholder.select_option')
                     "
                   />
                 </SelectTrigger>
@@ -203,7 +353,9 @@ defineExpose({
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="option in field.options"
+                    v-for="option in fieldOptions[field.name] ||
+                    field.options ||
+                    []"
                     :key="option.value"
                     :value="option.value"
                   >
@@ -303,20 +455,51 @@ defineExpose({
           </template>
           <template v-else-if="field.type === 'file'">
             <FormControl>
-              <Input
-                :id="field.name"
-                type="file"
-                :placeholder="field.placeholder"
-                :multiple="Boolean(field.props?.multiple)"
-                :accept="field.accept || String(field.props?.accept || '')"
-                :disabled="field.disabled || props.disabled"
-                @change="(e: Event) => {
-                  const input = e.target as HTMLInputElement;
-                  if (input && componentField['onUpdate:modelValue']) {
-                    componentField['onUpdate:modelValue'](input.files);
-                  }
-                }"
-              />
+              <div class="space-y-2">
+                <Input
+                  :id="field.name"
+                  type="file"
+                  :placeholder="field.placeholder"
+                  :multiple="Boolean(field.props?.multiple)"
+                  :accept="field.accept || String(field.props?.accept || '')"
+                  :disabled="
+                    field.disabled ||
+                    props.disabled ||
+                    uploadingFiles[field.name]
+                  "
+                  @change="(e: Event) => {
+                    const input = e.target as HTMLInputElement;
+                    if (input?.files) {
+                      handleFileChange(field.name, input.files);
+                    }
+                  }"
+                />
+                <div
+                  v-if="uploadingFiles[field.name]"
+                  class="text-sm text-muted-foreground"
+                >
+                  {{ t("action.uploading") }}...
+                </div>
+                <div
+                  v-if="
+                    uploadedFiles[field.name] && !uploadingFiles[field.name]
+                  "
+                  class="flex items-center gap-2"
+                >
+                  <span class="text-sm text-muted-foreground">
+                    {{ uploadedFiles[field.name].file.name }}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="field.disabled || props.disabled"
+                    @click="handleFileDelete(field.name)"
+                  >
+                    {{ t("action.delete") }}
+                  </Button>
+                </div>
+              </div>
             </FormControl>
           </template>
           <FormMessage />

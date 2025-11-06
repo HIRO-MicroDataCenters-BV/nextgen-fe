@@ -669,7 +669,9 @@ function processJsonLdValue(
  * Convert JSON-LD (or already-normalized JSON) into a simplified structure
  * suitable for training export: { dataset: Array<...> }
  */
-export function convertJsonLdForTraining(input: unknown): { dataset: Array<Record<string, unknown>> } {
+export function convertJsonLdForTraining(input: unknown): {
+  dataset: Array<Record<string, unknown>>;
+} {
   // If input already looks normalized (ts-json.json shape), return as-is
   const asObj = (input || {}) as Record<string, unknown>;
   if (Array.isArray(asObj.dataset)) {
@@ -693,7 +695,11 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
   const toBool = (v: unknown): boolean => {
     if (typeof v === "boolean") return v;
     if (typeof v === "string") return v.toLowerCase() === "true";
-    if (v && typeof v === "object" && "@value" in (v as Record<string, unknown>)) {
+    if (
+      v &&
+      typeof v === "object" &&
+      "@value" in (v as Record<string, unknown>)
+    ) {
       return toBool((v as Record<string, unknown>)["@value"]);
     }
     return false;
@@ -701,7 +707,12 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
 
   const extractScalar = (v: unknown): string => {
     if (v == null) return "";
-    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
+    if (
+      typeof v === "string" ||
+      typeof v === "number" ||
+      typeof v === "boolean"
+    )
+      return String(v);
     if (Array.isArray(v)) {
       for (const item of v) {
         const s = extractScalar(item);
@@ -712,9 +723,14 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
     if (typeof v === "object") {
       const obj = v as Record<string, unknown>;
       if ("@value" in obj) return getJsonLdValue(obj as unknown as JsonLdValue);
-      if ("@language" in obj && "@value" in obj) return getLanguageValue(obj as unknown as JsonLdLanguageValue);
-      if ("@id" in obj && Object.keys(obj).length === 1) return String(obj["@id"]);
-      if ("skos:prefLabel" in obj) return getLanguageValue(obj["skos:prefLabel"] as unknown as JsonLdLanguageValue);
+      if ("@language" in obj && "@value" in obj)
+        return getLanguageValue(obj as unknown as JsonLdLanguageValue);
+      if ("@id" in obj && Object.keys(obj).length === 1)
+        return String(obj["@id"]);
+      if ("skos:prefLabel" in obj)
+        return getLanguageValue(
+          obj["skos:prefLabel"] as unknown as JsonLdLanguageValue
+        );
       if ("prefLabel" in obj) return extractScalar(obj["prefLabel"]);
       // Fallback: try common fields
       for (const key of ["value", "name", "title"]) {
@@ -746,9 +762,13 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
     return out;
   };
 
-  const toPlainDataset = (ds: Record<string, unknown>): Record<string, unknown> => {
+  const toPlainDataset = (
+    ds: Record<string, unknown>
+  ): Record<string, unknown> => {
     const extra = ds["extraMetadata"] as unknown;
-    const publisher = ds["dcterms:publisher"] as Record<string, unknown> | undefined;
+    const publisher = ds["dcterms:publisher"] as
+      | Record<string, unknown>
+      | undefined;
     const theme = ds["dcat:theme"] as Record<string, unknown> | undefined;
     const distributions = ds["dcat:distribution"] as unknown[] | undefined;
 
@@ -759,7 +779,10 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
           .map((n) => {
             if (typeof n === "string") return n;
             if (n && typeof n === "object") {
-              return getLanguageValue(n as unknown as JsonLdLanguageValue) || getJsonLdValue(n as unknown as JsonLdValue);
+              return (
+                getLanguageValue(n as unknown as JsonLdLanguageValue) ||
+                getJsonLdValue(n as unknown as JsonLdValue)
+              );
             }
             return "";
           })
@@ -775,12 +798,18 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
       return [];
     };
 
-    const publisherName = publisher ? extractNames(publisher["foaf:name"]) : undefined;
+    const publisherName = publisher
+      ? extractNames(publisher["foaf:name"])
+      : undefined;
 
     const availabilityPrefLabel = (dist: Record<string, unknown>): string => {
-      const av = dist["dcatap:availability"] as Record<string, unknown> | undefined;
+      const av = dist["dcatap:availability"] as
+        | Record<string, unknown>
+        | undefined;
       if (!av) return "";
-      const label = av?.["skos:prefLabel"] as unknown as JsonLdLanguageValue | undefined;
+      const label = av?.["skos:prefLabel"] as unknown as
+        | JsonLdLanguageValue
+        | undefined;
       return label ? getLanguageValue(label) : String(av["@id"] || "");
     };
 
@@ -792,51 +821,73 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
         getJsonLdValueByPath(ds as unknown as JsonLdObject, "region.@value") ||
         extractScalar((ds as Record<string, unknown>)["region"]),
       metadataFilename:
-        getJsonLdValueByPath(ds as unknown as JsonLdObject, "metadataFilename.@value") ||
-        extractScalar((ds as Record<string, unknown>)["metadataFilename"]),
+        getJsonLdValueByPath(
+          ds as unknown as JsonLdObject,
+          "metadataFilename.@value"
+        ) || extractScalar((ds as Record<string, unknown>)["metadataFilename"]),
       description:
-        getLanguageValue((ds["dcterms:description"] as unknown) as JsonLdLanguageValue) ||
-        extractScalar(ds["dcterms:description"]),
-      identifier: getJsonLdValue((ds["dcterms:identifier"] as unknown) as JsonLdStringValue),
-      issued: getJsonLdValue((ds["dcterms:issued"] as unknown) as JsonLdStringValue),
+        getLanguageValue(
+          ds["dcterms:description"] as unknown as JsonLdLanguageValue
+        ) || extractScalar(ds["dcterms:description"]),
+      identifier: getJsonLdValue(
+        ds["dcterms:identifier"] as unknown as JsonLdStringValue
+      ),
+      issued: getJsonLdValue(
+        ds["dcterms:issued"] as unknown as JsonLdStringValue
+      ),
       license:
-        getJsonLdValue((ds["dcterms:license"] as unknown) as JsonLdStringValue) ||
+        getJsonLdValue(ds["dcterms:license"] as unknown as JsonLdStringValue) ||
         (ds["dcterms:license"] as Record<string, unknown>)?.["@id"] ||
         extractScalar(ds["dcterms:license"]) ||
         "",
       publisher: publisher
         ? {
-            identifier: getJsonLdValue((publisher["dcterms:identifier"] as unknown) as JsonLdStringValue),
+            identifier: getJsonLdValue(
+              publisher["dcterms:identifier"] as unknown as JsonLdStringValue
+            ),
             name: publisherName || [],
           }
         : undefined,
       title:
-        getLanguageValue((ds["dcterms:title"] as unknown) as JsonLdLanguageValue) ||
-        extractScalar(ds["dcterms:title"]),
+        getLanguageValue(
+          ds["dcterms:title"] as unknown as JsonLdLanguageValue
+        ) || extractScalar(ds["dcterms:title"]),
       distribution: Array.isArray(distributions)
         ? distributions.map((d) => {
             const dist = d as Record<string, unknown>;
             return {
               availability: availabilityPrefLabel(dist),
-              description: getLanguageValue((dist["dcterms:description"] as unknown) as JsonLdLanguageValue),
+              description: getLanguageValue(
+                dist["dcterms:description"] as unknown as JsonLdLanguageValue
+              ),
               accessURL:
                 (dist["dcat:accessURL"] as Record<string, unknown>)?.["@id"] ||
-                (dist["dcat:downloadURL"] as Record<string, unknown>)?.["@id"] ||
+                (dist["dcat:downloadURL"] as Record<string, unknown>)?.[
+                  "@id"
+                ] ||
                 extractScalar(dist["dcat:accessURL"]) ||
                 "",
-              byteSize: getJsonLdValue((dist["dcat:byteSize"] as unknown) as JsonLdLongValue),
+              byteSize: getJsonLdValue(
+                dist["dcat:byteSize"] as unknown as JsonLdLongValue
+              ),
               format:
-                getJsonLdValue((dist["dcat:format"] as unknown) as JsonLdStringValue) ||
-                getLanguageValue((dist["dcterms:format"] as unknown) as JsonLdLanguageValue) ||
+                getJsonLdValue(
+                  dist["dcat:format"] as unknown as JsonLdStringValue
+                ) ||
+                getLanguageValue(
+                  dist["dcterms:format"] as unknown as JsonLdLanguageValue
+                ) ||
                 extractScalar(dist["dcterms:format"]),
             } as Record<string, unknown>;
           })
         : undefined,
       keyword:
-        getJsonLdValue((ds["dcat:keyword"] as unknown) as JsonLdStringValue) ||
+        getJsonLdValue(ds["dcat:keyword"] as unknown as JsonLdStringValue) ||
         extractScalar(ds["dcat:keyword"]),
       theme: theme
-        ? getLanguageValue((theme["skos:prefLabel"] as unknown) as JsonLdLanguageValue) || theme
+        ? getLanguageValue(
+            theme["skos:prefLabel"] as unknown as JsonLdLanguageValue
+          ) || theme
         : undefined,
     } as Record<string, unknown>;
   };
@@ -847,4 +898,124 @@ export function convertJsonLdForTraining(input: unknown): { dataset: Array<Recor
   });
 
   return { dataset: result };
+}
+
+/**
+ * Create JSON-LD dataset structure for saveDataset API
+ * @param formData - Form values
+ * @param filename - Filename of uploaded file
+ * @returns JSON-LD dataset object as string
+ */
+export function createDatasetJsonLd(
+  formData: Record<string, unknown>,
+  filename: string
+): string {
+  const context = {
+    dcat: "http://www.w3.org/ns/dcat#",
+    dcatap: "http://data.europa.eu/r5r/",
+    dcterms: "http://purl.org/dc/terms/",
+    dspace: "http://data-space.org/",
+    foaf: "http://xmlns.com/foaf/0.1/",
+    skos: "http://www.w3.org/2004/02/skos/core#",
+    spdx: "http://spdx.org/rdf/terms#",
+    xsd: "http://www.w3.org/2001/XMLSchema#",
+  };
+
+  const datasetId = `https://example.com/dataset/${filename.replace(
+    /[^A-Za-z0-9_\-]/g,
+    "-"
+  )}`;
+
+  let metadataContent: Record<string, unknown> = {};
+
+  if (
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string"
+  ) {
+    try {
+      const parsed = JSON.parse(formData.metadata_content);
+      if (parsed && typeof parsed === "object") {
+        metadataContent = parsed;
+      }
+    } catch {
+      console.error(formData.metadata_content);
+    }
+  }
+
+  const baseDataset: Record<string, unknown> = {
+    "@context": context,
+    "@id": metadataContent["@id"] || datasetId,
+    "@type": "dcat:Dataset",
+  };
+
+  if (metadataContent["@context"]) {
+    baseDataset["@context"] = metadataContent["@context"];
+  }
+
+  if (
+    formData.name &&
+    typeof formData.name === "string" &&
+    formData.name.trim()
+  ) {
+    baseDataset["dcterms:title"] = [
+      {
+        "@language": "en",
+        "@value": formData.name.trim(),
+      },
+    ];
+  } else if (metadataContent["dcterms:title"]) {
+    baseDataset["dcterms:title"] = metadataContent["dcterms:title"];
+  }
+
+  if (
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string"
+  ) {
+    try {
+      const parsed = JSON.parse(formData.metadata_content);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        parsed["@type"] === "dcat:Dataset"
+      ) {
+        Object.assign(baseDataset, parsed);
+        baseDataset["@id"] = datasetId;
+        baseDataset["@context"] = context;
+      } else {
+        if (parsed && typeof parsed === "object") {
+          Object.keys(parsed).forEach((key) => {
+            if (
+              !key.startsWith("@") &&
+              parsed[key] !== undefined &&
+              parsed[key] !== null
+            ) {
+              baseDataset[key] = parsed[key];
+            }
+          });
+        }
+      }
+    } catch {
+      if (formData.metadata_content.trim()) {
+        baseDataset["dcterms:description"] = [
+          {
+            "@language": "en",
+            "@value": formData.metadata_content.trim(),
+          },
+        ];
+      }
+    }
+  }
+
+  if (filename) {
+    baseDataset["dspace:metadataFilename"] = {
+      "@type": "xsd:string",
+      "@value": filename,
+    };
+  }
+
+  if (formData.item_type && formData.item_type === "application") {
+    baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
+  }
+
+  return JSON.stringify(baseDataset, null, 2);
 }

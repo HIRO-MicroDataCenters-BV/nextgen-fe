@@ -56,12 +56,11 @@ export default defineNuxtConfig({
   css: ["~/assets/css/tailwind.css"],
   runtimeConfig: {
     public: {
-      apiSearchServiceUrl:
-        process.env.API_SEARCH_SERVICE_URL ||
-        "https://ds-gateway.uva.nextgen.hiro-develop.nl/search",
+      apiSearchServiceUrl: process.env.NUXT_PUBLIC_API_SEARCH_SERVICE_URL || "",
       apiCatalogServiceUrl:
-        process.env.API_CATALOG_SERVICE_URL ||
-        "https://ds-gateway.ki.nextgen.hiro-develop.nl/catalog",
+        process.env.NUXT_PUBLIC_API_CATALOG_SERVICE_URL || "",
+      apiConnectorServiceURL:
+        process.env.NUXT_PUBLOC_API_CONNECTOR_SERVICE_URL || "",
       catalogName: process.env.CATALOG_NAME || "hus_catalog",
     },
   },

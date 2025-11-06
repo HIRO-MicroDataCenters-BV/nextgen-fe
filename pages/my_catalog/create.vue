@@ -24,13 +24,14 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
+import { createDatasetJsonLd } from "@/utils/jsonld";
 
 const { t } = useI18n();
-const { uploadMmioFile, saveDataset } = useApi();
+const { saveDataset, getDataproducts } = useApi();
 const router = useRouter();
 
 const formSchema = z.object({
-  name: z.string(),
+  name: z.string().optional(),
   item_type: z.string(),
   related_data_product: z.string().optional(),
   file: z.any(),
@@ -49,14 +50,6 @@ const initialValues = {
 
 const fields: FormFieldDefinition[] = [
   {
-    name: "name",
-    label: t("label.name"),
-    type: "text",
-    placeholder: t("placeholder.enter_name"),
-    hint: null,
-    disabled: false,
-  },
-  {
     name: "item_type",
     label: t("label.item_type"),
     type: "select",
@@ -73,7 +66,10 @@ const fields: FormFieldDefinition[] = [
     label: t("label.related_data_product"),
     type: "select",
     placeholder: t("placeholder.select_data_product"),
-    options: [],
+    dataSource: getDataproducts,
+    fieldOptions: {
+      dataPath: "dataproducts",
+    },
     hint: null,
     conditions: [
       {
@@ -110,13 +106,19 @@ const onSubmitDirect = () => {
 };
 
 const onSubmit = async (formValues: Record<string, unknown>) => {
-  if (formValues.file) {
-    console.log("File: ", formValues.file);
-    const file = formValues.file as File;
-    const name = file.name;
-    await uploadMmioFile(file);
-    await saveDataset(name, formValues.metadata_content as string);
-    router.push("/my_catalog");
+  const uploadedFilename = formRef.value?.getUploadedFile?.("file");
+
+  if (!uploadedFilename) {
+    console.error("uploaded filename not found");
+    return;
   }
+
+  const datasetJsonLd = createDatasetJsonLd(formValues, uploadedFilename);
+  console.log("data", datasetJsonLd);
+
+  const result = await saveDataset(uploadedFilename, datasetJsonLd);
+  console.log("res", result);
+
+  router.push("/my_catalog");
 };
 </script>
