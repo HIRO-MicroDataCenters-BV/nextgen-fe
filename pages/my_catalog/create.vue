@@ -89,6 +89,7 @@ const fields: FormFieldDefinition[] = [
     type: "file",
     placeholder: t("placeholder.select_file"),
     hint: t("hint.accepted_file_types_json_jar"),
+    accept: "application/json, application/x-tar",
     disabled: false,
   },
   {

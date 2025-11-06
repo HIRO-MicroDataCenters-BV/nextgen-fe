@@ -57,6 +57,7 @@ export interface FormFieldDefinition {
   options?: FormFieldOption[];
   validation?: z.ZodTypeAny;
   disabled?: boolean;
+  accept?: string;
   props?: Record<string, unknown>;
   conditions?: Array<{
     field: string;
@@ -307,7 +308,7 @@ defineExpose({
                 type="file"
                 :placeholder="field.placeholder"
                 :multiple="Boolean(field.props?.multiple)"
-                :accept="String(field.props?.accept || '')"
+                :accept="field.accept || String(field.props?.accept || '')"
                 :disabled="field.disabled || props.disabled"
                 @change="(e: Event) => {
                   const input = e.target as HTMLInputElement;
