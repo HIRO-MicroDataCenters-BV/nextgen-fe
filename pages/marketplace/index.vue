@@ -116,6 +116,7 @@ const fetchTableData = async (
         has_next: page < totalPages,
         has_prev: page > 1,
       },
+      originals: tableData.originals,
     };
 
     return updatedTableData;

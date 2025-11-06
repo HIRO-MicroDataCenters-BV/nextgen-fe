@@ -60,6 +60,7 @@ const emit = defineEmits<{
 }>();
 
 const handlePassToTraining = () => {
+  console.log("pass to training", props.rows);
   emit("on-pass-to-training");
 };
 

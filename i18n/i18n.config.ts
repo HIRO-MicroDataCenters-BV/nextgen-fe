@@ -23,6 +23,7 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           actions: "Actions",
           are_you_sure: "Are you sure?",
+          create_catalog_item: "Add new item",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -39,6 +40,8 @@ export default defineI18nConfig(() => {
           marketplace_description:
             "Decentralised search across all institutional catalogs",
           short_description: "Genomic Data for Personalised Medicine.",
+          create_catalog_item_desc:
+            "Provide data and files for a dataset or an application.",
         },
         text: {
           available_biobank_description:
@@ -138,6 +141,13 @@ export default defineI18nConfig(() => {
           domain_specific_attributes: "Domain-Specific Attributes",
         },
         label: {
+          name: "Name",
+          item_type: "Item Type",
+          related_data_product: "Related Data Product",
+          file: "File",
+          metadata_content: "Metadata Content",
+          dataset: "Dataset",
+          application: "Application",
           filters: "Filters",
           theme: "Theme",
           creator: "Creator",
@@ -176,7 +186,6 @@ export default defineI18nConfig(() => {
           has_sex: "Has Sex",
           has_height: "Has Height",
           has_medical_conditions: "Has (Medical Conditions)",
-          metadata_content: "Metadata Content",
         },
         action: {
           datasets: "Datasets",
@@ -210,8 +219,13 @@ export default defineI18nConfig(() => {
           items_selected: "Items selected",
           clear_all: "Clear all",
           pass_to_training: "Pass to Training",
+          add_new_item: "Add New Item",
         },
         placeholder: {
+          enter_name: "Enter a name",
+          select_data_product_directory: "Select a data product directory",
+          select_data_product: "Select a data product",
+          select_file: "Select a file",
           search: "Search {type}...",
           select_filter: "Select filter",
           select_license: "Select license",
@@ -223,6 +237,9 @@ export default defineI18nConfig(() => {
           enter_metadata_content: "Enter metadata content",
         },
         hint: {
+          accepted_file_types_json_jar:
+            "MMIO (.json) or MMIO + OCA bundle (.tar)",
+          your: "Your",
           in: "In",
           all: "All",
           no_results: "No results found",

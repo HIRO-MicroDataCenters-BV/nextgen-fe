@@ -9,6 +9,7 @@
       :columns="columns"
       :data-source="fetchTableData"
       :selection-enabled="false"
+      :has-source-header="true"
     />
   </AppContent>
 </template>
@@ -123,7 +124,9 @@ const fetchTableData = async (
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
 
-    const filtersObj = createFiltersObject(params.filters);
+    const _filtersObj = createFiltersObject(
+      (params.filters || {}) as unknown as Record<string, unknown>
+    );
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
@@ -134,7 +137,7 @@ const fetchTableData = async (
       limit,
       filters:
         params.filters && Object.keys(params.filters).length > 0
-          ? filtersObj
+          ? (params.filters as unknown as Record<string, boolean>)
           : undefined,
     });
     const response = await api.getLocalCatalog(filter as SearchFilter);
@@ -157,6 +160,7 @@ const fetchTableData = async (
         has_next: page < totalPages,
         has_prev: page > 1,
       },
+      originals: tableData.originals,
     };
 
     return updatedTableData;
