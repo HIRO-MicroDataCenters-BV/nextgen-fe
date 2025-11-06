@@ -44,4 +44,5 @@ export interface TableDataResponse {
     has_next: boolean;
     has_prev: boolean;
   };
+  originals?: unknown[];
 }

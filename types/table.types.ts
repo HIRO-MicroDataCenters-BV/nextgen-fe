@@ -24,6 +24,7 @@ export interface TableDataResponse {
     page: number;
     limit: number;
   };
+  originals?: unknown[];
 }
 
 export interface TableFilter {

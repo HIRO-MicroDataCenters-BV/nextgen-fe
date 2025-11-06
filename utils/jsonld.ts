@@ -910,5 +910,112 @@ export function createDatasetJsonLd(
   formData: Record<string, unknown>,
   filename: string
 ): string {
-  return "";
+  const context = {
+    dcat: "http://www.w3.org/ns/dcat#",
+    dcatap: "http://data.europa.eu/r5r/",
+    dcterms: "http://purl.org/dc/terms/",
+    dspace: "http://data-space.org/",
+    foaf: "http://xmlns.com/foaf/0.1/",
+    skos: "http://www.w3.org/2004/02/skos/core#",
+    spdx: "http://spdx.org/rdf/terms#",
+    xsd: "http://www.w3.org/2001/XMLSchema#",
+  };
+
+  const datasetId = `https://example.com/dataset/${filename.replace(
+    /[^A-Za-z0-9_-]/g,
+    "-"
+  )}`;
+
+  let metadataContent: Record<string, unknown> = {};
+
+  if (
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string"
+  ) {
+    try {
+      const parsed = JSON.parse(formData.metadata_content);
+      if (parsed && typeof parsed === "object") {
+        metadataContent = parsed;
+      }
+    } catch {
+      console.error(formData.metadata_content);
+    }
+  }
+
+  const baseDataset: Record<string, unknown> = {
+    "@context": context,
+    "@id": metadataContent["@id"] || datasetId,
+    "@type": "dcat:Dataset",
+  };
+
+  if (metadataContent["@context"]) {
+    baseDataset["@context"] = metadataContent["@context"];
+  }
+
+  if (
+    formData.name &&
+    typeof formData.name === "string" &&
+    formData.name.trim()
+  ) {
+    baseDataset["dcterms:title"] = [
+      {
+        "@language": "en",
+        "@value": formData.name.trim(),
+      },
+    ];
+  } else if (metadataContent["dcterms:title"]) {
+    baseDataset["dcterms:title"] = metadataContent["dcterms:title"];
+  }
+
+  if (
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string"
+  ) {
+    try {
+      const parsed = JSON.parse(formData.metadata_content);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        parsed["@type"] === "dcat:Dataset"
+      ) {
+        Object.assign(baseDataset, parsed);
+        baseDataset["@id"] = datasetId;
+        baseDataset["@context"] = context;
+      } else {
+        if (parsed && typeof parsed === "object") {
+          Object.keys(parsed).forEach((key) => {
+            if (
+              !key.startsWith("@") &&
+              parsed[key] !== undefined &&
+              parsed[key] !== null
+            ) {
+              baseDataset[key] = parsed[key];
+            }
+          });
+        }
+      }
+    } catch {
+      if (formData.metadata_content.trim()) {
+        baseDataset["dcterms:description"] = [
+          {
+            "@language": "en",
+            "@value": formData.metadata_content.trim(),
+          },
+        ];
+      }
+    }
+  }
+
+  if (filename) {
+    baseDataset["dspace:metadataFilename"] = {
+      "@type": "xsd:string",
+      "@value": filename,
+    };
+  }
+
+  if (formData.item_type && formData.item_type === "application") {
+    baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
+  }
+
+  return JSON.stringify(baseDataset, null, 2);
 }
