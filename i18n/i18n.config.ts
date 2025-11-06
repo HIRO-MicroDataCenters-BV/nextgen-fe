@@ -24,6 +24,7 @@ export default defineI18nConfig(() => {
           actions: "Actions",
           are_you_sure: "Are you sure?",
           create_catalog_item: "Add new item",
+          unsaved_changes: "Unsaved Changes",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -49,6 +50,8 @@ export default defineI18nConfig(() => {
         },
         alert: {
           delete_dataset: "Are you sure you want to delete {name}?",
+          unsaved_changes_description:
+            "You have unsaved changes. Are you sure you want to discard them?",
         },
         menu: {
           home: "Home",
