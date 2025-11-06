@@ -5,10 +5,9 @@
     :show-available-biobanks="true"
   >
     <AppTable
-      :title="'marketplace'"
+      title="marketplace"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="10"
     />
   </AppContent>
 </template>
@@ -117,6 +116,7 @@ const fetchTableData = async (
         has_next: page < totalPages,
         has_prev: page > 1,
       },
+      originals: tableData.originals,
     };
 
     return updatedTableData;

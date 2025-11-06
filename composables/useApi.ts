@@ -18,7 +18,10 @@ export const useApi = () => {
   const serviceUrls = {
     search: config.public.apiSearchServiceUrl,
     catalog: config.public.apiCatalogServiceUrl,
+    connector: config.public.apiConnectorServiceURL,
   };
+
+  console.log("serviceUrls", serviceUrls);
 
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
@@ -58,7 +61,7 @@ export const useApi = () => {
    * @returns
    */
   const request = async <T>(
-    service: "search" | "catalog",
+    service: "search" | "catalog" | "connector",
     url: string,
     method: string = "GET",
     body?: unknown,
@@ -83,15 +86,19 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-        body: isFormData ? body as BodyInit : hasRawData ? body as BodyInit : JSON.stringify(body),
-      }),
+          body: isFormData
+            ? (body as BodyInit)
+            : hasRawData
+            ? (body as BodyInit)
+            : JSON.stringify(body),
+        }),
     };
 
     try {
       const res = await fetch(`${baseUrl}${url}`, opts);
       clearTimeout(timeoutId);
 
-      let data = {}
+      let data = {};
       const text = await res.text();
       if (text != "") {
         data = JSON.parse(text);
@@ -105,7 +112,7 @@ export const useApi = () => {
           error["dcterms:title"]?.["@value"] ||
           "An error occurred";
         */
-        const errorMessage = error.detail
+        const errorMessage = error.detail;
         switch (res.status) {
           case 401:
             token.value = null;
@@ -181,12 +188,12 @@ export const useApi = () => {
       "@type": "Filters",
       filters: Array.isArray(compacted.filters)
         ? (compacted.filters as Array<{
-          "@type": string;
-          [key: string]: unknown;
-        }>)
+            "@type": string;
+            [key: string]: unknown;
+          }>)
         : compacted.filters
-          ? [compacted.filters as { "@type": string;[key: string]: unknown }]
-          : [],
+        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
+        : [],
     };
 
     return result;
@@ -477,6 +484,22 @@ export const useApi = () => {
         "DELETE"
       );
       return response !== null;
+    },
+
+    /**
+     * Gets list of dataproducts from connector service
+     * @returns Promise with dataproducts response object or null if error occurs
+     * @example
+     * const api = useApi();
+     * const response = await api.getDataproducts();
+     */
+    getDataproducts: async (): Promise<{ dataproducts: string[] } | null> => {
+      const response = await request<{ dataproducts: string[] }>(
+        "connector",
+        "/file",
+        "GET"
+      );
+      return response || null;
     },
   };
 };

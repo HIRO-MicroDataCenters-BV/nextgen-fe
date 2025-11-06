@@ -18,7 +18,6 @@
             <div
               class="flex items-center gap-2 ml-auto items-center justify-between"
             >
-              <AppHeaderSource v-if="!isHome" />
               <div v-if="isHome" class="flex items-end gap-2">
                 <HoverCard>
                   <HoverCardTrigger as-child>

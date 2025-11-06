@@ -2,6 +2,7 @@
 import type {
   ColumnFiltersState,
   ExpandedState,
+  Row,
   VisibilityState,
 } from "@tanstack/vue-table";
 import {
@@ -22,28 +23,43 @@ import type {
   DropdownMenuItem,
 } from "~/types/table.types";
 import { useFilters } from "~/composables/useFilters";
+import { convertJsonLdForTraining } from "~/utils/jsonld";
+import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 
 interface TableProps {
   title?: string;
   dataSource: (params: unknown) => Promise<TableDataResponse>;
   columns?: TableColumn[];
   pageSize?: number;
+  selectionEnabled?: boolean;
+  hasSourceHeader?: boolean;
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
   title: "",
   columns: () => [],
   pageSize: 10,
+  selectionEnabled: true,
+  hasSourceHeader: false,
 });
 
-const { dataSource, columns, pageSize, title } = props;
+const { dataSource, columns, pageSize, title, hasSourceHeader } = props;
 
-const { t } = useI18n();
+const emit = defineEmits<{
+  (e: "selection-change", value: Array<string>): void;
+  (
+    e: "pass-to-training",
+    value: { dataset: Array<Record<string, unknown>> }
+  ): void;
+}>();
 const data = shallowRef<TableRowData[]>([]);
+const rawById = ref<Record<string, unknown>>({});
 const isLoading = ref(true);
 
 const selectedFilters = ref<Record<string, boolean | string | number>>({});
+const { t } = useI18n();
 
+const { page } = useApp();
 const {
   filterGroups,
   getActiveFilters,
@@ -84,13 +100,15 @@ const handleClearAllFilters = () => {
 };
 
 const fetchData = async () => {
+  rowSelection.value = {};
+  //selectedFilters.value = { "med:age": true };
   if (Object.keys(selectedFilters.value).length === 0) {
     isLoading.value = false;
     data.value = [];
     return;
   }
   isLoading.value = true;
-  const { data: tableData } = await dataSource({
+  const resp = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
     ...(searchValue.value &&
@@ -102,20 +120,31 @@ const fetchData = async () => {
       ...getActiveFilters(),
     },
   });
-
   isLoading.value = false;
 
-  let filteredData = tableData ?? [];
+  // map originals by id if provided
+  rawById.value = {};
+  const respObj = resp as { originals?: unknown[]; data?: TableRowData[] };
+  if (respObj && Array.isArray(respObj.originals)) {
+    const originals = respObj.originals as unknown[];
+    const prepared = (respObj.data || []) as Array<TableRowData>;
+    prepared.forEach((row, idx) => {
+      const id = String(row.id);
+      rawById.value[id] = originals[idx];
+    });
+  }
+
+  let filteredData: TableRowData[] = respObj?.data ?? [];
 
   if (selectedType.value === "datasets") {
-    filteredData = filteredData.filter((row) => {
+    filteredData = filteredData.filter((row: TableRowData) => {
       const datasetType = row.datasetType as string | undefined;
       return (
         !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
       );
     });
   } else if (selectedType.value === "applications") {
-    filteredData = filteredData.filter((row) => {
+    filteredData = filteredData.filter((row: TableRowData) => {
       const datasetType = row.datasetType as string | undefined;
       return datasetType === "http://purl.org/dc/dcmitype/Software";
     });
@@ -130,16 +159,16 @@ const fetchData = async () => {
       });
     });
   }
-  /*
-  const start =
-    table.getState().pagination.pageIndex *
-    table.getState().pagination.pageSize;
-  const end = start + table.getState().pagination.pageSize;
-  data.value = filteredData.slice(start, end);
-  totalItems.value = searchValue.value
-    ? filteredData.length
-    : pagination?.total_items ?? 0;
-  */
+  // attach original jsonld to each row for downstream converters
+  filteredData = filteredData.map((row: TableRowData) => {
+    const id = String(row.id);
+    const original = rawById.value[id];
+    return {
+      ...row,
+      _raw: original,
+      _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
+    } as unknown as TableRowData;
+  });
   data.value = filteredData;
 };
 
@@ -148,6 +177,7 @@ const searchValue = ref("");
 
 const route = useRoute();
 const selectedType = ref("datasets");
+const isMyCatalog = computed(() => page.value.section === "my_catalog");
 /*
 const router = useRouter();
 */
@@ -181,7 +211,12 @@ const getColumns = (cols: TableColumn[] | undefined) => {
   }));
 };
 
+const selectedRows = ref<Row<TableRowData>[]>([]);
+
 const mappedColumns = ref(getColumns(columns));
+const isSelectionVisible = computed(
+  () => props.selectionEnabled && selectedType.value === "datasets"
+);
 const table = useVueTable({
   data,
   columns: mappedColumns.value,
@@ -190,6 +225,9 @@ const table = useVueTable({
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getExpandedRowModel: getExpandedRowModel(),
+  getRowId: (row) => String((row as TableRowData).id),
+  enableRowSelection: true,
+  enableMultiRowSelection: true,
   onColumnFiltersChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, columnFilters),
   onColumnVisibilityChange: (updaterOrValue) =>
@@ -330,6 +368,19 @@ onMounted(() => {
   fetchData();
 });
 
+watch(
+  rowSelection,
+  () => {
+    const ids = table
+      .getSelectedRowModel()
+      .rows.map((r) => String((r.original as TableRowData).id));
+    console.debug("ids", ids);
+    selectedRows.value = table.getSelectedRowModel().rows;
+    emit("selection-change", ids);
+  },
+  { deep: true }
+);
+
 const filterItems = ref<DropdownMenuItem[]>(
   filterGroups.value.map((group) => ({
     key: group.key,
@@ -348,22 +399,88 @@ const handleTypeTabChange = (type: string | number) => {
   fetchData();
 };
 
-defineExpose({ fetchData });
+const handlePassToTraining = () => {
+  const raws = selectedRows.value
+    .map((r) => (r.original as unknown as { _rawJson?: string })._rawJson)
+    .filter((s): s is string => typeof s === "string" && s.length > 0)
+    .map((s) => {
+      try {
+        return JSON.parse(s) as Record<string, unknown>;
+      } catch {
+        return null;
+      }
+    })
+    .filter((o): o is Record<string, unknown> => !!o);
+
+  const looksJsonLdDataset =
+    raws.length > 0 &&
+    ((typeof raws[0]["@type"] === "string" &&
+      String(raws[0]["@type"]).includes("dcat:Dataset")) ||
+      (Array.isArray(raws[0]["@type"]) &&
+        (raws[0]["@type"] as unknown[]).some((t) =>
+          String(t).includes("dcat:Dataset")
+        )));
+
+  const inputForConverter = looksJsonLdDataset
+    ? ({ "dcat:dataset": raws } as unknown)
+    : ({ dataset: raws } as unknown);
+
+  const payload = convertJsonLdForTraining(inputForConverter);
+  console.debug("training payload", payload);
+  emit(
+    "pass-to-training",
+    payload as { dataset: Array<Record<string, unknown>> }
+  );
+};
+
+const handleClearAll = () => {
+  console.log("clear all");
+  rowSelection.value = {};
+};
+
+const handleCreate = () => {
+  console.log("create");
+  navigateTo("/my_catalog/create");
+};
+
+const getSelectedRaw = () => {
+  const ids = table
+    .getSelectedRowModel()
+    .rows.map((r) => String((r.original as TableRowData).id));
+  return ids.map((id) => rawById.value[id]).filter((v) => v !== undefined);
+};
+
+defineExpose({ fetchData, getSelectedRaw });
 </script>
 
 <template>
-  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)]">
+  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)] relative">
+    <div
+      v-if="hasSourceHeader"
+      class="flex items-center justify-between gap-2 mb-4"
+    >
+      <div class="flex items-center gap-2">
+        <AppHeaderSource />
+      </div>
+      <div class="flex items-center gap-2">
+        <Button class="cursor-pointer" @click="handleCreate">{{
+          t("action.add_new_item")
+        }}</Button>
+      </div>
+    </div>
     <div class="mb-4 flex items-center justify-between gap-2">
-      <!-- table filters -->
       <Tabs
         :model-value="selectedType"
         @update:model-value="handleTypeTabChange"
       >
         <TabsList class="flex mx-auto justify-center items-center mx-auto">
           <TabsTrigger value="datasets">
-            {{ $t("action.datasets") }}
+            <Icon name="lucide:table-2" />
+            {{ isMyCatalog ? $t("hint.your") : "" }} {{ $t("action.datasets") }}
           </TabsTrigger>
           <TabsTrigger value="applications">
+            <Icon name="lucide:box" />
+            {{ isMyCatalog ? $t("hint.your") : "" }}
             {{ $t("action.applications") }}
           </TabsTrigger>
         </TabsList>
@@ -376,7 +493,7 @@ defineExpose({ fetchData });
               v-model="searchValue"
               class="w-64 pl-8"
               type="search"
-              :placeholder="t('placeholder.search')"
+              :placeholder="t('placeholder.search', { type: selectedType })"
               @update:model-value="applySearchFilter"
             />
             <span
@@ -446,6 +563,22 @@ defineExpose({ fetchData });
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
           >
+            <TableHead v-if="isSelectionVisible">
+              <div class="flex items-center justify-center">
+                <Checkbox
+                  :model-value="
+                    table.getIsAllRowsSelected()
+                      ? true
+                      : table.getIsSomeRowsSelected()
+                      ? 'indeterminate'
+                      : false
+                  "
+                  aria-label="select all"
+                  class="cursor-pointer border-primary"
+                  @update:model-value="(v) => table.toggleAllRowsSelected(!!v)"
+                />
+              </div>
+            </TableHead>
             <TableHead v-for="header in headerGroup.headers" :key="header.id">
               <FlexRender
                 v-if="!header.isPlaceholder"
@@ -459,6 +592,17 @@ defineExpose({ fetchData });
           <template v-if="table.getRowModel().rows?.length">
             <template v-for="row in table.getRowModel().rows" :key="row.id">
               <TableRow :data-state="row.getIsSelected() && 'selected'">
+                <TableCell v-if="isSelectionVisible">
+                  <div class="flex items-center justify-center">
+                    <Checkbox
+                      :model-value="row.getIsSelected()"
+                      :disabled="!row.getCanSelect()"
+                      aria-label="select row"
+                      class="cursor-pointer border-primary"
+                      @update:model-value="(v) => row.toggleSelected(!!v)"
+                    />
+                  </div>
+                </TableCell>
                 <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
                   <FlexRender
                     :render="cell.column.columnDef.cell"
@@ -470,7 +614,10 @@ defineExpose({ fetchData });
           </template>
 
           <TableRow v-else>
-            <TableCell :colspan="mappedColumns.length" class="h-24 text-center">
+            <TableCell
+              :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
+              class="h-24 text-center"
+            >
               {{ t("hint.no_results") }}
             </TableCell>
           </TableRow>
@@ -494,6 +641,12 @@ defineExpose({ fetchData });
         </div>
       </div>
     </div>
+    <AppTableRowMenu
+      v-if="selectedRows.length > 0"
+      :rows="selectedRows"
+      @on-pass-to-training="handlePassToTraining"
+      @on-clear-all="handleClearAll"
+    />
 
     <!-- <AppTablePagination
       :current-page="currentPage"
