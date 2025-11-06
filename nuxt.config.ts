@@ -60,7 +60,7 @@ export default defineNuxtConfig({
       apiCatalogServiceUrl:
         process.env.NUXT_PUBLIC_API_CATALOG_SERVICE_URL || "",
       apiConnectorServiceURL:
-        process.env.NUXT_PUBLOC_API_CONNECTOR_SERVICE_URL || "",
+        process.env.NUXT_PUBLIC_API_CONNECTOR_SERVICE_URL || "",
       catalogName: process.env.CATALOG_NAME || "hus_catalog",
     },
   },

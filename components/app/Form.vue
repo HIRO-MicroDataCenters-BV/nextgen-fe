@@ -132,17 +132,20 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
     const response = await field.dataSource();
     let data: unknown = response;
 
-    if (field.fieldOptions?.dataPath) {
-      data = getNestedValue(response, field.fieldOptions.dataPath);
+    const dataPath = field.fieldOptions?.dataPath;
+    if (dataPath) {
+      data = getNestedValue(response, dataPath);
     }
 
     if (!data) {
-      console.warn(`No data found at path ${field.fieldOptions?.dataPath || "root"} for field ${field.name}`);
+      const pathStr = dataPath || "root";
+      console.warn(`No data found at path ${pathStr} for field ${field.name}`);
       return;
     }
 
     if (!Array.isArray(data)) {
-      console.warn(`Data at path ${field.fieldOptions?.dataPath || "root"} is not an array for field ${field.name}`);
+      const pathStr = dataPath || "root";
+      console.warn(`Data at path ${pathStr} is not an array for field ${field.name}`);
       return;
     }
 
