@@ -1,10 +1,13 @@
 <template>
   <NuxtLayout>
     <NuxtPage />
+    <Toaster />
   </NuxtLayout>
 </template>
 
 <script setup lang="ts">
+import { Toaster } from "~/components/ui/sonner";
+
 const { t } = useI18n();
 useHead({
   title: t("app.title"),

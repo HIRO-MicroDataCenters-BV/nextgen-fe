@@ -45,11 +45,6 @@ export const useApi = () => {
       headers["Content-Type"] = "application/json";
     }
 
-    // Authentication is disabled but kept in code
-    // if (token.value) {
-    //   headers["Authorization"] = `Bearer ${token.value}`;
-    // }
-
     return headers;
   };
 
@@ -112,31 +107,18 @@ export const useApi = () => {
           error["dcterms:title"]?.["@value"] ||
           "An error occurred";
         */
-        const errorMessage = error.detail;
+        const errorMessage = error.detail || "An error occurred";
         switch (res.status) {
           case 401:
             token.value = null;
             if (showToast) {
-              toaster.show("error", "Unauthorized access. Please login again.");
-            }
-            return null;
-          case 409:
-            if (showToast) {
-              toaster.show("error", "A conflict occurred, already exists.");
-            }
-            return null;
-          case 422:
-            if (showToast) {
-              toaster.show("error", errorMessage);
-            }
-            return null;
-          case 503:
-            if (showToast) {
-              toaster.show("error", errorMessage);
+              toaster.show("error", t("app.error.unauthorized"));
             }
             return null;
           default:
+            console.log("errorMessage", errorMessage);
             if (showToast) {
+              console.log("showing toast", errorMessage);
               toaster.show("error", errorMessage);
             }
             return null;

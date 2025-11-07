@@ -302,6 +302,8 @@ export default defineI18nConfig(() => {
           email: "Enter your email",
           password: "Enter your password",
           enter_metadata_content: "Enter metadata content",
+          loading: "Loading...",
+          select_option: "Select an option",
         },
         hint: {
           accepted_file_types_json_jar:
@@ -445,6 +447,10 @@ export default defineI18nConfig(() => {
           },
         },
         zodI18n: {
+          types: {
+            string: "Expected string",
+            null: "Expected null",
+          },
           errors: {
             required: "This field is required",
             email: "This field must be a valid email address",
