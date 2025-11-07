@@ -306,6 +306,7 @@ export default defineI18nConfig(() => {
           select_option: "Select an option",
         },
         hint: {
+          uploading: "Uploading...",
           accepted_file_types_json_jar:
             "MMIO (.json) or MMIO + OCA bundle (.tar)",
           your: "Your",
@@ -458,6 +459,11 @@ export default defineI18nConfig(() => {
             confirm_password: "This field must match the password",
             required_min_length:
               "This field must be at least {min} characters long",
+            too_small: {
+              string: {
+                inclusive: "This field is required",
+              },
+            },
             invalid_type: "Invalid type received",
             invalid_type_received_undefined: "Invalid type received",
             invalid_type_received_null: "Invalid type received",
@@ -466,6 +472,7 @@ export default defineI18nConfig(() => {
             invalid_type_received_boolean: "Invalid type received",
             invalid_type_received_object: "Invalid type received",
             invalid_type_received_array: "Invalid type received",
+            custom: "Validation failed",
           },
         },
       },

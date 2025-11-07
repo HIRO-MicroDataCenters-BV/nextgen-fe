@@ -32,10 +32,12 @@ const router = useRouter();
 
 const formSchema = z.object({
   name: z.string().optional(),
-  item_type: z.string(),
+  item_type: z.string().min(1),
   related_data_product: z.string().optional(),
-  file: z.any(),
-  metadata_content: z.string(),
+  file: z
+    .any()
+    .refine((val) => val !== null && val !== undefined && val !== ""),
+  metadata_content: z.string().min(1),
 });
 
 const formRef = ref();

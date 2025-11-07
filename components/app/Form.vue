@@ -97,6 +97,7 @@ const { uploadMmioFile, deleteMmioFile } = useApi();
 
 const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
 const uploadingFiles = ref<Record<string, boolean>>({});
+const fileInputKeys = ref<Record<string, number>>({});
 
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
@@ -227,6 +228,15 @@ const confirmDiscard = () => {
   router.back();
 };
 
+const clearFileField = (fieldName: string) => {
+  const newUploadedFiles = Object.fromEntries(
+    Object.entries(uploadedFiles.value).filter(([key]) => key !== fieldName)
+  );
+  uploadedFiles.value = newUploadedFiles;
+  setFieldValue(fieldName, undefined);
+  fileInputKeys.value[fieldName] = (fileInputKeys.value[fieldName] || 0) + 1;
+};
+
 const handleFileChange = async (fieldName: string, files: FileList | null) => {
   if (!files || files.length === 0) {
     return;
@@ -250,9 +260,12 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
         lastModified: file.lastModified,
       });
       console.log("API response:", { Location: location, filename });
+    } else {
+      clearFileField(fieldName);
     }
   } catch (error) {
     console.error("File upload error:", error);
+    clearFileField(fieldName);
   } finally {
     uploadingFiles.value[fieldName] = false;
   }
@@ -265,15 +278,7 @@ const handleFileDelete = async (fieldName: string) => {
   try {
     const success = await deleteMmioFile(uploaded.filename);
     if (success) {
-      const newUploadedFiles = Object.fromEntries(
-        Object.entries(uploadedFiles.value).filter(([key]) => key !== fieldName)
-      );
-      uploadedFiles.value = newUploadedFiles;
-      setFieldValue(fieldName, undefined);
-      const input = document.getElementById(fieldName) as HTMLInputElement;
-      if (input) {
-        input.value = "";
-      }
+      clearFileField(fieldName);
     }
   } catch (error) {
     console.error("File delete error:", error);
@@ -467,6 +472,9 @@ defineExpose({
               <div class="space-y-2">
                 <Input
                   :id="field.name"
+                  :key="`file-input-${field.name}-${
+                    fileInputKeys[field.name] || 0
+                  }`"
                   type="file"
                   :placeholder="field.placeholder"
                   :multiple="Boolean(field.props?.multiple)"
@@ -487,7 +495,7 @@ defineExpose({
                   v-if="uploadingFiles[field.name]"
                   class="text-sm text-muted-foreground"
                 >
-                  {{ t("action.uploading") }}...
+                  {{ t("hint.uploading") }}
                 </div>
                 <div
                   v-if="
@@ -528,7 +536,10 @@ defineExpose({
       >
         {{ t("action.discard") }}
       </Button>
-      <Button type="submit" :disabled="props.disabled">
+      <Button
+        type="submit"
+        :disabled="props.disabled || !meta.valid || meta.pending"
+      >
         {{ t("action.save") }}
       </Button>
     </div>
