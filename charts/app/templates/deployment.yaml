@@ -51,6 +51,8 @@ spec:
               value: "{{ .Values.backend.searchServiceURL }}"
             - name: NUXT_PUBLIC_API_CATALOG_SERVICE_URL
               value: "{{ .Values.backend.catalogServiceURL }}"
+            - name: NUXT_PUBLIC_API_CONNECTOR_SERVICE_URL
+              value: "{{ .Values.backend.connectorServiceURL }}"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
