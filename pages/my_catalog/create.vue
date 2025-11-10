@@ -111,16 +111,16 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
   const uploadedFilename = formRef.value?.getUploadedFile?.("file");
 
   if (!uploadedFilename) {
-    console.error("uploaded filename not found");
+    console.error("File is required for creation");
     return;
   }
 
   const datasetJsonLd = createDatasetJsonLd(formValues, uploadedFilename);
-  console.log("data", datasetJsonLd);
-
+  
   const result = await saveDataset(uploadedFilename, datasetJsonLd);
-  console.log("res", result);
-
-  router.push("/my_catalog");
+  
+  if (result) {
+    router.push("/my_catalog");
+  }
 };
 </script>

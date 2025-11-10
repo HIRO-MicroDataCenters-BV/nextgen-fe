@@ -81,6 +81,7 @@ export interface AppFormProps {
   title?: string;
   description?: string;
   disabled?: boolean;
+  id?: string | null;
 }
 
 const props = defineProps<AppFormProps>();
@@ -98,6 +99,8 @@ const { uploadMmioFile, deleteMmioFile } = useApi();
 const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
 const uploadingFiles = ref<Record<string, boolean>>({});
 const fileInputKeys = ref<Record<string, number>>({});
+
+const isEditMode = computed(() => Boolean(props.id));
 
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
@@ -300,6 +303,7 @@ defineExpose({
   meta,
   getUploadedFile: (fieldName: string) =>
     uploadedFiles.value[fieldName]?.filename,
+  isEditMode,
 });
 </script>
 
@@ -349,7 +353,10 @@ defineExpose({
             <Select
               v-bind="componentField"
               :disabled="
-                field.disabled || props.disabled || loadingOptions[field.name]
+                field.disabled ||
+                props.disabled ||
+                loadingOptions[field.name] ||
+                (isEditMode && field.name === 'item_type')
               "
               class="w-full"
             >
@@ -540,7 +547,7 @@ defineExpose({
         type="submit"
         :disabled="props.disabled || !meta.valid || meta.pending"
       >
-        {{ t("action.save") }}
+        {{ isEditMode ? t("action.update") : t("action.save") }}
       </Button>
     </div>
   </form>

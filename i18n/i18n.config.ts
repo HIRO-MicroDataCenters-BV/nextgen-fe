@@ -24,6 +24,7 @@ export default defineI18nConfig(() => {
           actions: "Actions",
           are_you_sure: "Are you sure?",
           create_catalog_item: "Add new item",
+          edit_catalog_item: "Edit item",
           unsaved_changes: "Unsaved Changes",
         },
         welcome: "Welcome11",
@@ -43,6 +44,8 @@ export default defineI18nConfig(() => {
           short_description: "Genomic Data for Personalised Medicine.",
           create_catalog_item_desc:
             "Provide data and files for a dataset or an application.",
+          edit_catalog_item_desc:
+            "Update dataset metadata or upload a new MMIO file.",
         },
         text: {
           available_biobank_description:
