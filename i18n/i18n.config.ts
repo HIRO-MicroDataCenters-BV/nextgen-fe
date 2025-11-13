@@ -9,6 +9,12 @@ export default defineI18nConfig(() => {
           description:
             "Build ML models on institutional medical data at source. Accelerate research, advance treatment, change lives for the better.",
           copyright: "Copyright {year} © NextGen",
+          error: {
+            occurred: "An error occurred",
+            unauthorized: "Unauthorized",
+            timeout: "Request timeout",
+            fetch: "An error occurred while fetching data",
+          },
         },
         status: {
           loading_data: "Loading data...",

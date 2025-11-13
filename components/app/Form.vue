@@ -255,16 +255,6 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
       const filename = location.split("/").pop() || file.name;
       uploadedFiles.value[fieldName] = { filename, file };
       setFieldValue(fieldName, file);
-
-      console.log("Original file data:", {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        lastModified: file.lastModified,
-      });
-      console.log("API response:", { Location: location, filename });
-    } else {
-      clearFileField(fieldName);
     }
   } catch (error) {
     console.error("File upload error:", error);

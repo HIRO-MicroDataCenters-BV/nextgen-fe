@@ -210,27 +210,7 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
   }
 
   try {
-    let datasetJsonLd: string;
-    if (uploadedFilename) {
-      datasetJsonLd = createDatasetJsonLd(formValues, uploadedFilename);
-    } else {
-      try {
-        const parsed = JSON.parse(metadataContent);
-        if (parsed && typeof parsed === "object") {
-          if (existingMetadataFilename.value) {
-            parsed["dspace:metadataFilename"] = {
-              "@type": "xsd:string",
-              "@value": existingMetadataFilename.value,
-            };
-          }
-          datasetJsonLd = JSON.stringify(parsed, null, 2);
-        } else {
-          datasetJsonLd = metadataContent;
-        }
-      } catch {
-        datasetJsonLd = metadataContent;
-      }
-    }
+    const datasetJsonLd = createDatasetJsonLd(formValues, targetFilename);
 
     const result = await saveDataset(targetFilename, datasetJsonLd);
     if (result) {

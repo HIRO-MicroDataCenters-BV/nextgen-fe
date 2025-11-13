@@ -14,14 +14,13 @@ import type {
  */
 export const useApi = () => {
   const config = useRuntimeConfig();
+  const { t } = useI18n();
 
   const serviceUrls = {
     search: config.public.apiSearchServiceUrl,
     catalog: config.public.apiCatalogServiceUrl,
     connector: config.public.apiConnectorServiceURL,
   };
-
-  console.log("serviceUrls", serviceUrls);
 
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
@@ -64,6 +63,7 @@ export const useApi = () => {
       showToast?: boolean;
       timeout?: number;
       hasRawData?: boolean;
+      returnResponse?: boolean;
     }
   ) => {
     const baseUrl = serviceUrls[service];
@@ -101,13 +101,7 @@ export const useApi = () => {
 
       if (!res.ok) {
         const error = data as ApiError;
-        /*
-        const errorMessage =
-          error["dcterms:description"]?.["@value"] ||
-          error["dcterms:title"]?.["@value"] ||
-          "An error occurred";
-        */
-        const errorMessage = error.detail || "An error occurred";
+        const errorMessage = error.detail || t("app.error.occurred");
         switch (res.status) {
           case 401:
             token.value = null;
@@ -116,16 +110,37 @@ export const useApi = () => {
             }
             return null;
           default:
-            console.log("errorMessage", errorMessage);
             if (showToast) {
-              console.log("showing toast", errorMessage);
               toaster.show("error", errorMessage);
             }
             return null;
         }
       }
 
-      // For successful responses, return the JSON-LD data directly
+      if (isFormData && (res.status === 201 || res.status === 200)) {
+        const locationHeader = res.headers.get("Location");
+        if (locationHeader) {
+          return locationHeader as T;
+        }
+
+        if (data && typeof data === "object" && "Location" in data) {
+          return (data as { Location: string }).Location as T;
+        }
+
+        if (body instanceof FormData) {
+          const file = body.get("file") as File;
+          if (file) {
+            return file.name as T;
+          }
+        }
+      }
+
+      if (options?.returnResponse) {
+        return { data: data as T, response: res } as unknown as T & {
+          response: Response;
+        };
+      }
+
       return data as T;
     } catch (err) {
       if (method === "DELETE") {
@@ -134,14 +149,14 @@ export const useApi = () => {
 
       if (err instanceof Error && err.name === "AbortError") {
         if (showToast) {
-          toaster.show("error", "Request timeout");
+          toaster.show("error", t("app.error.timeout"));
         }
         return null;
       }
 
       console.error("Fetch error:", err);
       if (showToast) {
-        toaster.show("error", "An error occurred while fetching data");
+        toaster.show("error", t("app.error.fetch"));
       }
       return null;
     }
@@ -411,25 +426,31 @@ export const useApi = () => {
     /**
      * Uploads a MMIO file to the catalog service
      * @param file - File to upload
+     * @param options - Optional configuration
      * @returns Promise with file location URL or null if upload fails
      * @example
      * const api = useApi();
      * const file = new File(["content"], "file.mmio");
      * const location = await api.uploadMmioFile(file);
      */
-    uploadMmioFile: async (file: File): Promise<string | null> => {
+    uploadMmioFile: async (
+      file: File,
+      options?: { showToast?: boolean }
+    ): Promise<string | null> => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await request<{ Location: string }>(
+      const result = await request<string>(
         "catalog",
         "/mmio/",
         "POST",
         formData,
-        { showToast: true }
+        {
+          showToast: options?.showToast,
+        }
       );
 
-      return response?.Location || null;
+      return result ?? null;
     },
 
     /**

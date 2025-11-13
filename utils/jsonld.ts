@@ -911,14 +911,14 @@ export function createDatasetJsonLd(
   filename: string
 ): string {
   const context = {
+    dspace: "http://data-space.org/",
+    xsd: "http://www.w3.org/2001/XMLSchema#",
     dcat: "http://www.w3.org/ns/dcat#",
     dcatap: "http://data.europa.eu/r5r/",
     dcterms: "http://purl.org/dc/terms/",
-    dspace: "http://data-space.org/",
+    spdx: "http://spdx.org/rdf/terms#",
     foaf: "http://xmlns.com/foaf/0.1/",
     skos: "http://www.w3.org/2004/02/skos/core#",
-    spdx: "http://spdx.org/rdf/terms#",
-    xsd: "http://www.w3.org/2001/XMLSchema#",
   };
 
   const datasetId = `https://example.com/dataset/${filename.replace(
@@ -952,58 +952,171 @@ export function createDatasetJsonLd(
     baseDataset["@context"] = metadataContent["@context"];
   }
 
-  if (
-    formData.name &&
-    typeof formData.name === "string" &&
-    formData.name.trim()
-  ) {
-    baseDataset["dcterms:title"] = [
-      {
+  const normalizeLanguageValue = (
+    value: unknown
+  ): Array<{ "@language": string; "@value": string }> | { "@language": string; "@value": string } => {
+    if (Array.isArray(value)) {
+      const normalized = value.map((item) => {
+        if (typeof item === "object" && item !== null) {
+          if ("@language" in item && "@value" in item) {
+            return {
+              "@language": String(item["@language"]),
+              "@value": String(item["@value"]),
+            };
+          }
+        }
+        return {
+          "@language": "en",
+          "@value": String(item),
+        };
+      });
+      if (normalized.length === 1) {
+        return normalized[0];
+      }
+      return normalized;
+    }
+    if (typeof value === "object" && value !== null) {
+      if ("@language" in value && "@value" in value) {
+        return {
+          "@language": String(value["@language"]),
+          "@value": String(value["@value"]),
+        };
+      }
+    }
+    if (value) {
+      return {
         "@language": "en",
-        "@value": formData.name.trim(),
-      },
-    ];
-  } else if (metadataContent["dcterms:title"]) {
-    baseDataset["dcterms:title"] = metadataContent["dcterms:title"];
-  }
+        "@value": String(value),
+      };
+    }
+    return {
+      "@language": "en",
+      "@value": "",
+    };
+  };
 
+  let parsedMetadataContent: Record<string, unknown> | null = null;
   if (
     formData.metadata_content &&
     typeof formData.metadata_content === "string"
   ) {
     try {
       const parsed = JSON.parse(formData.metadata_content);
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        parsed["@type"] === "dcat:Dataset"
-      ) {
-        Object.assign(baseDataset, parsed);
-        baseDataset["@id"] = datasetId;
-        baseDataset["@context"] = context;
-      } else {
-        if (parsed && typeof parsed === "object") {
-          Object.keys(parsed).forEach((key) => {
-            if (
-              !key.startsWith("@") &&
-              parsed[key] !== undefined &&
-              parsed[key] !== null
-            ) {
-              baseDataset[key] = parsed[key];
-            }
-          });
-        }
+      if (parsed && typeof parsed === "object") {
+        parsedMetadataContent = parsed;
       }
     } catch {
-      if (formData.metadata_content.trim()) {
-        baseDataset["dcterms:description"] = [
-          {
-            "@language": "en",
-            "@value": formData.metadata_content.trim(),
-          },
-        ];
+      // ignore parse error
+    }
+  }
+
+  if (
+    formData.name &&
+    typeof formData.name === "string" &&
+    formData.name.trim()
+  ) {
+    baseDataset["dcterms:title"] = {
+      "@language": "en",
+      "@value": formData.name.trim(),
+    };
+  } else if (
+    parsedMetadataContent &&
+    parsedMetadataContent["dcterms:title"]
+  ) {
+    const normalizedTitle = normalizeLanguageValue(
+      parsedMetadataContent["dcterms:title"]
+    );
+    if (Array.isArray(normalizedTitle)) {
+      if (normalizedTitle.length > 0) {
+        baseDataset["dcterms:title"] = normalizedTitle[0];
+      } else {
+        baseDataset["dcterms:title"] = {
+          "@language": "en",
+          "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
+        };
+      }
+    } else {
+      baseDataset["dcterms:title"] = normalizedTitle;
+    }
+  } else {
+    baseDataset["dcterms:title"] = {
+      "@language": "en",
+      "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
+    };
+  }
+
+  if (
+    parsedMetadataContent &&
+    parsedMetadataContent["dcterms:description"]
+  ) {
+    const normalizedDesc = normalizeLanguageValue(
+      parsedMetadataContent["dcterms:description"]
+    );
+    if (Array.isArray(normalizedDesc)) {
+      const nonEmptyDesc = normalizedDesc.filter(
+        (item) => item["@value"] && item["@value"].trim().length > 0
+      );
+      if (nonEmptyDesc.length > 0) {
+        baseDataset["dcterms:description"] = nonEmptyDesc[0];
+      } else {
+        baseDataset["dcterms:description"] = {
+          "@language": "en",
+          "@value": "No description provided",
+        };
+      }
+    } else {
+      if (normalizedDesc["@value"] && normalizedDesc["@value"].trim().length > 0) {
+        baseDataset["dcterms:description"] = normalizedDesc;
+      } else {
+        baseDataset["dcterms:description"] = {
+          "@language": "en",
+          "@value": "No description provided",
+        };
       }
     }
+  } else if (
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string" &&
+    formData.metadata_content.trim() &&
+    !parsedMetadataContent
+  ) {
+    baseDataset["dcterms:description"] = {
+      "@language": "en",
+      "@value": formData.metadata_content.trim(),
+    };
+  } else {
+    baseDataset["dcterms:description"] = {
+      "@language": "en",
+      "@value": "No description provided",
+    };
+  }
+
+  if (formData.item_type && formData.item_type === "application") {
+    baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
+  } else {
+    baseDataset["@type"] = "dcat:Dataset";
+  }
+
+  if (
+    formData.related_data_product &&
+    typeof formData.related_data_product === "string" &&
+    formData.related_data_product.trim()
+  ) {
+    const seriesId = formData.related_data_product.trim();
+    const seriesName = seriesId.split("/").pop() || seriesId.split(":").pop() || "Data Product Series";
+    
+    baseDataset["dcat:inSeries"] = {
+      "@id": seriesId,
+      "@type": "dcat:DatasetSeries",
+      "dcterms:title": {
+        "@language": "en",
+        "@value": seriesName,
+      },
+      "dcterms:description": {
+        "@language": "en",
+        "@value": `Data product series: ${seriesName}`,
+      },
+    };
   }
 
   if (filename) {
@@ -1013,8 +1126,90 @@ export function createDatasetJsonLd(
     };
   }
 
-  if (formData.item_type && formData.item_type === "application") {
-    baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
+  if (!baseDataset["dcterms:identifier"]) {
+    const identifier = filename.replace(/\.[^/.]+$/, "");
+    baseDataset["dcterms:identifier"] = {
+      "@type": "xsd:string",
+      "@value": identifier,
+    };
+  }
+
+  if (parsedMetadataContent && typeof parsedMetadataContent === "object") {
+    Object.keys(parsedMetadataContent).forEach((key) => {
+      if (
+        key === "@context" ||
+        key === "@id" ||
+        key === "@type" ||
+        key === "dcterms:title" ||
+        key === "dcterms:description" ||
+        key === "dcat:inSeries" ||
+        key === "dspace:metadataFilename" ||
+        baseDataset[key]
+      ) {
+        return;
+      }
+      baseDataset[key] = parsedMetadataContent[key];
+    });
+  }
+
+  if (filename && !baseDataset["dcat:distribution"]) {
+    const distributionId = `${baseDataset["@id"]}/distribution`;
+    baseDataset["dcat:distribution"] = {
+      "@id": distributionId,
+      "@type": "dcat:Distribution",
+      "dcterms:description": {
+        "@language": "en",
+        "@value": "Distribution for uploaded file",
+      },
+      "dcat:format": {
+        "@value": filename.split(".").pop()?.toUpperCase() || "MMIO",
+        "@type": "xsd:string",
+      },
+      "dcatap:availability": [
+        {
+          "@id": "http://data.europa.eu/r5r/AVAILABLE",
+          "@type": "skos:Concept",
+          "skos:prefLabel": {
+            "@value": "Available",
+            "@language": "en",
+          },
+        },
+      ],
+      "dcat:accessURL": {
+        "@id": `${distributionId}/information`,
+      },
+    };
+  } else if (filename && Array.isArray(baseDataset["dcat:distribution"])) {
+    if (baseDataset["dcat:distribution"].length > 0) {
+      baseDataset["dcat:distribution"] = baseDataset["dcat:distribution"][0];
+    } else {
+      const distributionId = `${baseDataset["@id"]}/distribution`;
+      baseDataset["dcat:distribution"] = {
+        "@id": distributionId,
+        "@type": "dcat:Distribution",
+        "dcterms:description": {
+          "@language": "en",
+          "@value": "Distribution for uploaded file",
+        },
+        "dcat:format": {
+          "@value": filename.split(".").pop()?.toUpperCase() || "MMIO",
+          "@type": "xsd:string",
+        },
+        "dcatap:availability": [
+          {
+            "@id": "http://data.europa.eu/r5r/AVAILABLE",
+            "@type": "skos:Concept",
+            "skos:prefLabel": {
+              "@value": "Available",
+              "@language": "en",
+            },
+          },
+        ],
+        "dcat:accessURL": {
+          "@id": `${distributionId}/information`,
+        },
+      };
+    }
   }
 
   return JSON.stringify(baseDataset, null, 2);

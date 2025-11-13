@@ -7,7 +7,7 @@
       >
         <div class="gap-2 border-b border-gray-200 w-full">
           <div
-            class="flex flex-row items-center justify-between w-[calc(840px+16px)] px-8 w-max-full mx-auto"
+            class="flex flex-row items-center justify-between max-w-[calc(840px+16px)] w-full px-8 mx-auto"
           >
             <div class="flex items-center gap-2 py-4 h-16">
               <SidebarTrigger class="-ml-1" />
@@ -104,7 +104,7 @@
         </div>
       </header>
       <div
-        class="flex flex-1 flex-col gap-4 md:gap-8 px-8 mx-auto w-[calc(840px+16px)] w-max-full"
+        class="flex flex-1 flex-col gap-4 md:gap-8 px-8 mx-auto max-w-[calc(840px+16px)] w-full"
       >
         <slot />
       </div>
