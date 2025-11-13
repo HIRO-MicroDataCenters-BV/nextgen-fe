@@ -197,7 +197,6 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
     return;
   }
 
-  const metadataContent = formValues.metadata_content as string;
   const uploadedFilename = formRef.value?.getUploadedFile?.("file");
 
   let targetFilename: string;
