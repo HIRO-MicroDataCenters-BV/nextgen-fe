@@ -33,6 +33,7 @@ import type { SearchFilter } from "~/types/api.types";
 const { t } = useI18n();
 const dayjs = useDayjs();
 const { page, setPage } = useApp();
+const api = useApi();
 
 setPage({
   section: "marketplace",
@@ -79,7 +80,6 @@ const fetchTableData = async (
   paramsAsUnknown: unknown
 ): Promise<TableDataResponse> => {
   const params = paramsAsUnknown as TableFetchParams;
-  const api = useApi();
   try {
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3);

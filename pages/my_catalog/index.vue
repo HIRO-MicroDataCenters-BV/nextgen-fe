@@ -35,7 +35,8 @@ import type { SearchFilter } from "~/types/api.types";
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
-const { deleteDataset } = useApi();
+const api = useApi();
+const { deleteDataset } = api;
 const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -117,7 +118,6 @@ const fetchTableData = async (
   paramsAsUnknown: unknown
 ): Promise<TableDataResponse> => {
   const params = paramsAsUnknown as TableFetchParams;
-  const api = useApi();
 
   try {
     // Ensure we have valid pagination parameters
