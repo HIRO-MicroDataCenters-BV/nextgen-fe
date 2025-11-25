@@ -926,8 +926,8 @@ export function createDatasetJsonLd(
     "-"
   )}`;
 
-  let metadataContent: Record<string, unknown> = {};
-
+  // Parse metadata_content if provided
+  let parsedMetadataContent: Record<string, unknown> | null = null;
   if (
     formData.metadata_content &&
     typeof formData.metadata_content === "string"
@@ -935,26 +935,42 @@ export function createDatasetJsonLd(
     try {
       const parsed = JSON.parse(formData.metadata_content);
       if (parsed && typeof parsed === "object") {
-        metadataContent = parsed;
+        parsedMetadataContent = parsed;
       }
     } catch {
-      console.error(formData.metadata_content);
+      console.error(
+        "Failed to parse metadata_content:",
+        formData.metadata_content
+      );
     }
   }
 
-  const baseDataset: Record<string, unknown> = {
-    "@context": context,
-    "@id": metadataContent["@id"] || datasetId,
-    "@type": "dcat:Dataset",
-  };
+  // Start with metadata_content as base if available, otherwise create new structure
+  const baseDataset: Record<string, unknown> = parsedMetadataContent
+    ? { ...parsedMetadataContent }
+    : {
+        "@context": context,
+        "@id": datasetId,
+        "@type": "dcat:Dataset",
+      };
 
-  if (metadataContent["@context"]) {
-    baseDataset["@context"] = metadataContent["@context"];
+  // Ensure context is set (use from metadata or default)
+  if (!baseDataset["@context"]) {
+    baseDataset["@context"] = context;
+  } else if (parsedMetadataContent && parsedMetadataContent["@context"]) {
+    baseDataset["@context"] = parsedMetadataContent["@context"];
+  }
+
+  // Ensure @id is set
+  if (!baseDataset["@id"]) {
+    baseDataset["@id"] = datasetId;
   }
 
   const normalizeLanguageValue = (
     value: unknown
-  ): Array<{ "@language": string; "@value": string }> | { "@language": string; "@value": string } => {
+  ):
+    | Array<{ "@language": string; "@value": string }>
+    | { "@language": string; "@value": string } => {
     if (Array.isArray(value)) {
       const normalized = value.map((item) => {
         if (typeof item === "object" && item !== null) {
@@ -995,21 +1011,7 @@ export function createDatasetJsonLd(
     };
   };
 
-  let parsedMetadataContent: Record<string, unknown> | null = null;
-  if (
-    formData.metadata_content &&
-    typeof formData.metadata_content === "string"
-  ) {
-    try {
-      const parsed = JSON.parse(formData.metadata_content);
-      if (parsed && typeof parsed === "object") {
-        parsedMetadataContent = parsed;
-      }
-    } catch {
-      // ignore parse error
-    }
-  }
-
+  // Update or set title from form data (form data takes precedence)
   if (
     formData.name &&
     typeof formData.name === "string" &&
@@ -1019,53 +1021,58 @@ export function createDatasetJsonLd(
       "@language": "en",
       "@value": formData.name.trim(),
     };
-  } else if (
-    parsedMetadataContent &&
-    parsedMetadataContent["dcterms:title"]
-  ) {
-    const normalizedTitle = normalizeLanguageValue(
-      parsedMetadataContent["dcterms:title"]
-    );
-    if (Array.isArray(normalizedTitle)) {
-      if (normalizedTitle.length > 0) {
-        baseDataset["dcterms:title"] = normalizedTitle[0];
-      } else {
-        baseDataset["dcterms:title"] = {
-          "@language": "en",
-          "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
-        };
-      }
-    } else {
-      baseDataset["dcterms:title"] = normalizedTitle;
-    }
-  } else {
+  } else if (!baseDataset["dcterms:title"]) {
+    // If no title in form and no title in metadata, use filename
     baseDataset["dcterms:title"] = {
       "@language": "en",
       "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
     };
+  } else if (baseDataset["dcterms:title"]) {
+    // Normalize existing title from metadata
+    const normalizedTitle = normalizeLanguageValue(
+      baseDataset["dcterms:title"]
+    );
+    if (Array.isArray(normalizedTitle)) {
+      baseDataset["dcterms:title"] =
+        normalizedTitle.length > 0 ? normalizedTitle[0] : normalizedTitle;
+    } else {
+      baseDataset["dcterms:title"] = normalizedTitle;
+    }
   }
 
+  // Update or set description (form data takes precedence, but if metadata_content is just a string, use it)
   if (
-    parsedMetadataContent &&
-    parsedMetadataContent["dcterms:description"]
+    formData.metadata_content &&
+    typeof formData.metadata_content === "string" &&
+    formData.metadata_content.trim() &&
+    !parsedMetadataContent
   ) {
+    // If metadata_content is a plain string (not JSON), use it as description
+    baseDataset["dcterms:description"] = {
+      "@language": "en",
+      "@value": formData.metadata_content.trim(),
+    };
+  } else if (baseDataset["dcterms:description"]) {
+    // Normalize existing description from metadata
     const normalizedDesc = normalizeLanguageValue(
-      parsedMetadataContent["dcterms:description"]
+      baseDataset["dcterms:description"]
     );
     if (Array.isArray(normalizedDesc)) {
       const nonEmptyDesc = normalizedDesc.filter(
         (item) => item["@value"] && item["@value"].trim().length > 0
       );
-      if (nonEmptyDesc.length > 0) {
-        baseDataset["dcterms:description"] = nonEmptyDesc[0];
-      } else {
-        baseDataset["dcterms:description"] = {
-          "@language": "en",
-          "@value": "No description provided",
-        };
-      }
+      baseDataset["dcterms:description"] =
+        nonEmptyDesc.length > 0
+          ? nonEmptyDesc[0]
+          : {
+              "@language": "en",
+              "@value": "No description provided",
+            };
     } else {
-      if (normalizedDesc["@value"] && normalizedDesc["@value"].trim().length > 0) {
+      if (
+        normalizedDesc["@value"] &&
+        normalizedDesc["@value"].trim().length > 0
+      ) {
         baseDataset["dcterms:description"] = normalizedDesc;
       } else {
         baseDataset["dcterms:description"] = {
@@ -1074,37 +1081,89 @@ export function createDatasetJsonLd(
         };
       }
     }
-  } else if (
-    formData.metadata_content &&
-    typeof formData.metadata_content === "string" &&
-    formData.metadata_content.trim() &&
-    !parsedMetadataContent
-  ) {
-    baseDataset["dcterms:description"] = {
-      "@language": "en",
-      "@value": formData.metadata_content.trim(),
-    };
   } else {
+    // No description in metadata, set default
     baseDataset["dcterms:description"] = {
       "@language": "en",
       "@value": "No description provided",
     };
   }
 
+  // Update @type based on item_type from form (form data takes precedence)
   if (formData.item_type && formData.item_type === "application") {
     baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
-  } else {
+  } else if (!baseDataset["@type"]) {
     baseDataset["@type"] = "dcat:Dataset";
   }
 
+  // Helper function to build accessURL from related_data_product and filename
+  // Combines data product path with uploaded filename in file:// URL format
+  const buildAccessURL = (
+    dataProductPath: string,
+    uploadedFilename: string
+  ): string => {
+    const trimmedPath = dataProductPath.trim();
+    const trimmedFilename = uploadedFilename.trim();
+
+    // Normalize path separators
+    const normalizePath = (path: string): string => {
+      return path.replace(/\\/g, "/").replace(/\/+/g, "/");
+    };
+
+    // Combine data product path with filename
+    let combinedPath: string;
+    if (trimmedPath.endsWith("/")) {
+      combinedPath = `${trimmedPath}${trimmedFilename}`;
+    } else {
+      combinedPath = `${trimmedPath}/${trimmedFilename}`;
+    }
+
+    combinedPath = normalizePath(combinedPath);
+
+    // If already a file:// URL, extract path and combine with filename
+    if (trimmedPath.startsWith("file://")) {
+      const pathWithoutProtocol = trimmedPath.replace(/^file:\/\//, "");
+      combinedPath = normalizePath(`${pathWithoutProtocol}/${trimmedFilename}`);
+      return `file://${combinedPath}`;
+    }
+
+    // If it's an absolute Windows path (C:/, D:/, etc.)
+    if (/^[A-Za-z]:/.test(trimmedPath)) {
+      return `file:///${combinedPath}`;
+    }
+
+    // If it's an absolute Unix path (starts with /)
+    if (trimmedPath.startsWith("/")) {
+      return `file://${combinedPath}`;
+    }
+
+    // If it's a relative path (starts with ./ or just a path)
+    if (trimmedPath.startsWith("./")) {
+      return `file://${combinedPath}`;
+    }
+
+    // Default: treat as relative path (no leading slash in file://)
+    return `file://${combinedPath}`;
+  };
+
+  // Determine if this is a dataset type
+  const isDataset = formData.item_type === "dataset";
+
+  // Process related_data_product for dataset type
+  let relatedDataProductPath: string | null = null;
   if (
+    isDataset &&
     formData.related_data_product &&
     typeof formData.related_data_product === "string" &&
     formData.related_data_product.trim()
   ) {
-    const seriesId = formData.related_data_product.trim();
-    const seriesName = seriesId.split("/").pop() || seriesId.split(":").pop() || "Data Product Series";
-    
+    relatedDataProductPath = formData.related_data_product.trim();
+    const seriesId = relatedDataProductPath;
+    const seriesName =
+      seriesId.split("/").pop() ||
+      seriesId.split(":").pop() ||
+      "Data Product Series";
+
     baseDataset["dcat:inSeries"] = {
       "@id": seriesId,
       "@type": "dcat:DatasetSeries",
@@ -1119,6 +1178,7 @@ export function createDatasetJsonLd(
     };
   }
 
+  // Set metadataFilename if file is uploaded
   if (filename) {
     baseDataset["dspace:metadataFilename"] = {
       "@type": "xsd:string",
@@ -1126,91 +1186,50 @@ export function createDatasetJsonLd(
     };
   }
 
-  if (!baseDataset["dcterms:identifier"]) {
+  // If file is uploaded, use filename (without extension) as identifier and overwrite metadata_content
+  if (filename) {
     const identifier = filename.replace(/\.[^/.]+$/, "");
     baseDataset["dcterms:identifier"] = {
       "@type": "xsd:string",
       "@value": identifier,
     };
+  } else if (!baseDataset["dcterms:identifier"]) {
+    // If no file uploaded and no identifier in metadata, use empty string
+    baseDataset["dcterms:identifier"] = {
+      "@type": "xsd:string",
+      "@value": "",
+    };
   }
 
-  if (parsedMetadataContent && typeof parsedMetadataContent === "object") {
-    Object.keys(parsedMetadataContent).forEach((key) => {
-      if (
-        key === "@context" ||
-        key === "@id" ||
-        key === "@type" ||
-        key === "dcterms:title" ||
-        key === "dcterms:description" ||
-        key === "dcat:inSeries" ||
-        key === "dspace:metadataFilename" ||
-        baseDataset[key]
-      ) {
-        return;
-      }
-      baseDataset[key] = parsedMetadataContent[key];
-    });
-  }
+  // Handle dcat:distribution with special logic:
+  // - If it exists in metadata_content, keep it as is
+  // - Otherwise, create new one for dataset with related_data_product
+  const hasDistributionInMetadata =
+    baseDataset["dcat:distribution"] !== undefined &&
+    baseDataset["dcat:distribution"] !== null;
 
-  if (filename && !baseDataset["dcat:distribution"]) {
+  if (
+    !hasDistributionInMetadata &&
+    filename &&
+    isDataset &&
+    relatedDataProductPath
+  ) {
+    // Create new distribution for dataset with related_data_product
     const distributionId = `${baseDataset["@id"]}/distribution`;
+
+    // Build accessURL by combining related_data_product path with uploaded filename
+    const accessURL = buildAccessURL(relatedDataProductPath, filename);
+
+    // Minimal distribution format matching ok_request.json
     baseDataset["dcat:distribution"] = {
       "@id": distributionId,
       "@type": "dcat:Distribution",
-      "dcterms:description": {
-        "@language": "en",
-        "@value": "Distribution for uploaded file",
-      },
-      "dcat:format": {
-        "@value": filename.split(".").pop()?.toUpperCase() || "MMIO",
-        "@type": "xsd:string",
-      },
-      "dcatap:availability": [
-        {
-          "@id": "http://data.europa.eu/r5r/AVAILABLE",
-          "@type": "skos:Concept",
-          "skos:prefLabel": {
-            "@value": "Available",
-            "@language": "en",
-          },
-        },
-      ],
       "dcat:accessURL": {
-        "@id": `${distributionId}/information`,
+        "@id": accessURL,
       },
     };
-  } else if (filename && Array.isArray(baseDataset["dcat:distribution"])) {
-    if (baseDataset["dcat:distribution"].length > 0) {
-      baseDataset["dcat:distribution"] = baseDataset["dcat:distribution"][0];
-    } else {
-      const distributionId = `${baseDataset["@id"]}/distribution`;
-      baseDataset["dcat:distribution"] = {
-        "@id": distributionId,
-        "@type": "dcat:Distribution",
-        "dcterms:description": {
-          "@language": "en",
-          "@value": "Distribution for uploaded file",
-        },
-        "dcat:format": {
-          "@value": filename.split(".").pop()?.toUpperCase() || "MMIO",
-          "@type": "xsd:string",
-        },
-        "dcatap:availability": [
-          {
-            "@id": "http://data.europa.eu/r5r/AVAILABLE",
-            "@type": "skos:Concept",
-            "skos:prefLabel": {
-              "@value": "Available",
-              "@language": "en",
-            },
-          },
-        ],
-        "dcat:accessURL": {
-          "@id": `${distributionId}/information`,
-        },
-      };
-    }
   }
+  // If distribution exists in metadata, it's already in baseDataset, so we keep it
 
   return JSON.stringify(baseDataset, null, 2);
 }

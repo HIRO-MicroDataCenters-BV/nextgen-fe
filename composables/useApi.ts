@@ -353,18 +353,30 @@ export const useApi = () => {
      * Creates or updates a dataset
      * @param filename - Name of the dataset file
      * @param dataset - Dataset data in JSON-LD format
+     * @param relatedDataProduct - Optional related data product path
      * @returns Promise with updated dataset data or null if error occurs
      * @example
      * const api = useApi();
-     * const updated = await api.saveDataset("my-dataset", datasetData);
+     * const updated = await api.saveDataset("my-dataset", datasetData, "path/to/product");
      */
     saveDataset: async (
       filename: string,
-      dataset: string
+      dataset: string,
+      relatedDataProduct?: string | null
     ): Promise<CatalogDataset | null> => {
+      // Build URL with properly encoded query parameter
+      let url = `/datasets/${filename}/`;
+      if (relatedDataProduct !== null && relatedDataProduct !== undefined) {
+        const encodedParam = encodeURIComponent(relatedDataProduct);
+        url += `?related_data_product=${encodedParam}`;
+      } else {
+        // Backend requires this parameter, so pass empty string if not provided
+        url += `?related_data_product=`;
+      }
+
       const response = await request<CatalogDataset>(
         "catalog",
-        `/datasets/${filename}/`,
+        url,
         "POST",
         dataset,
         { showToast: true, hasRawData: true }
