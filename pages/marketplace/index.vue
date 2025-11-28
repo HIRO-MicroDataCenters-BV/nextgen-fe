@@ -83,20 +83,31 @@ const fetchTableData = async (
   try {
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3);
-    const filtersObj = createFiltersObject(params.filters);
+    
+    // Debug: log search parameters
+    console.log("Search params:", {
+      name: params.name,
+      description: params.description,
+      all: params.all,
+      type: params.type,
+      biobank: params.biobank,
+    });
+    
+    const filtersObj = createFiltersObject(params.filters || {});
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
       biobank: params.biobank,
       lastupdate: params.lastupdate,
       all: params.all,
+      type: params.type,
       page,
       limit,
-      filters:
-        params.filters && Object.keys(params.filters).length > 0
-          ? filtersObj
-          : undefined,
+      filters: filtersObj.length > 0 ? filtersObj : undefined,
     });
+
+    // Debug: log the filter being sent
+    console.log("Filter being sent to API:", JSON.stringify(filter, null, 2));
     const response = await api.searchDistributed(filter as SearchFilter);
     const tableData = transformSearchResponseToTableData(
       response as unknown as JsonLdResponse,

@@ -25,6 +25,7 @@ import type {
 import { useFilters } from "~/composables/useFilters";
 import { convertJsonLdForTraining } from "~/utils/jsonld";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import { nextTick } from "vue";
 
 interface TableProps {
   title?: string;
@@ -56,7 +57,8 @@ const data = shallowRef<TableRowData[]>([]);
 const rawById = ref<Record<string, unknown>>({});
 const isLoading = ref(true);
 
-const selectedFilters = ref<Record<string, boolean | string | number>>({});
+const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const { page } = useApp();
@@ -66,6 +68,111 @@ const {
   resetFilters: _resetFilters,
 } = useFilters();
 
+// Function to sync selectedFilters with filterGroups
+const syncFiltersToUI = (filters: Record<string, boolean | string | number>) => {
+  console.log("=== Syncing filters to UI ===");
+  console.log("Filters to sync:", filters);
+  console.log("FilterGroups before sync:", JSON.parse(JSON.stringify(filterGroups.value)));
+  
+  // Directly update values in filterGroups to ensure reactivity
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      const filterValue = filters[item.key];
+      
+      if (filterValue !== undefined && filterValue !== false && filterValue !== null) {
+        if (item.value !== filterValue) {
+          item.value = filterValue;
+          console.log(`✓ Setting ${item.key} to ${filterValue} (was ${item.value})`);
+        }
+      } else if (!(item.key in filters)) {
+        // Only reset if not in filters
+        if (item.value !== null) {
+          item.value = null;
+          console.log(`✗ Resetting ${item.key} to null`);
+        }
+      }
+    });
+  });
+  
+  // Force reactivity update by reassigning the array
+  filterGroups.value = [...filterGroups.value];
+  
+  console.log("FilterGroups after sync:", JSON.parse(JSON.stringify(filterGroups.value)));
+  console.log("=== Sync complete ===");
+};
+
+// Initialize from URL query parameters
+const selectedFilterColumn = ref(
+  (route.query.searchColumn as string) || "all"
+);
+const searchValue = ref((route.query.search as string) || "");
+const selectedType = ref((route.query.type as string) || "datasets");
+const selectedFilters = ref<Record<string, boolean | string | number>>(() => {
+  try {
+    if (route.query.filters && typeof route.query.filters === "string") {
+      const decoded = decodeURIComponent(route.query.filters);
+      console.log("Initialization - Decoded filters from URL:", decoded);
+      const parsed = JSON.parse(decoded);
+      console.log("Initialization - Parsed filters:", parsed);
+      return parsed;
+    }
+  } catch (e) {
+    console.error("Error parsing filters from URL:", e);
+  }
+  return {};
+});
+const isMyCatalog = computed(() => page.value.section === "my_catalog");
+
+// Function to update URL query parameters
+const updateURLQuery = () => {
+  if (isUpdatingFromState.value) {
+    console.log("updateURLQuery blocked by isUpdatingFromState");
+    return;
+  }
+  
+  console.log("updateURLQuery called - selectedFilters:", selectedFilters.value, "searchValue:", searchValue.value);
+  
+  const query: Record<string, string> = {};
+
+  // Update type
+  if (selectedType.value && selectedType.value !== "datasets") {
+    query.type = selectedType.value;
+  }
+
+  // Update search
+  if (searchValue.value && searchValue.value.trim()) {
+    query.search = searchValue.value;
+    query.searchColumn = selectedFilterColumn.value;
+  }
+
+  // Update filters - use selectedFilters directly, getActiveFilters() is for reading from UI
+  const activeFilters = {
+    ...selectedFilters.value,
+    ...getActiveFilters(),
+  };
+  // Remove null/undefined/false values
+  const cleanedFilters: Record<string, boolean | string | number> = {};
+  Object.keys(activeFilters).forEach((key) => {
+    const value = activeFilters[key];
+    if (value !== null && value !== undefined && value !== false) {
+      cleanedFilters[key] = value;
+    }
+  });
+  
+  if (Object.keys(cleanedFilters).length > 0) {
+    query.filters = encodeURIComponent(JSON.stringify(cleanedFilters));
+  }
+
+  // Update page
+  if (currentPage.value > 0) {
+    query.page = String(currentPage.value);
+  }
+
+  console.log("updateURLQuery - updating query to:", query);
+  // Update URL without triggering navigation
+  router.replace({ query });
+};
+
 const handleFilterChange = (
   key: string,
   value: boolean | string | number,
@@ -73,44 +180,98 @@ const handleFilterChange = (
 ) => {
   if (!multiple) {
     selectedFilters.value = {};
+    // Reset all filter values in UI when switching to single selection mode
+    filterGroups.value.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.key !== key) {
+          item.value = null;
+        }
+      });
+    });
   }
 
   if (value) {
     selectedFilters.value[key] = value;
+    // Sync UI - update filter value in filterGroups
+    filterGroups.value.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.key === key) {
+          item.value = value;
+        }
+      });
+    });
   } else {
     const { [key]: _, ...rest } = selectedFilters.value;
     selectedFilters.value = rest;
+    // Sync UI - reset filter value in filterGroups
+    filterGroups.value.forEach((group) => {
+      group.items.forEach((item) => {
+        if (item.key === key) {
+          item.value = null;
+        }
+      });
+    });
   }
-
+  
+  // Force reactivity update
+  filterGroups.value = [...filterGroups.value];
+  
   searchValue.value = "";
   applySearchFilter();
+  updateURLQuery();
   fetchData();
 };
 
 const handleRemoveFilter = (key: string) => {
   const { [key]: _, ...rest } = selectedFilters.value;
   selectedFilters.value = rest;
+  currentPage.value = 0;
+  table.setPageIndex(0);
+  
+  // Sync UI - reset the filter value in filterGroups
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      if (item.key === key) {
+        item.value = null;
+      }
+    });
+  });
+  // Force reactivity update
+  filterGroups.value = [...filterGroups.value];
+  
+  updateURLQuery();
   fetchData();
 };
 
 const handleClearAllFilters = () => {
   selectedFilters.value = {};
   searchValue.value = "";
+  selectedFilterColumn.value = "all";
+  currentPage.value = 0;
+  table.setPageIndex(0);
+  
+  // Sync UI - reset all filter values in filterGroups
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      item.value = null;
+    });
+  });
+  // Force reactivity update
+  filterGroups.value = [...filterGroups.value];
+  
   applySearchFilter();
+  updateURLQuery();
+  fetchData();
 };
 
 const fetchData = async () => {
   rowSelection.value = {};
   //selectedFilters.value = { "med:age": true };
-  if (Object.keys(selectedFilters.value).length === 0) {
-    isLoading.value = false;
-    data.value = [];
-    return;
-  }
   isLoading.value = true;
   const resp = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
+    type: selectedType.value,
     ...(searchValue.value &&
       selectedFilterColumn.value && {
         [selectedFilterColumn.value]: searchValue.value,
@@ -136,6 +297,8 @@ const fetchData = async () => {
 
   let filteredData: TableRowData[] = respObj?.data ?? [];
 
+  // Type filtering is now done on the server side, but we keep client-side filtering as fallback
+  // This ensures compatibility if server-side filtering is not available
   if (selectedType.value === "datasets") {
     filteredData = filteredData.filter((row: TableRowData) => {
       const datasetType = row.datasetType as string | undefined;
@@ -150,15 +313,8 @@ const fetchData = async () => {
     });
   }
 
-  if (searchValue.value && searchValue.value.trim()) {
-    const searchTerm = searchValue.value.toLowerCase().trim();
-    filteredData = filteredData.filter((row) => {
-      return Object.values(row).some((value) => {
-        if (value === null || value === undefined) return false;
-        return String(value).toLowerCase().includes(searchTerm);
-      });
-    });
-  }
+  // Search filtering is now done on the server side via API parameters
+  // No need for client-side search filtering
   // attach original jsonld to each row for downstream converters
   filteredData = filteredData.map((row: TableRowData) => {
     const id = String(row.id);
@@ -171,16 +327,6 @@ const fetchData = async () => {
   });
   data.value = filteredData;
 };
-
-const selectedFilterColumn = ref("all");
-const searchValue = ref("");
-
-const route = useRoute();
-const selectedType = ref("datasets");
-const isMyCatalog = computed(() => page.value.section === "my_catalog");
-/*
-const router = useRouter();
-*/
 
 const columnFilters = ref<ColumnFiltersState>(
   route.query.filters && typeof route.query.filters === "string"
@@ -260,6 +406,7 @@ const table = useVueTable({
         ? updater(table.getState().pagination)
         : updater;
     currentPage.value = newPagination.pageIndex;
+    updateURLQuery();
     fetchData();
   },
   state: {
@@ -292,6 +439,7 @@ const applySearchFilter = () => {
     (filter) => filter.id !== "search"
   );
   if (!searchValue.value) {
+    updateURLQuery();
     fetchData();
     return;
   }
@@ -301,6 +449,7 @@ const applySearchFilter = () => {
     column: selectedFilterColumn.value,
   };
   columnFilters.value.push(searchFilter as unknown as TableFilter);
+  updateURLQuery();
   fetchData();
 };
 
@@ -308,8 +457,59 @@ watch(
   () => route.query,
   (newQuery) => {
     if (isUpdatingFromState.value) return;
+    console.log("=== Route query changed ===", newQuery);
     isUpdatingFromState.value = true;
     try {
+      // Update type
+      if (newQuery.type && typeof newQuery.type === "string") {
+        selectedType.value = newQuery.type;
+      } else {
+        selectedType.value = "datasets";
+      }
+
+      // Update search
+      if (newQuery.search && typeof newQuery.search === "string") {
+        searchValue.value = newQuery.search;
+        selectedFilterColumn.value =
+          (newQuery.searchColumn as string) || "all";
+      } else {
+        searchValue.value = "";
+        selectedFilterColumn.value = "all";
+      }
+
+      // Update selectedFilters
+      if (newQuery.filters && typeof newQuery.filters === "string") {
+        try {
+          const decoded = decodeURIComponent(newQuery.filters);
+          console.log("Watch - Decoded filters from URL:", decoded);
+          const parsedFilters = JSON.parse(decoded);
+          console.log("Watch - Parsed filters:", parsedFilters);
+          selectedFilters.value = parsedFilters;
+          // Sync filters to UI - use double nextTick to ensure filterGroups are ready
+          nextTick(() => {
+            nextTick(() => {
+              syncFiltersToUI(parsedFilters);
+            });
+          });
+        } catch (e) {
+          console.error("Error parsing filters from URL:", e);
+          selectedFilters.value = {};
+          nextTick(() => {
+            nextTick(() => {
+              syncFiltersToUI({});
+            });
+          });
+        }
+      } else {
+        selectedFilters.value = {};
+        nextTick(() => {
+          nextTick(() => {
+            syncFiltersToUI({});
+          });
+        });
+      }
+
+      // Update columnFilters (for backward compatibility)
       if (newQuery.filters && typeof newQuery.filters === "string") {
         columnFilters.value = JSON.parse(decodeURIComponent(newQuery.filters));
         const currentColumnFilters = columnFilters.value;
@@ -321,15 +521,11 @@ watch(
             searchValue.value = searchFilter.value as string;
             selectedFilterColumn.value = searchFilter.column || "all";
           }
-        } else {
-          searchValue.value = "";
-          selectedFilterColumn.value = "all";
         }
       } else {
         columnFilters.value = [];
-        searchValue.value = "";
-        selectedFilterColumn.value = "all";
       }
+
       if (newQuery.visibility && typeof newQuery.visibility === "string") {
         columnVisibility.value = JSON.parse(
           decodeURIComponent(newQuery.visibility)
@@ -352,7 +548,7 @@ watch(
       }, 100);
     }
   },
-  { deep: true }
+  { deep: true, immediate: true }
 );
 
 watch(
@@ -360,11 +556,76 @@ watch(
   (newPageSize) => {
     table.setPageSize(newPageSize);
     currentPage.value = 0;
+    updateURLQuery();
     fetchData();
   }
 );
 
+// Watch for searchValue changes and update URL (with debounce for search)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+watch(
+  searchValue,
+  () => {
+    if (!isUpdatingFromState.value) {
+      if (searchTimeout) clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        updateURLQuery();
+      }, 300); // Debounce 300ms
+    }
+  }
+);
+
+// Watch for other changes and update URL immediately
+watch(
+  [selectedFilterColumn, selectedType],
+  () => {
+    if (!isUpdatingFromState.value) {
+      updateURLQuery();
+    }
+  }
+);
+
+watch(
+  selectedFilters,
+  () => {
+    if (!isUpdatingFromState.value) {
+      updateURLQuery();
+    }
+  },
+  { deep: true }
+);
+
 onMounted(() => {
+  console.log("onMounted - selectedFilters:", selectedFilters.value);
+  console.log("onMounted - route.query.filters:", route.query.filters);
+  console.log("onMounted - filterGroups:", filterGroups.value);
+  
+  // Sync filters from URL to UI on mount - ensure filterGroups are ready
+  // Use double nextTick to ensure everything is initialized
+  nextTick(() => {
+    nextTick(() => {
+      if (selectedFilters.value && Object.keys(selectedFilters.value).length > 0) {
+        console.log("Syncing filters on mount:", selectedFilters.value);
+        syncFiltersToUI(selectedFilters.value);
+      } else if (route.query.filters && typeof route.query.filters === "string") {
+        // Also try to read from route.query directly if selectedFilters is empty
+        try {
+          const decoded = decodeURIComponent(route.query.filters);
+          const parsed = JSON.parse(decoded);
+          console.log("Reading filters from route.query on mount:", parsed);
+          selectedFilters.value = parsed;
+          syncFiltersToUI(parsed);
+        } catch (e) {
+          console.error("Error parsing filters from route.query on mount:", e);
+        }
+      }
+    });
+  });
+  
+  // Update URL with current state if not present in URL
+  if (!route.query.type && !route.query.search && !route.query.filters) {
+    updateURLQuery();
+  }
   fetchData();
 });
 
@@ -381,7 +642,7 @@ watch(
   { deep: true }
 );
 
-const filterItems = ref<DropdownMenuItem[]>(
+const filterItems = computed<DropdownMenuItem[]>(() =>
   filterGroups.value.map((group) => ({
     key: group.key,
     label: t(`filters.${group.key}`),
@@ -394,8 +655,34 @@ const filterItems = ref<DropdownMenuItem[]>(
   }))
 );
 
+// Compute selected filter keys from selectedFilters and filterGroups
+// Priority: filterGroups.value (UI state) > selectedFilters (URL state)
+const selectedFilterKeys = computed(() => {
+  const keys: string[] = [];
+  
+  // First, check filterGroups for selected items (UI state is source of truth)
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      if (item.value !== null && item.value !== false && !keys.includes(item.key)) {
+        keys.push(item.key);
+      }
+    });
+  });
+  
+  // Also add keys from selectedFilters that might not be in filterGroups yet
+  Object.keys(selectedFilters.value).forEach((key) => {
+    if (selectedFilters.value[key] !== false && selectedFilters.value[key] !== null && !keys.includes(key)) {
+      keys.push(key);
+    }
+  });
+  
+  console.log("selectedFilterKeys computed:", keys, "selectedFilters:", selectedFilters.value, "filterGroups items:", filterGroups.value.flatMap(g => g.items.map(i => ({ key: i.key, value: i.value }))));
+  return keys;
+});
+
 const handleTypeTabChange = (type: string | number) => {
   selectedType.value = String(type);
+  updateURLQuery();
   fetchData();
 };
 
@@ -507,6 +794,7 @@ defineExpose({ fetchData, getSelectedRaw });
             id="filter"
             label="filter"
             :items="filterItems"
+            :selected-values="selectedFilterKeys"
             @filter-change="handleFilterChange"
           />
         </div>
@@ -550,7 +838,6 @@ defineExpose({ fetchData, getSelectedRaw });
       class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
     >
       <Table
-        v-if="Object.keys(selectedFilters).length > 0"
         :data-source="dataSource"
         :columns="columns"
         :page-size="pageSize"
@@ -623,23 +910,6 @@ defineExpose({ fetchData, getSelectedRaw });
           </TableRow>
         </TableBody>
       </Table>
-      <div v-else class="flex-grow flex items-center justify-center">
-        <div class="flex flex-col items-center justify-center">
-          <div
-            class="w-[48px] h-[48px] flex items-center justify-center border rounded-md mb-4"
-          >
-            <Icon name="lucide:search-slash" size="24" />
-          </div>
-          <div class="text-center">
-            <p class="text-sm font-medium mb-2">
-              {{ t("hint.no_datasets_found") }}
-            </p>
-            <p class="text-sm text-muted-foreground">
-              {{ t("hint.try_changing_search_query_or_filters") }}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
     <AppTableRowMenu
       v-if="selectedRows.length > 0"

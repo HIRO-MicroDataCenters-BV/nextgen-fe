@@ -25,6 +25,7 @@ export interface TableFetchParams {
   biobank?: string;
   lastupdate?: string;
   all?: string;
+  type?: string; // "datasets" or "applications"
   filters?: Record<string, boolean>;
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { DropdownMenuItem } from "@/types/table.types";
 import { DropdownMenuItem as DropdownMenuItemComponent } from "@/components/ui/dropdown-menu";
@@ -14,7 +15,9 @@ const emit = defineEmits<{
 }>();
 
 const isSelected = computed(() => {
-  return props.selectedValues.includes(props.item.key);
+  const selected = props.selectedValues.includes(props.item.key);
+  console.log(`MenuItem ${props.item.key} isSelected:`, selected, "selectedValues:", props.selectedValues);
+  return selected;
 });
 </script>
 

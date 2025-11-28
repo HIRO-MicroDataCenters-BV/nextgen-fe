@@ -124,7 +124,16 @@ const fetchTableData = async (
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
 
-    const _filtersObj = createFiltersObject(
+    // Debug: log search parameters
+    console.log("Search params:", {
+      name: params.name,
+      description: params.description,
+      all: params.all,
+      type: params.type,
+      biobank: params.biobank,
+    });
+
+    const filtersObj = createFiltersObject(
       (params.filters || {}) as unknown as Record<string, unknown>
     );
     const filter = createTableSearchFilter({
@@ -133,13 +142,14 @@ const fetchTableData = async (
       biobank: params.biobank,
       lastupdate: params.lastupdate,
       all: params.all,
+      type: params.type,
       page,
       limit,
-      filters:
-        params.filters && Object.keys(params.filters).length > 0
-          ? (params.filters as unknown as Record<string, boolean>)
-          : undefined,
+      filters: filtersObj.length > 0 ? filtersObj : undefined,
     });
+
+    // Debug: log the filter being sent
+    console.log("Filter being sent to API:", JSON.stringify(filter, null, 2));
     const response = await api.getLocalCatalog(filter as SearchFilter);
 
     const tableData = transformSearchResponseToTableData(
