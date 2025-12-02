@@ -133,9 +133,22 @@ export function transformDatasetToTableRow(
       | JsonLdDistribution[]
       | undefined
   );
-  const datasetType = dataset["dcterms:type"]
-    ? ((dataset["dcterms:type"] as JsonLdObject)["@id"] as string)
-    : undefined;
+  // Handle dcterms:type - can be object with @id, array of objects, or string @id
+  let datasetType: string | undefined;
+  if (dataset["dcterms:type"]) {
+    const typeValue = dataset["dcterms:type"];
+    if (typeof typeValue === "string") {
+      datasetType = typeValue;
+    } else if (Array.isArray(typeValue)) {
+      // If it's an array, get the first one
+      const firstType = typeValue[0];
+      if (firstType && typeof firstType === "object" && "@id" in firstType) {
+        datasetType = firstType["@id"] as string;
+      }
+    } else if (typeof typeValue === "object" && "@id" in typeValue) {
+      datasetType = (typeValue as JsonLdObject)["@id"] as string;
+    }
+  }
 
   const result: DatasetMetadata = {
     id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
@@ -268,64 +281,81 @@ export function transformSearchResponseToTableData(
 export function createFiltersObject(
   filters: Record<string, unknown>
 ): Array<Record<string, unknown>> {
-  const filtersObj: Array<Record<string, unknown>> = [
-    {
-      "dcat:dataset": {
-        extraMetadata: [] as Array<Record<string, unknown>>,
-      },
-    },
-  ];
+  // If no filters provided, return empty array
+  if (!filters || Object.keys(filters).length === 0) {
+    return [];
+  }
+
+  // Initialize the dcat:dataset object
+  const dcatDataset: Record<string, unknown> = {
+    "@type": "dcat:Dataset",
+  };
+
+  // Separate filters by type
+  const extraMetadataFields: Record<string, unknown> = {};
+  let distributionFilter: Record<string, unknown> | null = null;
+  let identifierFilter: string | null = null;
+  let isSharedFilter: Record<string, unknown> | null = null;
 
   Object.keys(filters).forEach((key) => {
     switch (key) {
       case "distribution_csv":
       case "distribution_dicom":
       case "distribution_mmio":
-        filtersObj[0] = {
-          "@type": "dcat:Dataset",
-          "dcat:distribution": {
-            "@type": "dcat:Distribution",
-            "dcat:format": key.replace("distribution_", "").toUpperCase(),
-          },
+        distributionFilter = {
+          "@type": "dcat:Distribution",
+          "dcat:format": key.replace("distribution_", "").toLowerCase(),
         };
         break;
       case "isShared":
-        filtersObj[0] = {
-          "@type": "dcat:Dataset",
-          isShared: {
-            "@value": true,
-            "@type": "xsd:boolean",
-          },
+        isSharedFilter = {
+          "@value": true,
+          "@type": "xsd:boolean",
         };
         break;
+      case "identifier":
+        identifierFilter = String(filters[key]);
+        break;
       default:
-        if (
-          filtersObj[0]["dcat:dataset"] &&
-          typeof filtersObj[0]["dcat:dataset"] === "object"
-        ) {
-          const dcatDataset = filtersObj[0]["dcat:dataset"] as Record<
-            string,
-            unknown
-          >;
-          if (Array.isArray(dcatDataset["extraMetadata"])) {
-            (
-              dcatDataset["extraMetadata"] as Array<Record<string, unknown>>
-            ).push({
-              "@type": "med:Record",
-              [key]: [
-                {
-                  "@value": filters[key],
-                  "@type": "xsd:boolean",
-                },
-              ],
-            });
-          }
-        }
+        // All other keys are treated as extraMetadata fields
+        // Format: { "@type": "xsd:boolean", "@value": true }
+        extraMetadataFields[key] = {
+          "@type": "xsd:boolean",
+          "@value": filters[key] === true || filters[key] === "true",
+        };
         break;
     }
   });
 
-  return filtersObj;
+  // Build extraMetadata object if we have any fields
+  if (Object.keys(extraMetadataFields).length > 0) {
+    dcatDataset["extraMetadata"] = {
+      "@type": "med:Record",
+      ...extraMetadataFields,
+    };
+  }
+
+  // Add distribution filter if present
+  if (distributionFilter) {
+    dcatDataset["dcat:distribution"] = distributionFilter;
+  }
+
+  // Add identifier filter if present
+  if (identifierFilter) {
+    dcatDataset["dcterms:identifier"] = identifierFilter;
+  }
+
+  // Add isShared filter if present
+  if (isSharedFilter) {
+    dcatDataset["isShared"] = isSharedFilter;
+  }
+
+  // Return array with single filter object
+  return [
+    {
+      "dcat:dataset": dcatDataset,
+    },
+  ];
 }
 
 /**
@@ -339,7 +369,8 @@ export function createTableSearchFilter(params: {
   all?: string;
   page?: number;
   limit?: number;
-  filters?: Record<string, boolean>;
+  filters?: Array<Record<string, unknown>>;
+  type?: string; // "datasets" or "applications"
 }): SearchFilter {
   const filter: SearchFilter = {
     "@context": {
@@ -347,15 +378,81 @@ export function createTableSearchFilter(params: {
       dcat: "http://www.w3.org/ns/dcat#",
       dcterms: "http://purl.org/dc/terms/",
       med: "http://oca.example.org/123/",
+      skos: "http://www.w3.org/2004/02/skos/core#",
+      xsd: "http://www.w3.org/2001/XMLSchema#",
       Filters: "http://data-space.org/Filters",
     },
     "@type": "Filters",
     filters: [],
   };
 
-  if (params.filters) {
-    filter.filters = params.filters;
+  const filtersArray: Array<Record<string, unknown>> = [];
+
+  // Add type filter (datasets vs applications)
+  // Note: For applications, we filter by dcterms:type = Software
+  // For datasets, we don't add a filter (default is Dataset, or we filter out Software on client side)
+  if (params.type === "applications") {
+    filtersArray.push({
+      "@type": "dcat:Dataset",
+      "dcterms:type": {
+        "@id": "http://purl.org/dc/dcmitype/Software",
+        "@type": "skos:Concept",
+      },
+    });
   }
+  // For datasets, we don't filter by type on server side
+  // because many datasets don't have dcterms:type explicitly set (default is Dataset)
+  // Client-side filtering will handle this
+
+  // Add search filters - format according to API docs: dcat:dataset with nested filters
+  if (params.all) {
+    filtersArray.push({
+      "dcat:dataset": {
+        "dcterms:title": {
+          operation: "contains",
+          operationValue: params.all,
+        },
+      },
+    });
+  } else {
+    if (params.name) {
+      filtersArray.push({
+        "dcat:dataset": {
+          "dcterms:title": {
+            operation: "contains",
+            operationValue: params.name,
+          },
+        },
+      });
+    }
+    if (params.description) {
+      filtersArray.push({
+        "dcat:dataset": {
+          "dcterms:description": {
+            operation: "contains",
+            operationValue: params.description,
+          },
+        },
+      });
+    }
+  }
+
+  if (params.biobank) {
+    filtersArray.push({
+      "@type": "dcat:Catalog",
+      "dcterms:title": {
+        operation: "contains",
+        operationValue: params.biobank,
+      },
+    });
+  }
+
+  // Add custom filters
+  if (params.filters && Array.isArray(params.filters) && params.filters.length > 0) {
+    filtersArray.push(...params.filters);
+  }
+
+  filter.filters = filtersArray;
 
   // TEMPORARY: Disable pagination
   const DISABLE_PAGINATION = true;
