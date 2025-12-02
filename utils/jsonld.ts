@@ -448,7 +448,11 @@ export function createTableSearchFilter(params: {
   }
 
   // Add custom filters
-  if (params.filters && Array.isArray(params.filters) && params.filters.length > 0) {
+  if (
+    params.filters &&
+    Array.isArray(params.filters) &&
+    params.filters.length > 0
+  ) {
     filtersArray.push(...params.filters);
   }
 
