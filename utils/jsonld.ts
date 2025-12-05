@@ -133,7 +133,11 @@ export function transformDatasetToTableRow(
       | JsonLdDistribution[]
       | undefined
   );
-  // Handle dcterms:type - can be object with @id, array of objects, or string @id
+  // Extract dcterms:type to distinguish datasets vs applications
+  // Note: @type is always "dcat:Dataset" for both (per DF-207 fix)
+  // Applications have dcterms:type with @id = "http://purl.org/dc/dcmitype/Software"
+  // Datasets have dcterms:type with @id = "http://purl.org/dc/dcmitype/Dataset" or no dcterms:type (defaults to Dataset)
+  // dcterms:type can be object with @id, array of objects, or string @id
   let datasetType: string | undefined;
   if (dataset["dcterms:type"]) {
     const typeValue = dataset["dcterms:type"];
@@ -149,9 +153,38 @@ export function transformDatasetToTableRow(
       datasetType = (typeValue as JsonLdObject)["@id"] as string;
     }
   }
+  // If dcterms:type is not present, datasetType remains undefined, which defaults to Dataset
+
+  // Extract identifier with fallback logic
+  // The identifier should match what the backend API expects for /datasets/{identifier}/
+  // Priority: dcterms:identifier > metadataFilename (full filename) > metadataFilename (without extension) > @id
+  // Note: When saving via saveDataset(), the backend uses the full filename in the URL: /datasets/{filename}/
+  // So we should prioritize metadataFilename to match what was used during save
+  const identifier = getJsonLdValue(
+    dataset["dcterms:identifier"] as JsonLdStringValue
+  );
+  const metadataFilename = getJsonLdValue(
+    dataset["metadataFilename"] as JsonLdStringValue
+  );
+  const metadataFilenameWithoutExt = metadataFilename
+    ? metadataFilename.replace(/\.[^/.]+$/, "")
+    : "";
+  const datasetId = dataset["@id"]
+    ? String(dataset["@id"]).split("/").pop() || String(dataset["@id"])
+    : "";
+
+  // Use dcterms:identifier if available and non-empty, otherwise fallback to metadataFilename (full),
+  // then metadataFilename (without extension), then @id (last part of URL)
+  // This ensures we use the same identifier format that was used when saving
+  const finalId =
+    (identifier && identifier.trim() !== "" ? identifier : null) ||
+    metadataFilename ||
+    metadataFilenameWithoutExt ||
+    datasetId ||
+    "";
 
   const result: DatasetMetadata = {
-    id: getJsonLdValue(dataset["dcterms:identifier"] as JsonLdStringValue),
+    id: finalId,
     name: getLanguageValue(dataset["dcterms:title"] as JsonLdLanguageValue),
     description: getLanguageValue(
       dataset["dcterms:description"] as JsonLdLanguageValue
@@ -389,11 +422,13 @@ export function createTableSearchFilter(params: {
   const filtersArray: Array<Record<string, unknown>> = [];
 
   // Add type filter (datasets vs applications)
-  // Note: For applications, we filter by dcterms:type = Software
-  // For datasets, we don't add a filter (default is Dataset, or we filter out Software on client side)
+  // Note: @type is always "dcat:Dataset" for both types (per DF-207 fix)
+  // Applications are identified by dcterms:type = Software
+  // Datasets either have dcterms:type = Dataset or no dcterms:type (defaults to Dataset)
   if (params.type === "applications") {
+    // Filter for applications: must have dcterms:type = Software
     filtersArray.push({
-      "@type": "dcat:Dataset",
+      "@type": "dcat:Dataset", // Always dcat:Dataset (not used for distinction, but required by API)
       "dcterms:type": {
         "@id": "http://purl.org/dc/dcmitype/Software",
         "@type": "skos:Concept",
@@ -402,7 +437,7 @@ export function createTableSearchFilter(params: {
   }
   // For datasets, we don't filter by type on server side
   // because many datasets don't have dcterms:type explicitly set (default is Dataset)
-  // Client-side filtering will handle this
+  // Client-side filtering will handle excluding Software types
 
   // Add search filters - format according to API docs: dcat:dataset with nested filters
   if (params.all) {
@@ -1190,12 +1225,24 @@ export function createDatasetJsonLd(
     };
   }
 
-  // Update @type based on item_type from form (form data takes precedence)
+  // Update @type - always use "dcat:Dataset" for both datasets and applications
+  // Applications are distinguished by dcterms:type instead
+  // Backend expects all items to have @type: "dcat:Dataset" (not an array)
+  baseDataset["@type"] = "dcat:Dataset";
+
+  // Set dcterms:type for applications (form data takes precedence over metadata_content)
   if (formData.item_type && formData.item_type === "application") {
-    baseDataset["@type"] = ["dcat:Dataset", "dspace:Application"];
-  } else if (!baseDataset["@type"]) {
-    baseDataset["@type"] = "dcat:Dataset";
+    baseDataset["dcterms:type"] = {
+      "@id": "http://purl.org/dc/dcmitype/Software",
+      "@type": "skos:Concept",
+      "skos:prefLabel": {
+        "@language": "en",
+        "@value": "Software",
+      },
+    };
   }
+  // For datasets, dcterms:type is optional (defaults to Dataset)
+  // If it exists in metadata_content and item_type is dataset, keep it as is (don't overwrite)
 
   // Helper function to build accessURL from related_data_product and filename
   // Combines data product path with uploaded filename in file:// URL format

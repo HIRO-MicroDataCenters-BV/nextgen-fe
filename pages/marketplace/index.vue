@@ -8,6 +8,14 @@
       title="marketplace"
       :columns="columns"
       :data-source="fetchTableData"
+      @pass-to-training="handlePassToTraining"
+    />
+    <TrainingSuccessDialog
+      :open="showSuccessDialog"
+      :pipeline-id="successData?.data?.id"
+      :pipeline-name="successData?.data?.pipeline_name"
+      :order-id="successData?.data?.order_id"
+      @on-close="showSuccessDialog = false"
     />
   </AppContent>
 </template>
@@ -27,6 +35,7 @@ import {
 } from "~/utils/jsonld";
 import AppContent from "@/components/app/Content.vue";
 import AppTable from "@/components/app/Table.vue";
+import TrainingSuccessDialog from "@/components/app/TrainingSuccessDialog.vue";
 
 import type { SearchFilter } from "~/types/api.types";
 
@@ -34,6 +43,37 @@ const { t } = useI18n();
 const dayjs = useDayjs();
 const { page, setPage } = useApp();
 const api = useApi();
+
+const showSuccessDialog = ref(false);
+const successData = ref<{
+  status_code: number;
+  message: string;
+  data: {
+    id: string;
+    pipeline_name: string;
+    order_id: string;
+    status: string;
+  };
+} | null>(null);
+
+const handlePassToTraining = async (payload: {
+  dataset: Array<Record<string, unknown>>;
+}) => {
+  console.log(
+    "[marketplace/index.vue] handlePassToTraining called with payload:",
+    payload
+  );
+  console.log(
+    "[marketplace/index.vue] Calling api.runFederatedTraining with datasets:",
+    payload.dataset
+  );
+  const response = await api.runFederatedTraining(payload.dataset);
+  console.log("[marketplace/index.vue] API response:", response);
+  if (response) {
+    successData.value = response;
+    showSuccessDialog.value = true;
+  }
+};
 
 setPage({
   section: "marketplace",
@@ -83,7 +123,7 @@ const fetchTableData = async (
   try {
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3);
-    
+
     // Debug: log search parameters
     console.log("Search params:", {
       name: params.name,
@@ -92,7 +132,7 @@ const fetchTableData = async (
       type: params.type,
       biobank: params.biobank,
     });
-    
+
     const filtersObj = createFiltersObject(params.filters || {});
     const filter = createTableSearchFilter({
       name: params.name,

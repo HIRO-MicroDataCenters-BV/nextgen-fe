@@ -60,7 +60,10 @@ const emit = defineEmits<{
 }>();
 
 const handlePassToTraining = () => {
-  console.log("pass to training", props.rows);
+  console.log(
+    "[RowMenu.vue] handlePassToTraining called, emitting on-pass-to-training"
+  );
+  // Emit event to Table.vue which will handle data conversion and API call
   emit("on-pass-to-training");
 };
 
@@ -68,7 +71,7 @@ const handleClearAll = () => {
   emit("on-clear-all");
 };
 
-const items = [
+const items = computed(() => [
   {
     label: t("action.items_selected"),
     action: null,
@@ -87,5 +90,5 @@ const items = [
     type: "button",
     icon: "lucide:arrow-right",
   },
-];
+]);
 </script>

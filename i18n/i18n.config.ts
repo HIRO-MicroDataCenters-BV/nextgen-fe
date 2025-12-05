@@ -264,6 +264,7 @@ export default defineI18nConfig(() => {
           has_medical_conditions: "Has (Medical Conditions)",
         },
         action: {
+          processed: "Procesed",
           datasets: "Datasets",
           applications: "Applications",
           save: "Save",
@@ -345,6 +346,11 @@ export default defineI18nConfig(() => {
           required_max_length:
             "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
+        },
+        training: {
+          success_title: "Continue with training",
+          success_description:
+            "You will be redirected to Cognitive Engine platform to build a training pipeline with selected datasets.",
         },
         home: {
           contacts: {

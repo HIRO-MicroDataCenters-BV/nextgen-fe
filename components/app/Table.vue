@@ -68,108 +68,89 @@ const {
   resetFilters: _resetFilters,
 } = useFilters();
 
-// Function to sync selectedFilters with filterGroups
-const syncFiltersToUI = (filters: Record<string, boolean | string | number>) => {
-  console.log("=== Syncing filters to UI ===");
-  console.log("Filters to sync:", filters);
-  console.log("FilterGroups before sync:", JSON.parse(JSON.stringify(filterGroups.value)));
-  
-  // Directly update values in filterGroups to ensure reactivity
+// Sync selectedFilters with filterGroups UI state
+const syncFiltersToUI = (
+  filters: Record<string, boolean | string | number>
+) => {
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
       const filterValue = filters[item.key];
-      
-      if (filterValue !== undefined && filterValue !== false && filterValue !== null) {
-        if (item.value !== filterValue) {
-          item.value = filterValue;
-          console.log(`✓ Setting ${item.key} to ${filterValue} (was ${item.value})`);
-        }
+
+      if (
+        filterValue !== undefined &&
+        filterValue !== false &&
+        filterValue !== null
+      ) {
+        item.value = filterValue;
       } else if (!(item.key in filters)) {
-        // Only reset if not in filters
-        if (item.value !== null) {
-          item.value = null;
-          console.log(`✗ Resetting ${item.key} to null`);
-        }
+        item.value = null;
       }
     });
   });
-  
-  // Force reactivity update by reassigning the array
+
   filterGroups.value = [...filterGroups.value];
-  
-  console.log("FilterGroups after sync:", JSON.parse(JSON.stringify(filterGroups.value)));
-  console.log("=== Sync complete ===");
 };
 
 // Initialize from URL query parameters
-const selectedFilterColumn = ref(
-  (route.query.searchColumn as string) || "all"
-);
+const selectedFilterColumn = ref((route.query.searchColumn as string) || "all");
 const searchValue = ref((route.query.search as string) || "");
 const selectedType = ref((route.query.type as string) || "datasets");
-const selectedFilters = ref<Record<string, boolean | string | number>>(() => {
-  try {
-    if (route.query.filters && typeof route.query.filters === "string") {
-      const decoded = decodeURIComponent(route.query.filters);
-      console.log("Initialization - Decoded filters from URL:", decoded);
-      const parsed = JSON.parse(decoded);
-      console.log("Initialization - Parsed filters:", parsed);
-      return parsed;
+const selectedFilters = ref<Record<string, boolean | string | number>>(
+  (() => {
+    try {
+      if (route.query.filters && typeof route.query.filters === "string") {
+        const decoded = decodeURIComponent(route.query.filters);
+        const parsed = JSON.parse(decoded);
+        return parsed as Record<string, boolean | string | number>;
+      }
+    } catch (e) {
+      console.error("Error parsing filters from URL:", e);
     }
-  } catch (e) {
-    console.error("Error parsing filters from URL:", e);
-  }
-  return {};
-});
+    return {} as Record<string, boolean | string | number>;
+  })()
+);
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 
-// Function to update URL query parameters
+// Update URL query parameters from component state
 const updateURLQuery = () => {
-  if (isUpdatingFromState.value) {
-    console.log("updateURLQuery blocked by isUpdatingFromState");
-    return;
-  }
-  
-  console.log("updateURLQuery called - selectedFilters:", selectedFilters.value, "searchValue:", searchValue.value);
-  
+  if (isUpdatingFromState.value) return;
+
   const query: Record<string, string> = {};
 
-  // Update type
   if (selectedType.value && selectedType.value !== "datasets") {
     query.type = selectedType.value;
   }
 
-  // Update search
   if (searchValue.value && searchValue.value.trim()) {
     query.search = searchValue.value;
     query.searchColumn = selectedFilterColumn.value;
   }
 
-  // Update filters - use selectedFilters directly, getActiveFilters() is for reading from UI
   const activeFilters = {
     ...selectedFilters.value,
     ...getActiveFilters(),
   };
-  // Remove null/undefined/false values
   const cleanedFilters: Record<string, boolean | string | number> = {};
   Object.keys(activeFilters).forEach((key) => {
     const value = activeFilters[key];
-    if (value !== null && value !== undefined && value !== false) {
-      cleanedFilters[key] = value;
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== false &&
+      typeof value !== "object"
+    ) {
+      cleanedFilters[key] = value as boolean | string | number;
     }
   });
-  
+
   if (Object.keys(cleanedFilters).length > 0) {
     query.filters = encodeURIComponent(JSON.stringify(cleanedFilters));
   }
 
-  // Update page
   if (currentPage.value > 0) {
     query.page = String(currentPage.value);
   }
 
-  console.log("updateURLQuery - updating query to:", query);
-  // Update URL without triggering navigation
   router.replace({ query });
 };
 
@@ -192,7 +173,6 @@ const handleFilterChange = (
 
   if (value) {
     selectedFilters.value[key] = value;
-    // Sync UI - update filter value in filterGroups
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
         if (item.key === key) {
@@ -203,7 +183,6 @@ const handleFilterChange = (
   } else {
     const { [key]: _, ...rest } = selectedFilters.value;
     selectedFilters.value = rest;
-    // Sync UI - reset filter value in filterGroups
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
         if (item.key === key) {
@@ -212,10 +191,9 @@ const handleFilterChange = (
       });
     });
   }
-  
-  // Force reactivity update
+
   filterGroups.value = [...filterGroups.value];
-  
+
   searchValue.value = "";
   applySearchFilter();
   updateURLQuery();
@@ -227,8 +205,7 @@ const handleRemoveFilter = (key: string) => {
   selectedFilters.value = rest;
   currentPage.value = 0;
   table.setPageIndex(0);
-  
-  // Sync UI - reset the filter value in filterGroups
+
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
       if (item.key === key) {
@@ -236,9 +213,8 @@ const handleRemoveFilter = (key: string) => {
       }
     });
   });
-  // Force reactivity update
   filterGroups.value = [...filterGroups.value];
-  
+
   updateURLQuery();
   fetchData();
 };
@@ -249,16 +225,14 @@ const handleClearAllFilters = () => {
   selectedFilterColumn.value = "all";
   currentPage.value = 0;
   table.setPageIndex(0);
-  
-  // Sync UI - reset all filter values in filterGroups
+
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
       item.value = null;
     });
   });
-  // Force reactivity update
   filterGroups.value = [...filterGroups.value];
-  
+
   applySearchFilter();
   updateURLQuery();
   fetchData();
@@ -297,8 +271,7 @@ const fetchData = async () => {
 
   let filteredData: TableRowData[] = respObj?.data ?? [];
 
-  // Type filtering is now done on the server side, but we keep client-side filtering as fallback
-  // This ensures compatibility if server-side filtering is not available
+  // Filter by type using dcterms:type (not @type, which is always "dcat:Dataset")
   if (selectedType.value === "datasets") {
     filteredData = filteredData.filter((row: TableRowData) => {
       const datasetType = row.datasetType as string | undefined;
@@ -313,9 +286,7 @@ const fetchData = async () => {
     });
   }
 
-  // Search filtering is now done on the server side via API parameters
-  // No need for client-side search filtering
-  // attach original jsonld to each row for downstream converters
+  // Attach original JSON-LD to each row for downstream converters
   filteredData = filteredData.map((row: TableRowData) => {
     const id = String(row.id);
     const original = rawById.value[id];
@@ -457,35 +428,27 @@ watch(
   () => route.query,
   (newQuery) => {
     if (isUpdatingFromState.value) return;
-    console.log("=== Route query changed ===", newQuery);
     isUpdatingFromState.value = true;
     try {
-      // Update type
       if (newQuery.type && typeof newQuery.type === "string") {
         selectedType.value = newQuery.type;
       } else {
         selectedType.value = "datasets";
       }
 
-      // Update search
       if (newQuery.search && typeof newQuery.search === "string") {
         searchValue.value = newQuery.search;
-        selectedFilterColumn.value =
-          (newQuery.searchColumn as string) || "all";
+        selectedFilterColumn.value = (newQuery.searchColumn as string) || "all";
       } else {
         searchValue.value = "";
         selectedFilterColumn.value = "all";
       }
 
-      // Update selectedFilters
       if (newQuery.filters && typeof newQuery.filters === "string") {
         try {
           const decoded = decodeURIComponent(newQuery.filters);
-          console.log("Watch - Decoded filters from URL:", decoded);
           const parsedFilters = JSON.parse(decoded);
-          console.log("Watch - Parsed filters:", parsedFilters);
           selectedFilters.value = parsedFilters;
-          // Sync filters to UI - use double nextTick to ensure filterGroups are ready
           nextTick(() => {
             nextTick(() => {
               syncFiltersToUI(parsedFilters);
@@ -509,7 +472,6 @@ watch(
         });
       }
 
-      // Update columnFilters (for backward compatibility)
       if (newQuery.filters && typeof newQuery.filters === "string") {
         columnFilters.value = JSON.parse(decodeURIComponent(newQuery.filters));
         const currentColumnFilters = columnFilters.value;
@@ -561,29 +523,21 @@ watch(
   }
 );
 
-// Watch for searchValue changes and update URL (with debounce for search)
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-watch(
-  searchValue,
-  () => {
-    if (!isUpdatingFromState.value) {
-      if (searchTimeout) clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        updateURLQuery();
-      }, 300); // Debounce 300ms
-    }
-  }
-);
-
-// Watch for other changes and update URL immediately
-watch(
-  [selectedFilterColumn, selectedType],
-  () => {
-    if (!isUpdatingFromState.value) {
+watch(searchValue, () => {
+  if (!isUpdatingFromState.value) {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
       updateURLQuery();
-    }
+    }, 300);
   }
-);
+});
+
+watch([selectedFilterColumn, selectedType], () => {
+  if (!isUpdatingFromState.value) {
+    updateURLQuery();
+  }
+});
 
 watch(
   selectedFilters,
@@ -596,23 +550,20 @@ watch(
 );
 
 onMounted(() => {
-  console.log("onMounted - selectedFilters:", selectedFilters.value);
-  console.log("onMounted - route.query.filters:", route.query.filters);
-  console.log("onMounted - filterGroups:", filterGroups.value);
-  
-  // Sync filters from URL to UI on mount - ensure filterGroups are ready
-  // Use double nextTick to ensure everything is initialized
   nextTick(() => {
     nextTick(() => {
-      if (selectedFilters.value && Object.keys(selectedFilters.value).length > 0) {
-        console.log("Syncing filters on mount:", selectedFilters.value);
+      if (
+        selectedFilters.value &&
+        Object.keys(selectedFilters.value).length > 0
+      ) {
         syncFiltersToUI(selectedFilters.value);
-      } else if (route.query.filters && typeof route.query.filters === "string") {
-        // Also try to read from route.query directly if selectedFilters is empty
+      } else if (
+        route.query.filters &&
+        typeof route.query.filters === "string"
+      ) {
         try {
           const decoded = decodeURIComponent(route.query.filters);
           const parsed = JSON.parse(decoded);
-          console.log("Reading filters from route.query on mount:", parsed);
           selectedFilters.value = parsed;
           syncFiltersToUI(parsed);
         } catch (e) {
@@ -621,8 +572,7 @@ onMounted(() => {
       }
     });
   });
-  
-  // Update URL with current state if not present in URL
+
   if (!route.query.type && !route.query.search && !route.query.filters) {
     updateURLQuery();
   }
@@ -635,7 +585,6 @@ watch(
     const ids = table
       .getSelectedRowModel()
       .rows.map((r) => String((r.original as TableRowData).id));
-    console.debug("ids", ids);
     selectedRows.value = table.getSelectedRowModel().rows;
     emit("selection-change", ids);
   },
@@ -655,28 +604,32 @@ const filterItems = computed<DropdownMenuItem[]>(() =>
   }))
 );
 
-// Compute selected filter keys from selectedFilters and filterGroups
-// Priority: filterGroups.value (UI state) > selectedFilters (URL state)
+// Compute selected filter keys (UI state takes priority over URL state)
 const selectedFilterKeys = computed(() => {
   const keys: string[] = [];
-  
-  // First, check filterGroups for selected items (UI state is source of truth)
+
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
-      if (item.value !== null && item.value !== false && !keys.includes(item.key)) {
+      if (
+        item.value !== null &&
+        item.value !== false &&
+        !keys.includes(item.key)
+      ) {
         keys.push(item.key);
       }
     });
   });
-  
-  // Also add keys from selectedFilters that might not be in filterGroups yet
+
   Object.keys(selectedFilters.value).forEach((key) => {
-    if (selectedFilters.value[key] !== false && selectedFilters.value[key] !== null && !keys.includes(key)) {
+    if (
+      selectedFilters.value[key] !== false &&
+      selectedFilters.value[key] !== null &&
+      !keys.includes(key)
+    ) {
       keys.push(key);
     }
   });
-  
-  console.log("selectedFilterKeys computed:", keys, "selectedFilters:", selectedFilters.value, "filterGroups items:", filterGroups.value.flatMap(g => g.items.map(i => ({ key: i.key, value: i.value }))));
+
   return keys;
 });
 
@@ -687,6 +640,11 @@ const handleTypeTabChange = (type: string | number) => {
 };
 
 const handlePassToTraining = () => {
+  console.log(
+    "[Table.vue] handlePassToTraining called, selectedRows:",
+    selectedRows.value.length
+  );
+
   const raws = selectedRows.value
     .map((r) => (r.original as unknown as { _rawJson?: string })._rawJson)
     .filter((s): s is string => typeof s === "string" && s.length > 0)
@@ -698,6 +656,8 @@ const handlePassToTraining = () => {
       }
     })
     .filter((o): o is Record<string, unknown> => !!o);
+
+  console.log("[Table.vue] Parsed raws count:", raws.length);
 
   const looksJsonLdDataset =
     raws.length > 0 &&
@@ -713,7 +673,8 @@ const handlePassToTraining = () => {
     : ({ dataset: raws } as unknown);
 
   const payload = convertJsonLdForTraining(inputForConverter);
-  console.debug("training payload", payload);
+  console.log("[Table.vue] Training payload prepared:", payload);
+  console.log("[Table.vue] Emitting pass-to-training event");
   emit(
     "pass-to-training",
     payload as { dataset: Array<Record<string, unknown>> }

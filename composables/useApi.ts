@@ -516,5 +516,58 @@ export const useApi = () => {
       );
       return response || null;
     },
+
+    /**
+     * const response = await api.runFederatedTraining([{ identifier: "dataset-1" }]);
+     */
+    runFederatedTraining: async (
+      datasets: Array<Record<string, unknown>>,
+      options?: { showToast?: boolean }
+    ): Promise<{
+      status_code: number;
+      message: string;
+      data: {
+        id: string;
+        pipeline_name: string;
+        order_id: string;
+        status: string;
+      };
+    } | null> => {
+      const showToast = options?.showToast !== false;
+      console.log(
+        "[useApi.ts] runFederatedTraining called with datasets:",
+        datasets
+      );
+      console.log("[useApi.ts] Sending POST request to /api/training/run");
+      try {
+        const response = await $fetch<{
+          status_code: number;
+          message: string;
+          data: {
+            id: string;
+            pipeline_name: string;
+            order_id: string;
+            status: string;
+          };
+        }>("/api/training/run", {
+          method: "POST",
+          body: { datasets },
+        });
+        console.log(
+          "[useApi.ts] Received response from /api/training/run:",
+          response
+        );
+        return response;
+      } catch (error: unknown) {
+        console.error("Error running federated training:", error);
+        if (showToast) {
+          const errorMessage =
+            (error as { data?: { statusMessage?: string } })?.data
+              ?.statusMessage || t("app.error.fetch");
+          toaster.show("error", errorMessage);
+        }
+        return null;
+      }
+    },
   };
 };
