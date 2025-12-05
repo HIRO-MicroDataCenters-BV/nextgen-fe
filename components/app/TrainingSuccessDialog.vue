@@ -54,7 +54,7 @@ const cogUrl = computed(() => {
   try {
     const url = new URL(cogUrl);
     return url.origin; // Returns scheme + domain + port
-  } catch (e) {
+  } catch {
     return cogUrl;
   }
 });
