@@ -20,7 +20,7 @@
           {{ $t("action.cancel") }}
         </Button>
         <Button type="button" as-child>
-          <a :href="cogUrl" target="_blank" rel="noopener noreferrer">
+          <a :href="cogURL" target="_blank" rel="noopener noreferrer">
             {{ $t("action.processed") }}
             <Icon name="lucide:external-link" class="ml-2 h-4 w-4" />
           </a>
@@ -49,13 +49,7 @@ defineEmits<{
 }>();
 
 const config = useRuntimeConfig();
-const cogUrl = computed(() => {
-  const cogUrl = config.public.cogUrl as string;
-  try {
-    const url = new URL(cogUrl);
-    return url.origin; // Returns scheme + domain + port
-  } catch {
-    return cogUrl;
-  }
+const cogURL = computed(() => {
+  return config.public.cogURL as string;
 });
 </script>

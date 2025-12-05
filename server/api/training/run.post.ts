@@ -2,6 +2,7 @@ export default defineEventHandler(async (event) => {
   console.log("[server/api/training/run.post.ts] Request received");
   const config = useRuntimeConfig();
   const body = await readBody(event);
+  console.log("[server/api/training/run.post.ts] Config:", config);
   console.log(
     "[server/api/training/run.post.ts] Request body:",
     JSON.stringify(body, null, 2)
@@ -69,7 +70,7 @@ export default defineEventHandler(async (event) => {
   try {
     // COG API endpoint according to documentation:
     // POST https://dashboard.cog.hiro-develop.nl/apidev/training-builder-pipelines/dataspace/federated/run
-    const cogEndpoint = `${config.public.apiCogUrl}/training-builder-pipelines/dataspace/federated/run`;
+    const cogEndpoint = `${config.public.apiCogURL}/training-builder-pipelines/dataspace/federated/run`;
     console.log(
       "[server/api/training/run.post.ts] Sending request to COG:",
       cogEndpoint
@@ -97,7 +98,7 @@ export default defineEventHandler(async (event) => {
     // Extract FetchError details if available
     if (error && typeof error === "object") {
       const fetchError = error as Record<string, unknown>;
-      
+
       // Status code from COG API
       if (fetchError.statusCode) {
         errorDetails.statusCode = fetchError.statusCode;
