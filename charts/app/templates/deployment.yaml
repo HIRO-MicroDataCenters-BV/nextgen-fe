@@ -53,6 +53,12 @@ spec:
               value: "{{ .Values.backend.catalogServiceURL }}"
             - name: NUXT_PUBLIC_API_CONNECTOR_SERVICE_URL
               value: "{{ .Values.backend.connectorServiceURL }}"
+            - name: NUXT_PUBLIC_API_TRAINING_BUILDER_URL
+              value: "{{ .Values.backend.trainingBuilderServiceURL }}"
+            - name: NUXT_PUBLIC_COG_URL
+              value: "{{ .Values.backend.cogURL }}"
+            - name: NUXT_PUBLIC_API_COG_URL
+              value: "{{ .Values.backend.apiCogURL }}"
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
