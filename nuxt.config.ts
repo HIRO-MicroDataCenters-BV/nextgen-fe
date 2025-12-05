@@ -60,6 +60,9 @@ export default defineNuxtConfig({
       apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL || "",
       apiConnectorServiceURL: process.env.API_CONNECTOR_SERVICE_URL || "",
       catalogName: process.env.CATALOG_NAME || "hus_catalog",
+      cogURL: process.env.NUXT_PUBLIC_COG_URL || "",
+      apiCogURL: process.env.NUXT_PUBLIC_API_COG_URL || "",
+      trainingBuilderServiceURL: process.env.TRAINING_BUILDER_SERVICE_URL || "",
     },
   },
   vite: {
