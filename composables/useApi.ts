@@ -72,6 +72,8 @@ export const useApi = () => {
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;
 
+    console.log("config", config);
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
