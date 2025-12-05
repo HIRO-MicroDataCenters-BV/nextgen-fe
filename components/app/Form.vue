@@ -175,7 +175,7 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
         label: String(item),
       };
     });
-  } catch (error) {
+  } catch {
     // Error loading options
   } finally {
     loadingOptions.value[field.name] = false;
@@ -250,7 +250,7 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
       uploadedFiles.value[fieldName] = { filename, file };
       setFieldValue(fieldName, file);
     }
-  } catch (error) {
+  } catch {
     clearFileField(fieldName);
   } finally {
     uploadingFiles.value[fieldName] = false;
@@ -266,7 +266,7 @@ const handleFileDelete = async (fieldName: string) => {
     if (success) {
       clearFileField(fieldName);
     }
-  } catch (error) {
+  } catch {
     // Error deleting file
   }
 };

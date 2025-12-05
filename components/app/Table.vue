@@ -103,7 +103,7 @@ const selectedFilters = ref<Record<string, boolean | string | number>>(
         const parsed = JSON.parse(decoded);
         return parsed as Record<string, boolean | string | number>;
       }
-    } catch (e) {
+    } catch {
       // Error parsing filters
     }
     return {} as Record<string, boolean | string | number>;
@@ -454,7 +454,7 @@ watch(
               syncFiltersToUI(parsedFilters);
             });
           });
-        } catch (e) {
+        } catch {
           selectedFilters.value = {};
           nextTick(() => {
             nextTick(() => {
@@ -565,7 +565,7 @@ onMounted(() => {
           const parsed = JSON.parse(decoded);
           selectedFilters.value = parsed;
           syncFiltersToUI(parsed);
-        } catch (e) {
+        } catch {
           // Error parsing filters
         }
       }

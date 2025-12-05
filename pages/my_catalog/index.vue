@@ -162,7 +162,7 @@ const fetchTableData = async (
     };
 
     return updatedTableData;
-  } catch (e) {
+  } catch {
     return {
       data: [],
       pagination: {

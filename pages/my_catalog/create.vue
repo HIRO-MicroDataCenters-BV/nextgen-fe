@@ -100,7 +100,7 @@ const fields: FormFieldDefinition[] = [
   },
 ];
 
-const onChangeFile = (file: File) => {
+const onChangeFile = (_file: File) => {
   // File changed
 };
 const onSubmitDirect = () => {

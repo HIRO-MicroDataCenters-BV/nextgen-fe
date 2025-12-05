@@ -150,7 +150,7 @@ const fetchTableData = async (
     };
 
     return updatedTableData;
-  } catch (error) {
+  } catch {
     return {
       data: [],
       pagination: {

@@ -62,7 +62,7 @@ onMounted(async () => {
         });
       }
     }
-  } catch (error) {
+  } catch {
     // Error loading dataset
   }
 });
