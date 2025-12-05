@@ -1,31 +1,14 @@
 export default defineEventHandler(async (event) => {
-  console.log("[server/api/training/run.post.ts] Request received");
   const config = useRuntimeConfig();
   const body = await readBody(event);
-  console.log("[server/api/training/run.post.ts] Config:", config);
-  console.log(
-    "[server/api/training/run.post.ts] Request body:",
-    JSON.stringify(body, null, 2)
-  );
   const { datasets } = body;
 
   if (!datasets || !Array.isArray(datasets) || datasets.length === 0) {
-    console.error("[server/api/training/run.post.ts] No datasets provided");
     throw createError({
       statusCode: 400,
       statusMessage: "No datasets provided",
     });
   }
-
-  console.log(
-    "[server/api/training/run.post.ts] Processing",
-    datasets.length,
-    "datasets"
-  );
-  console.log(
-    "[server/api/training/run.post.ts] Datasets data:",
-    JSON.stringify(datasets, null, 2)
-  );
 
   // Extract ALL data from real datasets
   const datasetIds = datasets
@@ -70,23 +53,28 @@ export default defineEventHandler(async (event) => {
   try {
     // COG API endpoint according to documentation:
     // POST https://dashboard.cog.hiro-develop.nl/apidev/training-builder-pipelines/dataspace/federated/run
-    const cogEndpoint = `${config.public.apiCogURL}/training-builder-pipelines/dataspace/federated/run`;
-    console.log(
-      "[server/api/training/run.post.ts] Sending request to COG:",
-      cogEndpoint
-    );
-    console.log(
-      "[server/api/training/run.post.ts] Payload:",
-      JSON.stringify(payload, null, 2)
-    );
+    const apiCogUrl = config.public.apiCogURL;
+
+    if (!apiCogUrl) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: "COG API URL is not configured",
+        data: {
+          error: "apiCogURL is missing in runtime config",
+        },
+      });
+    }
+
+    const cogEndpoint = `${apiCogUrl}/training-builder-pipelines/dataspace/federated/run`;
+
     const response = await $fetch(cogEndpoint, {
       method: "POST",
       body: payload,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 60000, // 60 seconds timeout
     });
-    console.log(
-      "[server/api/training/run.post.ts] COG response:",
-      JSON.stringify(response, null, 2)
-    );
     return response;
   } catch (error: unknown) {
     // Extract all available error information from COG API response
@@ -123,6 +111,9 @@ export default defineEventHandler(async (event) => {
       if (fetchError.responseBody) {
         errorDetails.responseBody = fetchError.responseBody;
       }
+      if (fetchError.responseData) {
+        errorDetails.responseData = fetchError.responseData;
+      }
 
       // Request details
       if (fetchError.request) {
@@ -139,19 +130,21 @@ export default defineEventHandler(async (event) => {
       if (fetchError.stack) {
         errorDetails.stack = fetchError.stack;
       }
+      if (fetchError.name) {
+        errorDetails.name = fetchError.name;
+      }
 
       // Copy all other properties
       Object.keys(fetchError).forEach((key) => {
         if (!errorDetails[key]) {
-          errorDetails[key] = fetchError[key];
+          try {
+            errorDetails[key] = fetchError[key];
+          } catch {
+            // Skip non-serializable properties
+          }
         }
       });
     }
-
-    console.error(
-      "[server/api/training/run.post.ts] COG API error details:",
-      JSON.stringify(errorDetails, null, 2)
-    );
 
     throw createError({
       statusCode: (errorDetails.statusCode as number) || 500,

@@ -104,7 +104,7 @@ const selectedFilters = ref<Record<string, boolean | string | number>>(
         return parsed as Record<string, boolean | string | number>;
       }
     } catch (e) {
-      console.error("Error parsing filters from URL:", e);
+      // Error parsing filters
     }
     return {} as Record<string, boolean | string | number>;
   })()
@@ -455,7 +455,6 @@ watch(
             });
           });
         } catch (e) {
-          console.error("Error parsing filters from URL:", e);
           selectedFilters.value = {};
           nextTick(() => {
             nextTick(() => {
@@ -567,7 +566,7 @@ onMounted(() => {
           selectedFilters.value = parsed;
           syncFiltersToUI(parsed);
         } catch (e) {
-          console.error("Error parsing filters from route.query on mount:", e);
+          // Error parsing filters
         }
       }
     });
@@ -640,11 +639,6 @@ const handleTypeTabChange = (type: string | number) => {
 };
 
 const handlePassToTraining = () => {
-  console.log(
-    "[Table.vue] handlePassToTraining called, selectedRows:",
-    selectedRows.value.length
-  );
-
   const raws = selectedRows.value
     .map((r) => (r.original as unknown as { _rawJson?: string })._rawJson)
     .filter((s): s is string => typeof s === "string" && s.length > 0)
@@ -656,8 +650,6 @@ const handlePassToTraining = () => {
       }
     })
     .filter((o): o is Record<string, unknown> => !!o);
-
-  console.log("[Table.vue] Parsed raws count:", raws.length);
 
   const looksJsonLdDataset =
     raws.length > 0 &&
@@ -673,8 +665,6 @@ const handlePassToTraining = () => {
     : ({ dataset: raws } as unknown);
 
   const payload = convertJsonLdForTraining(inputForConverter);
-  console.log("[Table.vue] Training payload prepared:", payload);
-  console.log("[Table.vue] Emitting pass-to-training event");
   emit(
     "pass-to-training",
     payload as { dataset: Array<Record<string, unknown>> }
@@ -682,12 +672,10 @@ const handlePassToTraining = () => {
 };
 
 const handleClearAll = () => {
-  console.log("clear all");
   rowSelection.value = {};
 };
 
 const handleCreate = () => {
-  console.log("create");
   navigateTo("/my_catalog/create");
 };
 

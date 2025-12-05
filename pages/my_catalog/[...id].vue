@@ -171,6 +171,25 @@ onMounted(async () => {
       }
     }
 
+    // Extract related_data_product from dcat:inSeries
+    // Use dcterms:title.@value as the value (e.g., "disease_xyz")
+    let relatedDataProductValue: string | null = null;
+    const inSeries = dataset["dcat:inSeries"];
+
+    if (inSeries && typeof inSeries === "object" && inSeries !== null) {
+      const inSeriesObj = inSeries as Record<string, unknown>;
+      const dctermsTitle = inSeriesObj["dcterms:title"] as
+        | { "@value": string }
+        | undefined;
+      if (
+        dctermsTitle &&
+        typeof dctermsTitle === "object" &&
+        "@value" in dctermsTitle
+      ) {
+        relatedDataProductValue = dctermsTitle["@value"];
+      }
+    }
+
     setPage({
       ...page.value,
       title: (converted.title as string) || t("title.edit_catalog_item"),
@@ -181,12 +200,12 @@ onMounted(async () => {
 
     initialValues.value = {
       item_type: datasetType.value,
-      related_data_product: null,
+      related_data_product: relatedDataProductValue,
       file: null,
       metadata_content: metadataString,
     };
-  } catch (error) {
-    console.error("Error loading dataset:", error);
+  } catch {
+    // Error loading dataset
   } finally {
     loading.value = false;
   }
@@ -215,8 +234,8 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
     if (result) {
       goBackToCatalog();
     }
-  } catch (error) {
-    console.error("Failed to save dataset:", error);
+  } catch {
+    // Error handling
   }
 };
 </script>

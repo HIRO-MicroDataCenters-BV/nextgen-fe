@@ -63,7 +63,7 @@ onMounted(async () => {
       }
     }
   } catch (error) {
-    console.error("Error loading dataset:", error);
+    // Error loading dataset
   }
 });
 </script>

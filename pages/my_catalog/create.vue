@@ -101,7 +101,7 @@ const fields: FormFieldDefinition[] = [
 ];
 
 const onChangeFile = (file: File) => {
-  console.log("File changed: ", file);
+  // File changed
 };
 const onSubmitDirect = () => {
   formRef.value.submit();
@@ -111,7 +111,6 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
   const uploadedFilename = formRef.value?.getUploadedFile?.("file");
 
   if (!uploadedFilename) {
-    console.error("File is required for creation");
     return;
   }
 

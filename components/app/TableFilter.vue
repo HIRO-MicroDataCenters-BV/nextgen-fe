@@ -25,7 +25,6 @@ const q = ref("");
 
 const handleSelect = (option: { key: string; label: string }) => {
   const isSelected = selectedValues.value.includes(option.label);
-  console.log(isSelected, option.label);
   if (isSelected) {
     const index = selectedValues.value.indexOf(option.label);
     selectedValues.value.splice(index, 1);

@@ -11,7 +11,6 @@ export const useToaster = () => {
         ...(data || {}),
       };
       if (type === "error") {
-        console.log(message);
         toast.error(message, { ...options });
       } else {
         toast.info(message, { ...options });

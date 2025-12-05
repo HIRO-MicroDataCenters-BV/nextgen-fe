@@ -146,16 +146,10 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
     }
 
     if (!data) {
-      const pathStr = dataPath || "root";
-      console.warn(`No data found at path ${pathStr} for field ${field.name}`);
       return;
     }
 
     if (!Array.isArray(data)) {
-      const pathStr = dataPath || "root";
-      console.warn(
-        `Data at path ${pathStr} is not an array for field ${field.name}`
-      );
       return;
     }
 
@@ -182,7 +176,7 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
       };
     });
   } catch (error) {
-    console.error(`Error loading options for field ${field.name}:`, error);
+    // Error loading options
   } finally {
     loadingOptions.value[field.name] = false;
   }
@@ -257,7 +251,6 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
       setFieldValue(fieldName, file);
     }
   } catch (error) {
-    console.error("File upload error:", error);
     clearFileField(fieldName);
   } finally {
     uploadingFiles.value[fieldName] = false;
@@ -274,7 +267,7 @@ const handleFileDelete = async (fieldName: string) => {
       clearFileField(fieldName);
     }
   } catch (error) {
-    console.error("File delete error:", error);
+    // Error deleting file
   }
 };
 

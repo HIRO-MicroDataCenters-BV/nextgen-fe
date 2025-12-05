@@ -72,8 +72,6 @@ export const useApi = () => {
     const showToast = options?.showToast !== false;
     const timeout = options?.timeout || 30000;
 
-    console.log("config", config);
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -156,7 +154,6 @@ export const useApi = () => {
         return null;
       }
 
-      console.error("Fetch error:", err);
       if (showToast) {
         toaster.show("error", t("app.error.fetch"));
       }
@@ -536,11 +533,6 @@ export const useApi = () => {
       };
     } | null> => {
       const showToast = options?.showToast !== false;
-      console.log(
-        "[useApi.ts] runFederatedTraining called with datasets:",
-        datasets
-      );
-      console.log("[useApi.ts] Sending POST request to /api/training/run");
       try {
         const response = await $fetch<{
           status_code: number;
@@ -555,13 +547,8 @@ export const useApi = () => {
           method: "POST",
           body: { datasets },
         });
-        console.log(
-          "[useApi.ts] Received response from /api/training/run:",
-          response
-        );
         return response;
       } catch (error: unknown) {
-        console.error("Error running federated training:", error);
         if (showToast) {
           const errorMessage =
             (error as { data?: { statusMessage?: string } })?.data

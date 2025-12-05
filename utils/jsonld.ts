@@ -287,13 +287,11 @@ export function transformSearchResponseToTableData(
       }
     });
   }
-  console.log("datasets", datasets);
 
   const transformedData = datasets.map((dataset: JsonLdObject) =>
     transformDatasetToTableRow(dataset)
   );
   const totalPages = Math.ceil(transformedData.length / currentLimit);
-  console.log("tras", transformedData);
   return {
     data: transformedData,
     pagination: {
@@ -715,8 +713,6 @@ export function convertJsonLdDatasetToJson(
     result._raw = dataset;
   }
 
-  console.log("result", result);
-
   return result;
 }
 
@@ -1074,10 +1070,7 @@ export function createDatasetJsonLd(
         parsedMetadataContent = parsed;
       }
     } catch {
-      console.error(
-        "Failed to parse metadata_content:",
-        formData.metadata_content
-      );
+      // Failed to parse metadata_content
     }
   }
 

@@ -49,7 +49,6 @@ const selectedCount = ref(0);
 watch(
   () => props.rows,
   (rows) => {
-    console.log("rows changed", rows);
     selectedCount.value = Array.isArray(rows) ? rows.length : 0;
   },
   { immediate: true, deep: true }
@@ -60,9 +59,6 @@ const emit = defineEmits<{
 }>();
 
 const handlePassToTraining = () => {
-  console.log(
-    "[RowMenu.vue] handlePassToTraining called, emitting on-pass-to-training"
-  );
   // Emit event to Table.vue which will handle data conversion and API call
   emit("on-pass-to-training");
 };

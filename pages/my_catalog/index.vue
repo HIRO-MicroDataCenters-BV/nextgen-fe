@@ -122,16 +122,7 @@ const fetchTableData = async (
   try {
     // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
-
-    // Debug: log search parameters
-    console.log("Search params:", {
-      name: params.name,
-      description: params.description,
-      all: params.all,
-      type: params.type,
-      biobank: params.biobank,
-    });
+    const limit = Math.max(1, params.limit || 3);
 
     const filtersObj = createFiltersObject(
       (params.filters || {}) as unknown as Record<string, unknown>
@@ -147,9 +138,6 @@ const fetchTableData = async (
       limit,
       filters: filtersObj.length > 0 ? filtersObj : undefined,
     });
-
-    // Debug: log the filter being sent
-    console.log("Filter being sent to API:", JSON.stringify(filter, null, 2));
     const response = await api.getLocalCatalog(filter as SearchFilter);
 
     const tableData = transformSearchResponseToTableData(
@@ -175,7 +163,6 @@ const fetchTableData = async (
 
     return updatedTableData;
   } catch (e) {
-    console.log("Error fetching table data:", e);
     return {
       data: [],
       pagination: {

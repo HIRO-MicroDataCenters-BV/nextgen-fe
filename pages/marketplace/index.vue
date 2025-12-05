@@ -59,16 +59,7 @@ const successData = ref<{
 const handlePassToTraining = async (payload: {
   dataset: Array<Record<string, unknown>>;
 }) => {
-  console.log(
-    "[marketplace/index.vue] handlePassToTraining called with payload:",
-    payload
-  );
-  console.log(
-    "[marketplace/index.vue] Calling api.runFederatedTraining with datasets:",
-    payload.dataset
-  );
   const response = await api.runFederatedTraining(payload.dataset);
-  console.log("[marketplace/index.vue] API response:", response);
   if (response) {
     successData.value = response;
     showSuccessDialog.value = true;
@@ -124,15 +115,6 @@ const fetchTableData = async (
     const page = Math.max(1, params.page || 1);
     const limit = Math.max(1, params.limit || 3);
 
-    // Debug: log search parameters
-    console.log("Search params:", {
-      name: params.name,
-      description: params.description,
-      all: params.all,
-      type: params.type,
-      biobank: params.biobank,
-    });
-
     const filtersObj = createFiltersObject(params.filters || {});
     const filter = createTableSearchFilter({
       name: params.name,
@@ -145,9 +127,6 @@ const fetchTableData = async (
       limit,
       filters: filtersObj.length > 0 ? filtersObj : undefined,
     });
-
-    // Debug: log the filter being sent
-    console.log("Filter being sent to API:", JSON.stringify(filter, null, 2));
     const response = await api.searchDistributed(filter as SearchFilter);
     const tableData = transformSearchResponseToTableData(
       response as unknown as JsonLdResponse,
@@ -172,7 +151,6 @@ const fetchTableData = async (
 
     return updatedTableData;
   } catch (error) {
-    console.error("Error fetching table data:", error);
     return {
       data: [],
       pagination: {

@@ -5,7 +5,7 @@
         v-if="source"
         :src="`/images/icons/${source}.png`"
         class="size-8"
-      ><span class="uppercase text-sm font-medium">{{ source }}</span>
+      /><span class="uppercase text-sm font-medium">{{ source }}</span>
     </div>
     <div>
       <span class="text-sm text-muted-foreground">{{
@@ -17,11 +17,9 @@
 
 <script lang="ts" setup>
 const { page } = useApp();
-console.log("page", page.value);
 const source = ref(page.value.source);
 
 watch(page, (newVal) => {
-  console.log("newVal", newVal);
   source.value = newVal.source;
 });
 
