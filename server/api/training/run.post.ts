@@ -151,8 +151,8 @@ export default defineEventHandler(async (event) => {
         if (!errorDetails[key]) {
           try {
             errorDetails[key] = fetchError[key];
-          } catch (e) {
-            void e;
+          } catch {
+            
           }
         }
       });

@@ -29,7 +29,8 @@ export class CheckoutService {
         distribution = [];
       }
 
-      const { _original_dcat_distribution, ...datasetWithoutTempFields } = d;
+      const datasetWithoutTempFields = { ...d };
+      delete datasetWithoutTempFields._original_dcat_distribution;
 
       const datasetObj: Record<string, unknown> = {
         "@type": "dcat:Dataset",
