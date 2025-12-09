@@ -12,6 +12,9 @@ const props = withDefaults(defineProps<PrimitiveProps & {
   size?: ItemVariants["size"]
 }>(), {
   as: "div",
+  class: undefined,
+  variant: undefined,
+  size: undefined,
 })
 </script>
 

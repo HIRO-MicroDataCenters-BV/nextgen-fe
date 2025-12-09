@@ -10,6 +10,7 @@ const props = withDefaults(defineProps<{
   colspan?: number
 }>(), {
   colspan: 1,
+  class: undefined,
 })
 
 const delegatedProps = reactiveOmit(props, "class")

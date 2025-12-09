@@ -152,7 +152,7 @@ export default defineEventHandler(async (event) => {
           try {
             errorDetails[key] = fetchError[key];
           } catch {
-            
+            // Ignore non-serializable properties
           }
         }
       });

@@ -14,6 +14,7 @@ const props = withDefaults(defineProps<NavigationMenuRootProps & {
   viewport?: boolean
 }>(), {
   viewport: true,
+  class: undefined,
 })
 const emits = defineEmits<NavigationMenuRootEmits>()
 

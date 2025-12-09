@@ -14,6 +14,8 @@ import { CalendarCell, CalendarCellTrigger, CalendarGrid, CalendarGridBody, Cale
 const props = withDefaults(defineProps<CalendarRootProps & { class?: HTMLAttributes["class"], layout?: LayoutTypes, yearRange?: DateValue[] }>(), {
   modelValue: undefined,
   layout: undefined,
+  class: undefined,
+  yearRange: undefined,
 })
 const emits = defineEmits<CalendarRootEmits>()
 

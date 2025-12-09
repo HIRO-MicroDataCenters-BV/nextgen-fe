@@ -12,11 +12,13 @@ const props = withDefaults(defineProps<{
   class?: HTMLAttributes["class"]
 }>(), {
   verticalAlign: "bottom",
+  nameKey: undefined,
+  class: undefined,
 })
 
 const { id, config } = useChart()
 
-const payload = computed(() => Object.entries(config.value).map(([key, value]) => {
+const payload = computed(() => Object.entries(config.value).map(([key, _value]) => {
   return {
     key: props.nameKey || key,
     itemConfig: config.value[key],

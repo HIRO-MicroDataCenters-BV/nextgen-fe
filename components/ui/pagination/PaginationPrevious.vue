@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<PaginationPrevProps & {
   class?: HTMLAttributes["class"]
 }>(), {
   size: "default",
+  class: undefined,
 })
 
 const delegatedProps = reactiveOmit(props, "class", "size")

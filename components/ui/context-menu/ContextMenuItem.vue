@@ -14,6 +14,7 @@ const props = withDefaults(defineProps<ContextMenuItemProps & {
   variant?: "default" | "destructive"
 }>(), {
   variant: "default",
+  class: undefined,
 })
 const emits = defineEmits<ContextMenuItemEmits>()
 

@@ -70,11 +70,12 @@ const handlePassToTraining = async (payload: {
   );
 
   if (trainingResponse) {
-    const cogData = (trainingResponse as any).data || trainingResponse;
+    const response = trainingResponse as Record<string, unknown>;
+    const cogData = (response.data as Record<string, unknown>) || response;
     
     successData.value = {
-      status_code: (trainingResponse as any).status_code || 201,
-      message: (trainingResponse as any).message || "Pipeline launched successfully",
+      status_code: (response.status_code as number) || 201,
+      message: (response.message as string) || "Pipeline launched successfully",
       data: {
         id: cogData?.id || "",
         pipeline_name: cogData?.pipeline_name || "FederatedLearningPipeline",

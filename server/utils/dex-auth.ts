@@ -49,7 +49,7 @@ export async function getDexSessionCookie(): Promise<string> {
         const agent = new https.Agent({
             rejectUnauthorized: false,
         });
-        (fetchOptions as any).agent = agent;
+        (fetchOptions as Record<string, unknown>).agent = agent;
     }
 
     // Helper to extract and store cookies from response
