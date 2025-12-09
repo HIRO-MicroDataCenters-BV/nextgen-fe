@@ -59,9 +59,29 @@ const successData = ref<{
 const handlePassToTraining = async (payload: {
   dataset: Array<Record<string, unknown>>;
 }) => {
-  const response = await api.runFederatedTraining(payload.dataset);
-  if (response) {
-    successData.value = response;
+  const checkoutResponse = await api.checkout(payload.dataset);
+  if (!checkoutResponse) {
+    return;
+  }
+
+  const trainingResponse = await api.training.run(
+    payload.dataset,
+    checkoutResponse.order_id
+  );
+
+  if (trainingResponse) {
+    const cogData = (trainingResponse as any).data || trainingResponse;
+    
+    successData.value = {
+      status_code: (trainingResponse as any).status_code || 201,
+      message: (trainingResponse as any).message || "Pipeline launched successfully",
+      data: {
+        id: cogData?.id || "",
+        pipeline_name: cogData?.pipeline_name || "FederatedLearningPipeline",
+        order_id: checkoutResponse.order_id,
+        status: cogData?.status || "RUNNING",
+      },
+    };
     showSuccessDialog.value = true;
   }
 };

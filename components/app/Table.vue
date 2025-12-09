@@ -53,9 +53,11 @@ const emit = defineEmits<{
     value: { dataset: Array<Record<string, unknown>> }
   ): void;
 }>();
-const data = shallowRef<TableRowData[]>([]);
+const serverData = shallowRef<TableRowData[]>([]); // Raw data from server
+const data = shallowRef<TableRowData[]>([]); // Filtered data for display
 const rawById = ref<Record<string, unknown>>({});
 const isLoading = ref(true);
+const clientSearchTerm = ref(""); // Client-side search term
 
 const route = useRoute();
 const router = useRouter();
@@ -94,6 +96,11 @@ const syncFiltersToUI = (
 // Initialize from URL query parameters
 const selectedFilterColumn = ref((route.query.searchColumn as string) || "all");
 const searchValue = ref((route.query.search as string) || "");
+
+// Initialize client search from URL
+if (route.query.search && typeof route.query.search === "string") {
+  clientSearchTerm.value = route.query.search;
+}
 const selectedType = ref((route.query.type as string) || "datasets");
 const selectedFilters = ref<Record<string, boolean | string | number>>(
   (() => {
@@ -195,7 +202,8 @@ const handleFilterChange = (
   filterGroups.value = [...filterGroups.value];
 
   searchValue.value = "";
-  applySearchFilter();
+  clientSearchTerm.value = ""; // Clear client search
+  applyClientSearch(); // Reset to show all filtered data
   updateURLQuery();
   fetchData();
 };
@@ -222,6 +230,7 @@ const handleRemoveFilter = (key: string) => {
 const handleClearAllFilters = () => {
   selectedFilters.value = {};
   searchValue.value = "";
+  clientSearchTerm.value = ""; // Clear client search
   selectedFilterColumn.value = "all";
   currentPage.value = 0;
   table.setPageIndex(0);
@@ -233,23 +242,21 @@ const handleClearAllFilters = () => {
   });
   filterGroups.value = [...filterGroups.value];
 
-  applySearchFilter();
+  applyClientSearch(); // Apply empty search (shows all data)
   updateURLQuery();
   fetchData();
 };
 
 const fetchData = async () => {
   rowSelection.value = {};
-  //selectedFilters.value = { "med:age": true };
   isLoading.value = true;
+  
+  // Fetch data WITHOUT client search term (only server filters)
   const resp = await dataSource({
     page: table.getState().pagination.pageIndex + 1,
     limit: table.getState().pagination.pageSize,
     type: selectedType.value,
-    ...(searchValue.value &&
-      selectedFilterColumn.value && {
-        [selectedFilterColumn.value]: searchValue.value,
-      }),
+    // Remove client search from server request
     filters: {
       ...selectedFilters.value,
       ...getActiveFilters(),
@@ -296,7 +303,28 @@ const fetchData = async () => {
       _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
     } as unknown as TableRowData;
   });
-  data.value = filteredData;
+  
+  // Store server data and apply client search
+  serverData.value = filteredData;
+  applyClientSearch();
+};
+
+// Client-side search filter
+const applyClientSearch = () => {
+  if (!clientSearchTerm.value || !clientSearchTerm.value.trim()) {
+    data.value = serverData.value;
+    return;
+  }
+
+  const searchLower = clientSearchTerm.value.toLowerCase().trim();
+  
+  data.value = serverData.value.filter((row: TableRowData) => {
+    // Search across all column values
+    return Object.values(row).some((value) => {
+      if (value === null || value === undefined) return false;
+      return String(value).toLowerCase().includes(searchLower);
+    });
+  });
 };
 
 const columnFilters = ref<ColumnFiltersState>(
@@ -406,22 +434,10 @@ const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 
 const applySearchFilter = () => {
-  columnFilters.value = columnFilters.value.filter(
-    (filter) => filter.id !== "search"
-  );
-  if (!searchValue.value) {
-    updateURLQuery();
-    fetchData();
-    return;
-  }
-  const searchFilter: TableFilter = {
-    id: "search",
-    value: searchValue.value,
-    column: selectedFilterColumn.value,
-  };
-  columnFilters.value.push(searchFilter as unknown as TableFilter);
+  // Update client search term and apply filter
+  clientSearchTerm.value = searchValue.value;
+  applyClientSearch();
   updateURLQuery();
-  fetchData();
 };
 
 watch(
@@ -438,9 +454,11 @@ watch(
 
       if (newQuery.search && typeof newQuery.search === "string") {
         searchValue.value = newQuery.search;
+        clientSearchTerm.value = newQuery.search; // Sync client search
         selectedFilterColumn.value = (newQuery.searchColumn as string) || "all";
       } else {
         searchValue.value = "";
+        clientSearchTerm.value = ""; // Clear client search
         selectedFilterColumn.value = "all";
       }
 
@@ -527,8 +545,17 @@ watch(searchValue, () => {
   if (!isUpdatingFromState.value) {
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
+      clientSearchTerm.value = searchValue.value;
+      applyClientSearch();
       updateURLQuery();
     }, 300);
+  }
+});
+
+// Watch client search term changes
+watch(clientSearchTerm, () => {
+  if (!isUpdatingFromState.value) {
+    applyClientSearch();
   }
 });
 
@@ -664,7 +691,26 @@ const handlePassToTraining = () => {
     ? ({ "dcat:dataset": raws } as unknown)
     : ({ dataset: raws } as unknown);
 
+  // Convert to simplified format for training
   const payload = convertJsonLdForTraining(inputForConverter);
+  
+  // Attach original JSON-LD data to each dataset for Checkout Service
+  // This preserves dcat:distribution in JSON-LD format
+  if (looksJsonLdDataset && raws.length > 0) {
+    payload.dataset = payload.dataset.map((converted: Record<string, unknown>, index: number) => {
+      const original = raws[index];
+      if (original && typeof original === "object") {
+        // Preserve original dcat:distribution if it exists
+        if (original["dcat:distribution"]) {
+          (converted as Record<string, unknown>)["_original_dcat_distribution"] = original["dcat:distribution"];
+        }
+        // Preserve original region from catalog if available
+        // Region might be in the catalog's dcterms:title
+      }
+      return converted;
+    });
+  }
+  
   emit(
     "pass-to-training",
     payload as { dataset: Array<Record<string, unknown>> }

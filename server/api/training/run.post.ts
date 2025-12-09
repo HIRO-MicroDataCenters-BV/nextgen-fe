@@ -1,7 +1,9 @@
+import { getDexSessionCookie } from "~/server/utils/dex-auth";
+
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const body = await readBody(event);
-  const { datasets } = body;
+  const { datasets, order_id } = body;
 
   if (!datasets || !Array.isArray(datasets) || datasets.length === 0) {
     throw createError({
@@ -10,7 +12,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Extract ALL data from real datasets
+  if (!order_id) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "No order_id provided",
+    });
+  }
+
   const datasetIds = datasets
     .map((d: Record<string, unknown>) => {
       return (
@@ -30,29 +38,37 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Build payload using ONLY real data from datasets - NO MOCKS!
   const firstDataset = datasets[0] as Record<string, unknown>;
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     name:
       (firstDataset.title as string) ||
       (firstDataset.identifier as string) ||
       "FederatedLearningPipeline",
-    datasets: datasets, // Pass ALL real datasets
-    datasetIds: datasetIds, // Comma-separated identifiers for local_data_connector
-    input_path: [
-      {
-        name: "local_data_connector",
-        type: "String",
-        default: datasetIds,
-      },
-    ],
-    order_id: crypto.randomUUID(),
+    datasets: datasets,
+    datasetIds: datasetIds,
+    order_id: order_id,
   };
 
+  if (firstDataset.pipeline_components) {
+    payload.pipeline_components = firstDataset.pipeline_components;
+  } else {
+    payload.pipeline_components = [];
+  }
+
+  if (firstDataset.input_path) {
+    payload.input_path = firstDataset.input_path;
+  } else {
+    payload.input_path = [];
+  }
+
+  if (firstDataset.output_path) {
+    payload.output_path = firstDataset.output_path;
+  } else {
+    payload.output_path = [];
+  }
+
   try {
-    // COG API endpoint according to documentation:
-    // POST https://dashboard.cog.hiro-develop.nl/apidev/training-builder-pipelines/dataspace/federated/run
     const apiCogUrl = config.public.apiCogURL;
 
     if (!apiCogUrl) {
@@ -65,6 +81,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    const cookieHeader = await getDexSessionCookie();
     const cogEndpoint = `${apiCogUrl}/training-builder-pipelines/dataspace/federated/run`;
 
     const response = await $fetch(cogEndpoint, {
@@ -72,22 +89,21 @@ export default defineEventHandler(async (event) => {
       body: payload,
       headers: {
         "Content-Type": "application/json",
+        Cookie: cookieHeader,
       },
-      timeout: 60000, // 60 seconds timeout
+      timeout: 60000,
     });
+
     return response;
   } catch (error: unknown) {
-    // Extract all available error information from COG API response
     const errorDetails: Record<string, unknown> = {
       errorType: error instanceof Error ? error.constructor.name : typeof error,
       message: error instanceof Error ? error.message : String(error),
     };
 
-    // Extract FetchError details if available
     if (error && typeof error === "object") {
       const fetchError = error as Record<string, unknown>;
 
-      // Status code from COG API
       if (fetchError.statusCode) {
         errorDetails.statusCode = fetchError.statusCode;
       }
@@ -101,7 +117,6 @@ export default defineEventHandler(async (event) => {
         errorDetails.statusText = fetchError.statusText;
       }
 
-      // Response body from COG API
       if (fetchError.response) {
         errorDetails.response = fetchError.response;
       }
@@ -115,7 +130,6 @@ export default defineEventHandler(async (event) => {
         errorDetails.responseData = fetchError.responseData;
       }
 
-      // Request details
       if (fetchError.request) {
         errorDetails.request = fetchError.request;
       }
@@ -123,7 +137,6 @@ export default defineEventHandler(async (event) => {
         errorDetails.url = fetchError.url;
       }
 
-      // Additional error info
       if (fetchError.cause) {
         errorDetails.cause = fetchError.cause;
       }
@@ -134,13 +147,12 @@ export default defineEventHandler(async (event) => {
         errorDetails.name = fetchError.name;
       }
 
-      // Copy all other properties
       Object.keys(fetchError).forEach((key) => {
         if (!errorDetails[key]) {
           try {
             errorDetails[key] = fetchError[key];
-          } catch {
-            // Skip non-serializable properties
+          } catch (e) {
+            void e;
           }
         }
       });

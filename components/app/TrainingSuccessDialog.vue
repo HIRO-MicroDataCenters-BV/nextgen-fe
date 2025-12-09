@@ -20,7 +20,11 @@
           {{ $t("action.cancel") }}
         </Button>
         <Button type="button" as-child>
-          <a :href="cogURL" target="_blank" rel="noopener noreferrer">
+          <a
+            :href="`${cogURL}${orderId ? '?order_id=' + orderId : ''}`"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             {{ $t("action.processed") }}
             <Icon name="lucide:external-link" class="ml-2 h-4 w-4" />
           </a>
@@ -42,6 +46,9 @@ import { Button } from "@/components/ui/button";
 
 defineProps<{
   open: boolean;
+  pipelineId?: string;
+  pipelineName?: string;
+  orderId?: string;
 }>();
 
 defineEmits<{
