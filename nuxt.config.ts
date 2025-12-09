@@ -1,9 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
+
+  alias: {
+    "@": fileURLToPath(new URL(".", import.meta.url)),
+  },
 
   modules: [
     "@nuxt/eslint",
@@ -51,7 +56,7 @@ export default defineNuxtConfig({
   },
   shadcn: {
     prefix: "",
-    componentDir: "./components/ui",
+    componentDir: "@/components/ui",
   },
   css: ["~/assets/css/tailwind.css"],
   runtimeConfig: {
@@ -67,5 +72,10 @@ export default defineNuxtConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL(".", import.meta.url)),
+      },
+    },
   },
 });
