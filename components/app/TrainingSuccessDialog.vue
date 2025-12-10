@@ -46,8 +46,6 @@ import { Button } from "@/components/ui/button";
 
 defineProps<{
   open: boolean;
-  pipelineId?: string;
-  pipelineName?: string;
   orderId?: string;
 }>();
 
@@ -57,6 +55,10 @@ defineEmits<{
 
 const config = useRuntimeConfig();
 const cogURL = computed(() => {
-  return config.public.cogURL as string;
+  const baseUrl = config.public.cogURL as string;
+  if (baseUrl) {
+    return `${baseUrl}/pipelines/builder/new`;
+  }
+  return "https://dashboard.cog.hiro-develop.nl/uidev/pipelines/builder/new";
 });
 </script>
