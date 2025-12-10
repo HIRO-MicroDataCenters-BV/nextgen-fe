@@ -12,10 +12,8 @@
     />
     <TrainingSuccessDialog
       :open="showSuccessDialog"
-      :pipeline-id="successData?.data?.id"
-      :pipeline-name="successData?.data?.pipeline_name"
       :order-id="successData?.data?.order_id"
-      @on-close="showSuccessDialog = false"
+      @update:open="showSuccessDialog = $event"
     />
   </AppContent>
 </template>
@@ -64,27 +62,17 @@ const handlePassToTraining = async (payload: {
     return;
   }
 
-  const trainingResponse = await api.training.run(
-    payload.dataset,
-    checkoutResponse.order_id
-  );
-
-  if (trainingResponse) {
-    const response = trainingResponse as Record<string, unknown>;
-    const cogData = (response.data as Record<string, unknown>) || response;
-    
-    successData.value = {
-      status_code: (response.status_code as number) || 201,
-      message: (response.message as string) || "Pipeline launched successfully",
-      data: {
-        id: cogData?.id || "",
-        pipeline_name: cogData?.pipeline_name || "FederatedLearningPipeline",
-        order_id: checkoutResponse.order_id,
-        status: cogData?.status || "RUNNING",
-      },
-    };
-    showSuccessDialog.value = true;
-  }
+  successData.value = {
+    status_code: 201,
+    message: "Order created successfully",
+    data: {
+      id: "",
+      pipeline_name: "",
+      order_id: checkoutResponse.order_id,
+      status: "CREATED",
+    },
+  };
+  showSuccessDialog.value = true;
 };
 
 setPage({
