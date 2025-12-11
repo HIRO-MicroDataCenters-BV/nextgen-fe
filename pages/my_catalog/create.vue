@@ -116,18 +116,18 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
 
   const datasetJsonLd = createDatasetJsonLd(formValues, uploadedFilename);
 
-  // Extract related_data_product, converting to string or null
+  const isApplication = formValues.item_type === "application";
+
   const relatedDataProduct =
     formValues.related_data_product &&
     typeof formValues.related_data_product === "string"
       ? formValues.related_data_product.trim() || null
       : null;
 
-  const result = await saveDataset(
-    uploadedFilename,
-    datasetJsonLd,
-    relatedDataProduct
-  );
+  const result = await saveDataset(uploadedFilename, datasetJsonLd, {
+    relatedDataProduct,
+    isApplication,
+  });
 
   if (result) {
     router.push("/my_catalog");

@@ -230,7 +230,18 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
   try {
     const datasetJsonLd = createDatasetJsonLd(formValues, targetFilename);
 
-    const result = await saveDataset(targetFilename, datasetJsonLd);
+    const isApplication = formValues.item_type === "application";
+
+    const relatedDataProduct =
+      formValues.related_data_product &&
+      typeof formValues.related_data_product === "string"
+        ? formValues.related_data_product.trim() || null
+        : null;
+
+    const result = await saveDataset(targetFilename, datasetJsonLd, {
+      relatedDataProduct,
+      isApplication,
+    });
     if (result) {
       goBackToCatalog();
     }

@@ -65,12 +65,12 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-        body: isFormData
-          ? (body as BodyInit)
-          : hasRawData
+          body: isFormData
+            ? (body as BodyInit)
+            : hasRawData
             ? (body as BodyInit)
             : JSON.stringify(body),
-      }),
+        }),
     };
 
     try {
@@ -162,12 +162,12 @@ export const useApi = () => {
       "@type": "Filters",
       filters: Array.isArray(compacted.filters)
         ? (compacted.filters as Array<{
-          "@type": string;
-          [key: string]: unknown;
-        }>)
+            "@type": string;
+            [key: string]: unknown;
+          }>)
         : compacted.filters
-          ? [compacted.filters as { "@type": string;[key: string]: unknown }]
-          : [],
+        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
+        : [],
     };
 
     return result;
@@ -251,14 +251,21 @@ export const useApi = () => {
     saveDataset: async (
       filename: string,
       dataset: string,
-      relatedDataProduct?: string | null
+      options?: {
+        relatedDataProduct?: string | null;
+        isApplication?: boolean;
+      }
     ): Promise<CatalogDataset | null> => {
       let url = `/datasets/${filename}/`;
-      if (relatedDataProduct !== null && relatedDataProduct !== undefined) {
-        const encodedParam = encodeURIComponent(relatedDataProduct);
+
+      // Only add related_data_product if it has a value (for datasets only)
+      if (
+        !options?.isApplication &&
+        options?.relatedDataProduct &&
+        options.relatedDataProduct.trim()
+      ) {
+        const encodedParam = encodeURIComponent(options.relatedDataProduct);
         url += `?related_data_product=${encodedParam}`;
-      } else {
-        url += `?related_data_product=`;
       }
 
       const response = await request<CatalogDataset>(
