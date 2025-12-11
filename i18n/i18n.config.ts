@@ -70,7 +70,10 @@ export default defineI18nConfig(() => {
           help: "Help",
           logout: "Logout",
           hus_catalog: "My Catalog",
-          ki_catalog: "KI Catalog",
+          ki_catalog: "My Catalog",
+          umcu_catalog: "My Catalog",
+          uva_catalog: "My Catalog",
+          tum_catalog: "My Catalog",
         },
         sidebar: {
           home: "Home",

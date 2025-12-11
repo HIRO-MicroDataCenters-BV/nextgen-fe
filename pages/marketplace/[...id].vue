@@ -24,16 +24,16 @@ const { setPage, page } = useApp();
 const datasetData = ref();
 
 const route = useRoute();
-const datasetId = route.params.id;
+const datasetId = Array.isArray(route.params.id)
+  ? route.params.id.join("/")
+  : route.params.id;
 
 onMounted(async () => {
   try {
     const filter = createTableSearchFilter({
       filters: [
         {
-          "@type": "dcat:Catalog",
           "dcat:dataset": {
-            "@type": "dcat:Dataset",
             "dcterms:identifier": datasetId,
           },
         },

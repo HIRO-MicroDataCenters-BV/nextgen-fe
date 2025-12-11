@@ -46,7 +46,7 @@ setPage({
   section: "my_catalog",
   title: t(`menu.${catalogName}`),
   subtitle: t("subtitle.my_catalog"),
-  source: "ki",
+  source: catalogName as string,
 });
 
 // Defining columns for the table
