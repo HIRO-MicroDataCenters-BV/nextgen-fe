@@ -420,22 +420,27 @@ export function createTableSearchFilter(params: {
   const filtersArray: Array<Record<string, unknown>> = [];
 
   // Add type filter (datasets vs applications)
-  // Note: @type is always "dcat:Dataset" for both types (per DF-207 fix)
-  // Applications are identified by dcterms:type = Software
-  // Datasets either have dcterms:type = Dataset or no dcterms:type (defaults to Dataset)
   if (params.type === "applications") {
-    // Filter for applications: must have dcterms:type = Software
     filtersArray.push({
-      "@type": "dcat:Dataset", // Always dcat:Dataset (not used for distinction, but required by API)
-      "dcterms:type": {
-        "@id": "http://purl.org/dc/dcmitype/Software",
-        "@type": "skos:Concept",
+      "dcat:dataset": {
+        "dcterms:type": {
+          "@id": "http://purl.org/dc/dcmitype/Software",
+          "@type": "skos:Concept",
+          "skos:prefLabel": { "@language": "en", "@value": "Software" },
+        },
+      },
+    });
+  } else if (params.type === "datasets" || !params.type) {
+    filtersArray.push({
+      "dcat:dataset": {
+        "dcterms:type": {
+          "@id": "http://purl.org/dc/dcmitype/Dataset",
+          "@type": "skos:Concept",
+          "skos:prefLabel": { "@language": "en", "@value": "Dataset" },
+        },
       },
     });
   }
-  // For datasets, we don't filter by type on server side
-  // because many datasets don't have dcterms:type explicitly set (default is Dataset)
-  // Client-side filtering will handle excluding Software types
 
   // Add search filters - format according to API docs: dcat:dataset with nested filters
   if (params.all) {
