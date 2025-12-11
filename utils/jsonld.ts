@@ -1332,19 +1332,20 @@ export function createDatasetJsonLd(
     };
   }
 
-  // If file is uploaded, use filename (without extension) as identifier and overwrite metadata_content
-  if (filename) {
-    const identifier = filename;
-    baseDataset["dcterms:identifier"] = {
-      "@type": "xsd:string",
-      "@value": identifier,
-    };
-  } else if (!baseDataset["dcterms:identifier"]) {
-    // If no file uploaded and no identifier in metadata, use empty string
-    baseDataset["dcterms:identifier"] = {
-      "@type": "xsd:string",
-      "@value": "",
-    };
+  // Preserve existing dcterms:identifier from metadata_content
+  // Only set identifier if it doesn't exist in metadata
+  if (!baseDataset["dcterms:identifier"]) {
+    if (filename) {
+      baseDataset["dcterms:identifier"] = {
+        "@type": "xsd:string",
+        "@value": filename,
+      };
+    } else {
+      baseDataset["dcterms:identifier"] = {
+        "@type": "xsd:string",
+        "@value": "",
+      };
+    }
   }
 
   // Handle dcat:distribution with special logic:
