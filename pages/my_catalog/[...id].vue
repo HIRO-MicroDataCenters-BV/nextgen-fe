@@ -5,7 +5,7 @@
     :show-available-biobanks="false"
   >
     <div v-if="loading" class="flex justify-center items-center h-64">
-      <p>{{ t("status.loading_data") }}</p>
+      <Spinner class="size-8" />
     </div>
     <div v-else-if="!formReady" class="text-center py-10">
       <p>{{ t("status.item_not_found") }}</p>
@@ -39,6 +39,7 @@ import {
   convertJsonLdDatasetToJson,
   createDatasetJsonLd,
 } from "~/utils/jsonld";
+import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
 const { saveDataset, getDataset, getDataproducts } = useApi();
@@ -171,8 +172,8 @@ onMounted(async () => {
       }
     }
 
-    // Extract related_data_product from dcat:inSeries
-    // Use dcterms:title.@value as the value (e.g., "disease_xyz")
+    // Extract related_data_product from dcat:inSeries or dcat:distribution
+    // Priority: dcat:inSeries > dcat:distribution[0].dcat:accessURL
     let relatedDataProductValue: string | null = null;
     const inSeries = dataset["dcat:inSeries"];
 
@@ -187,6 +188,44 @@ onMounted(async () => {
         "@value" in dctermsTitle
       ) {
         relatedDataProductValue = dctermsTitle["@value"];
+      }
+    } else {
+      // Fallback: extract from dcat:distribution[0].dcat:accessURL
+      // Format: file://disease_xyz/filename.ext -> extract "disease_xyz"
+      const distributions = dataset["dcat:distribution"];
+      if (distributions) {
+        const distArray = Array.isArray(distributions)
+          ? distributions
+          : [distributions];
+        if (distArray.length > 0) {
+          const firstDist = distArray[0] as Record<string, unknown>;
+          const accessURL = firstDist["dcat:accessURL"];
+          if (accessURL) {
+            let accessURLString: string | null = null;
+            if (typeof accessURL === "string") {
+              accessURLString = accessURL;
+            } else if (
+              typeof accessURL === "object" &&
+              accessURL !== null &&
+              "@id" in accessURL
+            ) {
+              accessURLString = (accessURL as { "@id": string })["@id"];
+            }
+
+            if (accessURLString && accessURLString.startsWith("file://")) {
+              // Extract path after file://
+              const pathWithoutProtocol = accessURLString.replace(
+                /^file:\/\//,
+                ""
+              );
+              // Get first part of path (before first /)
+              const pathParts = pathWithoutProtocol.split("/");
+              if (pathParts.length > 0 && pathParts[0]) {
+                relatedDataProductValue = pathParts[0];
+              }
+            }
+          }
+        }
       }
     }
 

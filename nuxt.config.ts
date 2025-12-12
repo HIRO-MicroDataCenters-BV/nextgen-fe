@@ -67,15 +67,18 @@ export default defineNuxtConfig({
     dexAuthType: process.env.NUXT_DEX_AUTH_TYPE || "local",
     skipTlsVerify: process.env.NUXT_DEX_SKIP_TLS_VERIFY !== "false", // Default to true
     public: {
-      apiSearchServiceUrl: process.env.API_SEARCH_SERVICE_URL || "",
-      apiCatalogServiceUrl: process.env.API_CATALOG_SERVICE_URL || "",
-      apiConnectorServiceURL: process.env.API_CONNECTOR_SERVICE_URL || "",
-      catalogName: process.env.CATALOG_NAME || "hus_catalog",
+      apiSearchServiceUrl: process.env.NUXT_PUBLIC_API_SEARCH_SERVICE_URL || "",
+      apiCatalogServiceUrl:
+        process.env.NUXT_PUBLIC_API_CATALOG_SERVICE_URL || "",
+      apiConnectorServiceURL:
+        process.env.NUXT_PUBLIC_API_CONNECTOR_SERVICE_URL || "",
+      catalogName: process.env.NUXT_PUBLIC_CATALOG_NAME || "hus_catalog",
       cogURL: process.env.NUXT_PUBLIC_COG_URL || "",
       apiCogURL: process.env.NUXT_PUBLIC_API_COG_URL || "",
-      trainingBuilderServiceURL: process.env.TRAINING_BUILDER_SERVICE_URL || "",
+      trainingBuilderServiceURL:
+        process.env.NUXT_PUBLIC_TRAINING_BUILDER_SERVICE_URL || "",
       apiCheckoutServiceUrl:
-        process.env.API_CHECKOUT_SERVICE_URL ||
+        process.env.NUXT_PUBLIC_API_CHECKOUT_SERVICE_URL ||
         "https://ds-checkout.marketplace.nextgen.hiro-develop.nl",
     },
   },

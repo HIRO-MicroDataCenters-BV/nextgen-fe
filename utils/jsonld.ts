@@ -419,27 +419,39 @@ export function createTableSearchFilter(params: {
 
   const filtersArray: Array<Record<string, unknown>> = [];
 
-  // Add type filter (datasets vs applications)
-  if (params.type === "applications") {
-    filtersArray.push({
-      "dcat:dataset": {
-        "dcterms:type": {
-          "@id": "http://purl.org/dc/dcmitype/Software",
-          "@type": "skos:Concept",
-          "skos:prefLabel": { "@language": "en", "@value": "Software" },
+  // If custom filters are provided, use minimal context matching CURL example
+  const hasCustomFilters =
+    params.filters && Array.isArray(params.filters) && params.filters.length > 0;
+
+  if (hasCustomFilters) {
+    filter["@context"] = {
+      "@vocab": "http://data-space.org/",
+      dcat: "http://www.w3.org/ns/dcat#",
+      dcterms: "http://purl.org/dc/terms/",
+    };
+  } else {
+    // Add type filter (datasets vs applications) only when no custom filters
+    if (params.type === "applications") {
+      filtersArray.push({
+        "dcat:dataset": {
+          "dcterms:type": {
+            "@id": "http://purl.org/dc/dcmitype/Software",
+            "@type": "skos:Concept",
+            "skos:prefLabel": { "@language": "en", "@value": "Software" },
+          },
         },
-      },
-    });
-  } else if (params.type === "datasets" || !params.type) {
-    filtersArray.push({
-      "dcat:dataset": {
-        "dcterms:type": {
-          "@id": "http://purl.org/dc/dcmitype/Dataset",
-          "@type": "skos:Concept",
-          "skos:prefLabel": { "@language": "en", "@value": "Dataset" },
+      });
+    } else if (params.type === "datasets" || !params.type) {
+      filtersArray.push({
+        "dcat:dataset": {
+          "dcterms:type": {
+            "@id": "http://purl.org/dc/dcmitype/Dataset",
+            "@type": "skos:Concept",
+            "skos:prefLabel": { "@language": "en", "@value": "Dataset" },
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   // Add search filters - format according to API docs: dcat:dataset with nested filters
@@ -485,13 +497,16 @@ export function createTableSearchFilter(params: {
     });
   }
 
-  // Add custom filters
+  // Add custom filters first (before other filters) if provided
   if (
     params.filters &&
     Array.isArray(params.filters) &&
     params.filters.length > 0
   ) {
     filtersArray.push(...params.filters);
+    // If custom filters are provided, skip other filters
+    filter.filters = filtersArray;
+    return filter;
   }
 
   filter.filters = filtersArray;
