@@ -240,7 +240,7 @@ onMounted(async () => {
     initialValues.value = {
       item_type: datasetType.value,
       related_data_product: relatedDataProductValue,
-      file: null,
+      file: existingMetadataFilename.value,
       metadata_content: metadataString,
     };
   } catch {

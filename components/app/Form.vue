@@ -187,6 +187,17 @@ onMounted(() => {
     if (field.dataSource && field.type === "select") {
       loadFieldOptions(field);
     }
+    // Handle existing file values in edit mode
+    if (field.type === "file" && isEditMode.value && props.initialValues) {
+      const initialValue = props.initialValues[field.name];
+      if (initialValue && typeof initialValue === "string") {
+        // Store the existing filename so it displays in the form
+        uploadedFiles.value[field.name] = {
+          filename: initialValue,
+          file: null as any, // No actual File object for existing files
+        };
+      }
+    }
   });
 });
 
@@ -261,13 +272,20 @@ const handleFileDelete = async (fieldName: string) => {
   const uploaded = uploadedFiles.value[fieldName];
   if (!uploaded) return;
 
-  try {
-    const success = await deleteMmioFile(uploaded.filename);
-    if (success) {
-      clearFileField(fieldName);
+  // Only delete from server if it's a newly uploaded file (has a File object)
+  // For existing files in edit mode, just clear the field locally
+  if (uploaded.file) {
+    try {
+      const success = await deleteMmioFile(uploaded.filename);
+      if (success) {
+        clearFileField(fieldName);
+      }
+    } catch {
+      // Error deleting file
     }
-  } catch {
-    // Error deleting file
+  } else {
+    // Existing file - just clear locally without deleting from server
+    clearFileField(fieldName);
   }
 };
 
@@ -494,7 +512,7 @@ defineExpose({
                   class="flex items-center gap-2"
                 >
                   <span class="text-sm text-muted-foreground">
-                    {{ uploadedFiles[field.name].file.name }}
+                    {{ uploadedFiles[field.name].file?.name || uploadedFiles[field.name].filename }}
                   </span>
                   <Button
                     type="button"
