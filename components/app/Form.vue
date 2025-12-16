@@ -194,7 +194,7 @@ onMounted(() => {
         // Store the existing filename so it displays in the form
         uploadedFiles.value[field.name] = {
           filename: initialValue,
-          file: null as any, // No actual File object for existing files
+          file: null as unknown as File, // No actual File object for existing files
         };
       }
     }
