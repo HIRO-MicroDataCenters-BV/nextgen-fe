@@ -144,11 +144,30 @@ onMounted(async () => {
       return;
     }
 
-    const rawType = dataset["@type"];
-    const typeList = Array.isArray(rawType) ? rawType : [rawType];
-    datasetType.value = typeList?.includes("dspace:Application")
-      ? "application"
-      : "dataset";
+    // Determine type using dcterms:type[@id] (Software = application, Dataset = dataset)
+    let detectedType: "dataset" | "application" = "dataset";
+    const dctermsType = dataset["dcterms:type"];
+    
+    if (dctermsType) {
+      let typeId: string | undefined;
+      
+      if (typeof dctermsType === "string") {
+        typeId = dctermsType;
+      } else if (Array.isArray(dctermsType)) {
+        const firstType = dctermsType[0];
+        if (firstType && typeof firstType === "object" && "@id" in firstType) {
+          typeId = (firstType as Record<string, unknown>)["@id"] as string;
+        }
+      } else if (typeof dctermsType === "object" && "@id" in dctermsType) {
+        typeId = (dctermsType as Record<string, unknown>)["@id"] as string;
+      }
+      
+      if (typeId === "http://purl.org/dc/dcmitype/Software") {
+        detectedType = "application";
+      }
+    }
+    
+    datasetType.value = detectedType;
 
     const metadataString = JSON.stringify(dataset, null, 2);
     const converted = convertJsonLdDatasetToJson(dataset, {
