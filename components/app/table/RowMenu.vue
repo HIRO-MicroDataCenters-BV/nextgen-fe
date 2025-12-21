@@ -1,27 +1,36 @@
 <template>
-  <div class="absolute bottom-[40px] left-0 right-0 mx-auto w-fit">
-    <Menubar class="bg-gray-900 text-white overflow rounded-md px-2">
-      <MenubarMenu>
-        <template v-for="item in items" :key="item.label">
-          <MenubarTrigger
-            v-if="item.type === 'button'"
-            class="bg-transparent! hover:bg-gray-800! text-white! cursor-pointer flex items-center gap-1"
-            @click="item.action"
-            ><Icon :name="item.icon" class="size-4" />
-            {{ item.label }}</MenubarTrigger
-          >
+  <Transition
+    enter-active-class="transition-all duration-300 ease-out"
+    enter-from-class="translate-y-full opacity-0"
+    enter-to-class="translate-y-0 opacity-100"
+    leave-active-class="transition-all duration-300 ease-in"
+    leave-from-class="translate-y-0 opacity-100"
+    leave-to-class="translate-y-full opacity-0"
+  >
+    <div v-if="selectedCount > 0" class="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
+      <Menubar class="bg-gray-900 text-white overflow rounded-md px-2 shadow-lg">
+        <MenubarMenu>
+          <template v-for="item in items" :key="item.label">
+            <MenubarTrigger
+              v-if="item.type === 'button'"
+              class="bg-transparent! hover:bg-gray-800! text-white! cursor-pointer flex items-center gap-1"
+              @click="item.action"
+              ><Icon :name="item.icon" class="size-4" />
+              {{ item.label }}</MenubarTrigger
+            >
 
-          <MenubarTrigger
-            v-else-if="item.type === 'counter'"
-            class="bg-transparent! text-white!"
-            @click="item.action"
-            >{{ selectedCount }} {{ item.label }}</MenubarTrigger
-          >
-          <MenubarSeparator />
-        </template>
-      </MenubarMenu>
-    </Menubar>
-  </div>
+            <MenubarTrigger
+              v-else-if="item.type === 'counter'"
+              class="bg-transparent! text-white!"
+              @click="item.action"
+              >{{ selectedCount }} {{ item.label }}</MenubarTrigger
+            >
+            <MenubarSeparator />
+          </template>
+        </MenubarMenu>
+      </Menubar>
+    </div>
+  </Transition>
 </template>
 
 <script lang="ts" setup>

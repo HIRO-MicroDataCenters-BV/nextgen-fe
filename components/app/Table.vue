@@ -908,7 +908,6 @@ defineExpose({ fetchData, getSelectedRaw });
       </Table>
     </div>
     <AppTableRowMenu
-      v-if="selectedRows.length > 0"
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"
       @on-clear-all="handleClearAll"
