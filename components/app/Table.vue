@@ -24,6 +24,7 @@ import type {
 } from "~/types/table.types";
 import { useFilters } from "~/composables/useFilters";
 import { convertJsonLdForTraining } from "~/utils/jsonld";
+import { createColumnHeader } from "~/utils/tableHelpers";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
 import { nextTick } from "vue";
 
@@ -351,7 +352,7 @@ const getColumns = (cols: TableColumn[] | undefined) => {
   return cols.map((item) => ({
     id: item.id,
     accessorKey: item.id,
-    header: t(`column.${item.id}`),
+    header: () => createColumnHeader(t(`column.${item.id}`), item.icon, item.iconOnly),
     cell: item.cell,
   }));
 };

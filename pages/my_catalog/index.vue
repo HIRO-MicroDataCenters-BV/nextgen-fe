@@ -53,6 +53,7 @@ setPage({
 const columns: TableColumn[] = [
   {
     id: "name",
+    icon: "lucide:text",
     header: () => t("label.data_product_name"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
@@ -71,17 +72,21 @@ const columns: TableColumn[] = [
   },
   {
     id: "description",
+    icon: "lucide:text",
     header: () => t("label.description"),
     cell: ({ row }) => row.getValue("description") as string,
   },
   {
     id: "issued",
+    icon: "lucide:calendar",
     header: () => t("label.issued"),
     cell: ({ row }) =>
       dayjs(row.getValue("issued") as string).format("DD/MM/YYYY"),
   },
   {
     id: "actions",
+    icon: "lucide:circle-plus",
+    iconOnly: true,
     header: () => t("label.actions"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;

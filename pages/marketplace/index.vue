@@ -24,6 +24,7 @@ import type {
   TableFetchParams,
   TableDataResponse,
 } from "~/types/catalog.types";
+import type { TableColumn } from "~/types/table.types";
 import type { JsonLdResponse } from "~/types/jsonld.types";
 import Button from "@/components/ui/button/Button.vue";
 import {
@@ -87,9 +88,11 @@ const baseUrl = page.value.section;
 // const mock = useMock();
 
 // Defining columns for the table
-const columns = [
+const columns: TableColumn[] = [
   {
     id: "name",
+    icon: "lucide:text",
+    header: () => t("column.name"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
       const id = item.id;
@@ -103,14 +106,20 @@ const columns = [
   },
   {
     id: "biobank",
+    icon: "lucide:users",
+    header: () => t("column.biobank"),
     cell: ({ row }) => row.getValue("biobank"),
   },
   {
     id: "description",
+    icon: "lucide:text",
+    header: () => t("column.description"),
     cell: ({ row }) => row.getValue("description"),
   },
   {
     id: "issued",
+    icon: "lucide:calendar",
+    header: () => t("column.issued"),
     cell: ({ row }) => dayjs(row.getValue("issued")).format("DD/MM/YYYY"),
   },
 ];
