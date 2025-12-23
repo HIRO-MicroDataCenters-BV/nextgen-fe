@@ -6,7 +6,7 @@
         :src="`/images/icons/${source}.png`"
         class="size-8"
         alt=""
-      ><span class="uppercase text-sm font-medium">{{
+      ><span class="uppercase text-xl font-medium">{{
         nameSource[source]
       }}</span>
     </div>

@@ -740,7 +740,7 @@ defineExpose({ fetchData, getSelectedRaw });
   <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)] relative">
     <div
       v-if="hasSourceHeader"
-      class="flex items-center justify-between gap-2 mb-4"
+      class="flex items-center justify-between gap-2 mb-4 flex-wrap"
     >
       <div class="flex items-center gap-2">
         <AppHeaderSource />

@@ -111,12 +111,6 @@ const columns: TableColumn[] = [
     cell: ({ row }) => row.getValue("biobank"),
   },
   {
-    id: "description",
-    icon: "lucide:text",
-    header: () => t("column.description"),
-    cell: ({ row }) => row.getValue("description"),
-  },
-  {
     id: "issued",
     icon: "lucide:calendar",
     header: () => t("column.issued"),

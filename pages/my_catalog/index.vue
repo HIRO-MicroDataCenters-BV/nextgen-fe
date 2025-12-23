@@ -71,12 +71,6 @@ const columns: TableColumn[] = [
     },
   },
   {
-    id: "description",
-    icon: "lucide:text",
-    header: () => t("label.description"),
-    cell: ({ row }) => row.getValue("description") as string,
-  },
-  {
     id: "issued",
     icon: "lucide:calendar",
     header: () => t("label.issued"),
