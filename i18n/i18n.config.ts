@@ -353,7 +353,7 @@ export default defineI18nConfig(() => {
         training: {
           success_title: "Continue with training",
           success_description:
-            "You will be redirected to Cognitive Engine platform to build a training pipeline with selected datasets.",
+            "You will be redirected to the training builder to build the training pipelines with the selected datasets.",
         },
         home: {
           contacts: {
