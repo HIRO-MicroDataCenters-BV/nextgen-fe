@@ -317,10 +317,8 @@ export function createFiltersObject(
     return [];
   }
 
-  // Initialize the dcat:dataset object
-  const dcatDataset: Record<string, unknown> = {
-    "@type": "dcat:Dataset",
-  };
+  // Initialize the dcat:dataset object WITHOUT @type initially
+  const dcatDataset: Record<string, unknown> = {};
 
   // Separate filters by type
   const extraMetadataFields: Record<string, unknown> = {};
@@ -349,11 +347,8 @@ export function createFiltersObject(
         break;
       default:
         // All other keys are treated as extraMetadata fields
-        // Format: { "@type": "xsd:boolean", "@value": true }
-        extraMetadataFields[key] = {
-          "@type": "xsd:boolean",
-          "@value": filters[key] === true || filters[key] === "true",
-        };
+        // Use boolean shorthand instead of RDF typed literals
+        extraMetadataFields[key] = filters[key] === true || filters[key] === "true";
         break;
     }
   });
@@ -379,6 +374,12 @@ export function createFiltersObject(
   // Add isShared filter if present
   if (isSharedFilter) {
     dcatDataset["isShared"] = isSharedFilter;
+  }
+
+  // Only add @type if we have non-extraMetadata filters
+  // When using only extraMetadata, @type should NOT be present
+  if (distributionFilter || identifierFilter || isSharedFilter) {
+    dcatDataset["@type"] = "dcat:Dataset";
   }
 
   // Return array with single filter object
@@ -427,7 +428,7 @@ export function createTableSearchFilter(params: {
     filter["@context"] = {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
-      dcterms: "http://purl.org/dc/terms/",
+      med: "http://oca.example.org/123/",
     };
   } else {
     // Add type filter (datasets vs applications) only when no custom filters
