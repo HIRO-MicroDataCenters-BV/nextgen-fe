@@ -121,6 +121,8 @@ export interface SearchFilter {
     dcterms?: string;
     dspace?: string;
     med?: string;
+    skos?: string;
+    xsd?: string;
     Filters?: "Filters" | string;
   };
   "@type": string;

@@ -376,9 +376,10 @@ export function createFiltersObject(
     dcatDataset["isShared"] = isSharedFilter;
   }
 
-  // Only add @type if we have non-extraMetadata filters
-  // When using only extraMetadata, @type should NOT be present
-  if (distributionFilter || identifierFilter || isSharedFilter) {
+  // Only add @type if we have distribution or isShared filters
+  // When using only identifier or extraMetadata, @type should NOT be present
+  // This matches the working curl example from requestfix.md
+  if (distributionFilter || isSharedFilter) {
     dcatDataset["@type"] = "dcat:Dataset";
   }
 
@@ -425,11 +426,35 @@ export function createTableSearchFilter(params: {
     params.filters && Array.isArray(params.filters) && params.filters.length > 0;
 
   if (hasCustomFilters) {
-    filter["@context"] = {
+    // Build minimal context based on what filters are actually used
+    // Start with base namespaces
+    const minimalContext: Record<string, string> = {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
-      med: "http://oca.example.org/123/",
     };
+
+    // Check if any filter uses extraMetadata (needs 'med' namespace)
+    const hasExtraMetadata = params.filters?.some((f: Record<string, unknown>) => {
+      const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
+      return dataset && "extraMetadata" in dataset;
+    });
+
+    // Check if any filter uses dcterms properties (needs 'dcterms' namespace)
+    const hasDcterms = params.filters?.some((f: Record<string, unknown>) => {
+      const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
+      if (!dataset) return false;
+      return Object.keys(dataset).some(key => key.startsWith("dcterms:"));
+    });
+
+    // Add namespaces based on filter content
+    if (hasExtraMetadata) {
+      minimalContext.med = "http://oca.example.org/123/";
+    }
+    if (hasDcterms) {
+      minimalContext.dcterms = "http://purl.org/dc/terms/";
+    }
+
+    filter["@context"] = minimalContext as typeof filter["@context"];
   } else {
     // Add type filter (datasets vs applications) only when no custom filters
     if (params.type === "applications") {
