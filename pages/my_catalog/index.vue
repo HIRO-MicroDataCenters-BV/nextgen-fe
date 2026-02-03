@@ -8,8 +8,8 @@
       :title="t(`menu.${catalogName}`)"
       :columns="columns"
       :data-source="fetchTableData"
-      :page-size="10"
-      :enable-pagination="true"
+      :selection-enabled="false"
+      :has-source-header="true"
     />
   </AppContent>
 </template>
@@ -35,7 +35,8 @@ import type { SearchFilter } from "~/types/api.types";
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
-const { deleteDataset } = useApi();
+const api = useApi();
+const { deleteDataset } = api;
 const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -45,13 +46,14 @@ setPage({
   section: "my_catalog",
   title: t(`menu.${catalogName}`),
   subtitle: t("subtitle.my_catalog"),
-  source: "ki",
+  source: catalogName as string,
 });
 
 // Defining columns for the table
 const columns: TableColumn[] = [
   {
     id: "name",
+    icon: "lucide:text",
     header: () => t("label.data_product_name"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
@@ -69,18 +71,16 @@ const columns: TableColumn[] = [
     },
   },
   {
-    id: "description",
-    header: () => t("label.description"),
-    cell: ({ row }) => row.getValue("description") as string,
-  },
-  {
     id: "issued",
+    icon: "lucide:calendar",
     header: () => t("label.issued"),
     cell: ({ row }) =>
       dayjs(row.getValue("issued") as string).format("DD/MM/YYYY"),
   },
   {
     id: "actions",
+    icon: "lucide:circle-plus",
+    iconOnly: true,
     header: () => t("label.actions"),
     cell: ({ row }) => {
       const item = row.original as CatalogItem;
@@ -117,26 +117,25 @@ const fetchTableData = async (
   paramsAsUnknown: unknown
 ): Promise<TableDataResponse> => {
   const params = paramsAsUnknown as TableFetchParams;
-  const api = useApi();
 
   try {
     // Ensure we have valid pagination parameters
     const page = Math.max(1, params.page || 1);
-    const limit = Math.max(1, params.limit || 3); // Changed to 3 for testing
+    const limit = Math.max(1, params.limit || 3);
 
-    const filtersObj = createFiltersObject(params.filters);
+    const filtersObj = createFiltersObject(
+      (params.filters || {}) as unknown as Record<string, unknown>
+    );
     const filter = createTableSearchFilter({
       name: params.name,
       description: params.description,
       biobank: params.biobank,
       lastupdate: params.lastupdate,
       all: params.all,
+      type: params.type,
       page,
       limit,
-      filters:
-        params.filters && Object.keys(params.filters).length > 0
-          ? filtersObj
-          : undefined,
+      filters: filtersObj.length > 0 ? filtersObj : undefined,
     });
     const response = await api.getLocalCatalog(filter as SearchFilter);
 
@@ -158,11 +157,11 @@ const fetchTableData = async (
         has_next: page < totalPages,
         has_prev: page > 1,
       },
+      originals: tableData.originals,
     };
 
     return updatedTableData;
-  } catch (e) {
-    console.log("Error fetching table data:", e);
+  } catch {
     return {
       data: [],
       pagination: {

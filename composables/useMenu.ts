@@ -40,7 +40,6 @@ export function useMenu() {
   });
 
   const catalogName = config.public.catalogName;
-  console.log("publ", config.public);
 
   // Menu structure
   const menuItems = ref<MenuStructure>({

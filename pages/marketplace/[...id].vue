@@ -4,7 +4,10 @@
     :description="page.subtitle"
     :show-available-biobanks="false"
   >
-    <AppDetails :data="datasetData" />
+    <div v-if="loading" class="flex justify-center items-center h-64">
+      <Spinner class="size-8" />
+    </div>
+    <AppDetails v-else :data="datasetData" />
   </AppContent>
 </template>
 
@@ -15,6 +18,7 @@ import {
   convertJsonLdDatasetToJson,
   createTableSearchFilter,
 } from "~/utils/jsonld";
+import { Spinner } from "@/components/ui/spinner";
 
 // // const { t } = useI18n();
 // const dayjs = useDayjs();
@@ -22,19 +26,30 @@ const api = useApi();
 const { setPage, page } = useApp();
 
 const datasetData = ref();
+const loading = ref(true);
 
 const route = useRoute();
-const datasetId = route.params.id;
+const datasetId = computed(() => {
+  const idParam = route.params.id;
+  if (Array.isArray(idParam)) {
+    return idParam.join("/");
+  }
+  return (idParam as string) || "";
+});
 
 onMounted(async () => {
+  if (!datasetId.value) {
+    loading.value = false;
+    return;
+  }
+
+  loading.value = true;
   try {
     const filter = createTableSearchFilter({
       filters: [
         {
-          "@type": "dcat:Catalog",
           "dcat:dataset": {
-            "@type": "dcat:Dataset",
-            "dcterms:identifier": datasetId,
+            "dcterms:identifier": datasetId.value,
           },
         },
       ],
@@ -62,8 +77,10 @@ onMounted(async () => {
         });
       }
     }
-  } catch (error) {
-    console.error("Error loading dataset:", error);
+  } catch {
+    // Error loading dataset
+  } finally {
+    loading.value = false;
   }
 });
 </script>

@@ -6,6 +6,8 @@ export interface TableColumn {
   cell: (props: { row: Row<TableRowData> }) => unknown;
   enableSorting?: boolean;
   enableHiding?: boolean;
+  icon?: string; // Lucide icon name, e.g., "lucide:user", "lucide:calendar"
+  iconOnly?: boolean; // If true, only shows the icon without text
 }
 
 export interface TableRowData {
@@ -24,6 +26,7 @@ export interface TableDataResponse {
     page: number;
     limit: number;
   };
+  originals?: unknown[];
 }
 
 export interface TableFilter {
@@ -46,4 +49,5 @@ export interface TableDropdownFilterProps {
   items?: DropdownMenuItem[];
   column?: unknown;
   multiple?: boolean;
+  selectedValues?: string[];
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type {
   DropdownMenuItem,
@@ -12,25 +12,18 @@ const props = withDefaults(defineProps<TableDropdownFilterProps>(), {
   label: "",
   items: () => [],
   multiple: true,
+  selectedValues: () => [],
 });
 
 const emit = defineEmits<{
   "filter-change": [key: string, value: boolean, multiple: boolean];
 }>();
 
-const items = ref<DropdownMenuItem[]>(props.items);
-const selectedValues = ref<string[]>([]);
+const items = computed<DropdownMenuItem[]>(() => props.items);
+const selectedValues = computed(() => props.selectedValues || []);
 
 const handleCheckboxChange = (key: string) => {
   const isSelected = selectedValues.value.includes(key);
-  if (isSelected) {
-    selectedValues.value = selectedValues.value.filter((v) => v !== key);
-  } else {
-    if (!props.multiple) {
-      selectedValues.value = [];
-    }
-    selectedValues.value = [...selectedValues.value, key];
-  }
   emit("filter-change", key, !isSelected, props.multiple);
 };
 </script>

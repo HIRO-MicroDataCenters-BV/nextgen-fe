@@ -123,3 +123,23 @@
     @apply bg-background text-foreground;
   }
 }
+:root {
+  .toaster li {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid;
+    border-color: rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius);
+    padding: 8px;
+    margin: 8px;
+  }
+  .toaster li [data-icon] {
+    display: none;
+  }
+}

@@ -25,6 +25,7 @@ export interface TableFetchParams {
   biobank?: string;
   lastupdate?: string;
   all?: string;
+  type?: string; // "datasets" or "applications"
   filters?: Record<string, boolean>;
 }
 
@@ -44,4 +45,5 @@ export interface TableDataResponse {
     has_next: boolean;
     has_prev: boolean;
   };
+  originals?: unknown[];
 }

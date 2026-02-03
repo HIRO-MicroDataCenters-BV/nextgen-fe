@@ -107,22 +107,22 @@ function getDataType(value: unknown): string {
 
 // Helper function to format labels
 function formatLabel(key: string): string {
-  if(key.includes('.')){
-    const parts = key.split('.');
+  if (key.includes(".")) {
+    const parts = key.split(".");
     const end = parts[parts.length - 1];
 
-    let result = parts[0]
-    if(end.includes('/')){
-      const endParts = end.split('/');
-      if(endParts.length > 1){
+    let result = parts[0];
+    if (end.includes("/")) {
+      const endParts = end.split("/");
+      if (endParts.length > 1) {
         result += ` / ${endParts[endParts.length - 1]}`;
-      } 
+      }
     } else {
       result += ` / ${end}`;
     }
     return result;
   }
-  return key
+  return key;
 }
 
 // Helper function to get display value for complex objects

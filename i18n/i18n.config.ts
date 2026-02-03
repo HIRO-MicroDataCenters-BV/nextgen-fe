@@ -9,6 +9,12 @@ export default defineI18nConfig(() => {
           description:
             "Build ML models on institutional medical data at source. Accelerate research, advance treatment, change lives for the better.",
           copyright: "Copyright {year} © NextGen",
+          error: {
+            occurred: "An error occurred",
+            unauthorized: "Unauthorized",
+            timeout: "Request timeout",
+            fetch: "An error occurred while fetching data",
+          },
         },
         status: {
           loading_data: "Loading data...",
@@ -23,6 +29,9 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           actions: "Actions",
           are_you_sure: "Are you sure?",
+          create_catalog_item: "Add new item",
+          edit_catalog_item: "Edit item",
+          unsaved_changes: "Unsaved Changes",
         },
         welcome: "Welcome11",
         nextgen: "NextGen",
@@ -39,6 +48,10 @@ export default defineI18nConfig(() => {
           marketplace_description:
             "Decentralised search across all institutional catalogs",
           short_description: "Genomic Data for Personalised Medicine.",
+          create_catalog_item_desc:
+            "Provide data and files for a dataset or an application.",
+          edit_catalog_item_desc:
+            "Update dataset metadata or upload a new MMIO file.",
         },
         text: {
           available_biobank_description:
@@ -46,6 +59,8 @@ export default defineI18nConfig(() => {
         },
         alert: {
           delete_dataset: "Are you sure you want to delete {name}?",
+          unsaved_changes_description:
+            "You have unsaved changes. Are you sure you want to discard them?",
         },
         menu: {
           home: "Home",
@@ -55,10 +70,16 @@ export default defineI18nConfig(() => {
           help: "Help",
           logout: "Logout",
           hus_catalog: "My Catalog",
-          ki_catalog: "KI Catalog",
+          ki_catalog: "My Catalog",
+          umcu_catalog: "My Catalog",
+          uva_catalog: "My Catalog",
+          tum_catalog: "My Catalog",
         },
         sidebar: {
           home: "Home",
+          marketplace: "Marketplace",
+        },
+        breadcrumb: {
           marketplace: "Marketplace",
         },
         filter: {
@@ -117,6 +138,67 @@ export default defineI18nConfig(() => {
             text: "Text",
           },
         },
+        filters: {
+          sociodemographics: "Sociodemographics",
+          age: "Age",
+          gender: "Gender",
+          ethnicity: "Ethnicity",
+          sex: "Sex",
+          comorbidities: "Comorbidities",
+          previous_myocardial_infarction: "Previous Myocardial Infarction",
+          stroke: "Stroke",
+          chronic_obstructive_pulmonary_disease:
+            "Chronic Obstructive Pulmonary Disease",
+          atrial_fibrillation: "Atrial Fibrillation",
+          peripheral_artery_disease: "Peripheral Artery Disease",
+          hypertension: "Hypertension",
+          diabetes: "Diabetes",
+          hypercholesterolemia: "Hypercholesterolemia",
+          chronic_kidney_disease: "Chronic Kidney Disease",
+          asthma: "Asthma",
+          physical_measurements: "Physical Measurements",
+          height: "Height",
+          waist_hip_ratio: "Waist-Hip Ratio",
+          waist_height_ratio: "Waist-Height Ratio",
+          sbp: "Systolic Blood Pressure",
+          pulse_rate: "Pulse Rate",
+          lifestyle_habits: "Lifestyle Habits",
+          smoking_history: "Smoking History",
+          distribution: "Distribution",
+          distribution_csv: "CSV",
+          distribution_dicom: "DICOM",
+          distribution_mmio: "MMIO",
+          distribution_nifti: "NIfTI",
+          "distribution_jpg/png": "JPG/PNG",
+          distribution_xml: "XML",
+          distribution_vcf: "VCF",
+          distribution_plink: "PLINK",
+          catalog: "Catalog",
+          is_shared: "Is Shared",
+          isShared: "Is Shared",
+          "med:age": "Age",
+          "med:gender": "Gender",
+          "med:ethnicity": "Ethnicity",
+          "med:sex": "Sex",
+          "med:previous_myocardial_infarction":
+            "Previous Myocardial Infarction",
+          "med:stroke": "Stroke",
+          "med:chronic_obstructive_pulmonary_disease":
+            "Chronic Obstructive Pulmonary Disease",
+          "med:atrial_fibrillation": "Atrial Fibrillation",
+          "med:peripheral_artery_disease": "Peripheral Artery Disease",
+          "med:hypertension": "Hypertension",
+          "med:diabetes": "Diabetes",
+          "med:hypercholesterolemia": "Hypercholesterolemia",
+          "med:chronic_kidney_disease": "Chronic Kidney Disease",
+          "med:asthma": "Asthma",
+          "med:height": "Height",
+          "med:waist_hip_ratio": "Waist-Hip Ratio",
+          "med:waist_height_ratio": "Waist-Height Ratio",
+          "med:sbp": "Systolic Blood Pressure",
+          "med:pulse_rate": "Pulse Rate",
+          "med:smoking_history": "Smoking History",
+        },
         column: {
           name: "Name",
           biobank: "Biobank",
@@ -138,6 +220,13 @@ export default defineI18nConfig(() => {
           domain_specific_attributes: "Domain-Specific Attributes",
         },
         label: {
+          name: "Name",
+          item_type: "Item Type",
+          related_data_product: "Related Data Product",
+          file: "File",
+          metadata_content: "Metadata Content",
+          dataset: "Dataset",
+          application: "Application",
           filters: "Filters",
           theme: "Theme",
           creator: "Creator",
@@ -176,9 +265,9 @@ export default defineI18nConfig(() => {
           has_sex: "Has Sex",
           has_height: "Has Height",
           has_medical_conditions: "Has (Medical Conditions)",
-          metadata_content: "Metadata Content",
         },
         action: {
+          processed: "Procesed",
           datasets: "Datasets",
           applications: "Applications",
           save: "Save",
@@ -207,9 +296,17 @@ export default defineI18nConfig(() => {
           back_to_catalog: "Back to Catalog",
           for_researchers: "For Researchers",
           for_data_providers: "For Data Providers",
+          items_selected: "Items selected",
+          clear_all: "Clear all",
+          pass_to_training: "Pass to Training",
+          add_new_item: "Add New Item",
         },
         placeholder: {
-          search: "Search...",
+          enter_name: "Enter a name",
+          select_data_product_directory: "Select a data product directory",
+          select_data_product: "Select a data product",
+          select_file: "Select a file",
+          search: "Search {type}...",
           select_filter: "Select filter",
           select_license: "Select license",
           pick_date: "Pick a date",
@@ -218,8 +315,14 @@ export default defineI18nConfig(() => {
           email: "Enter your email",
           password: "Enter your password",
           enter_metadata_content: "Enter metadata content",
+          loading: "Loading...",
+          select_option: "Select an option",
         },
         hint: {
+          uploading: "Uploading...",
+          accepted_file_types_json_jar:
+            "MMIO (.json) or MMIO + OCA bundle (.tar)",
+          your: "Your",
           in: "In",
           all: "All",
           no_results: "No results found",
@@ -246,6 +349,11 @@ export default defineI18nConfig(() => {
           required_max_length:
             "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
+        },
+        training: {
+          success_title: "Continue with training",
+          success_description:
+            "You will be redirected to the training builder to build the training pipelines with the selected datasets.",
         },
         home: {
           contacts: {
@@ -358,6 +466,10 @@ export default defineI18nConfig(() => {
           },
         },
         zodI18n: {
+          types: {
+            string: "Expected string",
+            null: "Expected null",
+          },
           errors: {
             required: "This field is required",
             email: "This field must be a valid email address",
@@ -365,6 +477,11 @@ export default defineI18nConfig(() => {
             confirm_password: "This field must match the password",
             required_min_length:
               "This field must be at least {min} characters long",
+            too_small: {
+              string: {
+                inclusive: "This field is required",
+              },
+            },
             invalid_type: "Invalid type received",
             invalid_type_received_undefined: "Invalid type received",
             invalid_type_received_null: "Invalid type received",
@@ -373,6 +490,7 @@ export default defineI18nConfig(() => {
             invalid_type_received_boolean: "Invalid type received",
             invalid_type_received_object: "Invalid type received",
             invalid_type_received_array: "Invalid type received",
+            custom: "Validation failed",
           },
         },
       },

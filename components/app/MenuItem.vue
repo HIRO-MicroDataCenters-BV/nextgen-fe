@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { DropdownMenuItem } from "@/types/table.types";
 import { DropdownMenuItem as DropdownMenuItemComponent } from "@/components/ui/dropdown-menu";
@@ -52,7 +53,7 @@ const isSelected = computed(() => {
         >
           <Icon name="lucide:check" :class="cn('h-4 w-4')" />
         </div>
-        <div v-else class="w-4 h-4"/>
+        <div v-else class="w-4 h-4" />
       </Label>
     </DropdownMenuItemComponent>
   </template>

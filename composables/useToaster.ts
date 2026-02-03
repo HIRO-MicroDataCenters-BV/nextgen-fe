@@ -7,17 +7,14 @@ export const useToaster = () => {
       message: string,
       data?: Record<string, string | number>
     ) => {
-      const msg = JSON.stringify(message);
-      //nuxtApp.$i18n.t(`message.${type}.${message}`);
+      const options = {
+        ...(data || {}),
+      };
       if (type === "error") {
-        console.log(message);
+        toast.error(message, { ...options });
+      } else {
+        toast.info(message, { ...options });
       }
-      toast(
-        msg,
-        data || {
-          duration: 2000,
-        }
-      );
     },
   };
 };

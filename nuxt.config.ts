@@ -1,9 +1,14 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath } from "node:url";
 
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
+
+  alias: {
+    "@": fileURLToPath(new URL(".", import.meta.url)),
+  },
 
   modules: [
     "@nuxt/eslint",
@@ -51,21 +56,38 @@ export default defineNuxtConfig({
   },
   shadcn: {
     prefix: "",
-    componentDir: "./components/ui",
+    componentDir: "@/components/ui",
   },
   css: ["~/assets/css/tailwind.css"],
   runtimeConfig: {
+    // Server-only variables (not exposed to client)
+    dexHost: process.env.NUXT_DEX_HOST || "",
+    dexUsername: process.env.NUXT_DEX_LOGIN || "",
+    dexPassword: process.env.NUXT_DEX_PASSWORD || "",
+    dexAuthType: process.env.NUXT_DEX_AUTH_TYPE || "local",
+    skipTlsVerify: process.env.NUXT_DEX_SKIP_TLS_VERIFY !== "false", // Default to true
     public: {
-      apiSearchServiceUrl:
-        process.env.API_SEARCH_SERVICE_URL ||
-        "https://ds-gateway.uva.nextgen.hiro-develop.nl/search",
+      apiSearchServiceUrl: process.env.NUXT_PUBLIC_API_SEARCH_SERVICE_URL || "",
       apiCatalogServiceUrl:
-        process.env.API_CATALOG_SERVICE_URL ||
-        "https://ds-gateway.ki.nextgen.hiro-develop.nl/catalog",
-      catalogName: process.env.CATALOG_NAME || "hus_catalog",
+        process.env.NUXT_PUBLIC_API_CATALOG_SERVICE_URL || "",
+      apiConnectorServiceURL:
+        process.env.NUXT_PUBLIC_API_CONNECTOR_SERVICE_URL || "",
+      catalogName: process.env.NUXT_PUBLIC_CATALOG_NAME || "hus_catalog",
+      cogURL: process.env.NUXT_PUBLIC_COG_URL || "",
+      apiCogURL: process.env.NUXT_PUBLIC_API_COG_URL || "",
+      trainingBuilderServiceURL:
+        process.env.NUXT_PUBLIC_TRAINING_BUILDER_SERVICE_URL || "",
+      apiCheckoutServiceUrl:
+        process.env.NUXT_PUBLIC_API_CHECKOUT_SERVICE_URL ||
+        "https://ds-checkout.marketplace.nextgen.hiro-develop.nl",
     },
   },
   vite: {
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL(".", import.meta.url)),
+      },
+    },
   },
 });

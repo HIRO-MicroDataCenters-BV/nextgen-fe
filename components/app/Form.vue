@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
-import * as z from "zod";
+import type { z } from "zod";
 import { cn } from "@/lib/utils";
 import {
   FormControl,
@@ -23,7 +23,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   TagsInput,
@@ -32,7 +31,20 @@ import {
   TagsInputItemDelete,
   TagsInputInput,
 } from "@/components/ui/tags-input";
-// import { Icon } from '#components'; // Assuming Icon is globally available or auto-imported
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import Button from "@/components/ui/button/Button.vue";
+import Input from "@/components/ui/input/Input.vue";
+import Textarea from "@/components/ui/textarea/Textarea.vue";
+import { useApi } from "@/composables/useApi";
 
 export interface FormFieldOption {
   value: string;
@@ -44,110 +56,157 @@ export interface FormFieldDefinition {
   label: string;
   type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file";
   placeholder?: string;
+  hint?: string | null;
   options?: FormFieldOption[];
+  dataSource?: () => Promise<unknown>;
+  fieldOptions?: {
+    dataPath?: string;
+    valueKey?: string;
+    labelKey?: string;
+  };
   validation?: z.ZodTypeAny;
   disabled?: boolean;
+  accept?: string;
   props?: Record<string, unknown>;
-}
-
-export interface FormGroupDefinition {
-  label: string;
-  fields: FormFieldDefinition[];
+  conditions?: Array<{
+    field: string;
+    value: unknown;
+  }>;
 }
 
 export interface AppFormProps {
-  id?: string;
-  formSchema: FormGroupDefinition[];
+  fields: FormFieldDefinition[];
   initialValues?: Record<string, unknown>;
+  formSchema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  title?: string;
+  description?: string;
+  disabled?: boolean;
+  id?: string | null;
 }
 
 const props = defineProps<AppFormProps>();
-const emit = defineEmits(["submit", "cancel", "update:values"]);
+const emit = defineEmits<{
+  (e: "submit", values: Record<string, unknown>): void;
+  (e: "cancel"): void;
+}>();
 
-const { formSchema, initialValues } = toRefs(props);
-
+const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
 const df = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const { uploadMmioFile, deleteMmioFile } = useApi();
 
-// Build dynamic Zod schema for all fields in all groups
-const dynamicSchema = computed(() => {
-  const shape: Record<string, z.ZodTypeAny> = {};
-  formSchema.value.forEach((group) => {
-    group.fields.forEach((field) => {
-      if (field.validation) {
-        shape[field.name] = field.validation;
-      } else {
-        switch (field.type) {
-          case "text":
-          case "textarea":
-            shape[field.name] = z.string().optional();
-            break;
-          case "select":
-            shape[field.name] = z.string().optional();
-            break;
-          case "date":
-            shape[field.name] = z.date().optional().nullable();
-            break;
-          case "checkbox":
-            shape[field.name] = z.boolean().optional();
-            break;
-          case "tags":
-            shape[field.name] = z.array(z.string()).optional();
-            break;
-          case "file":
-            shape[field.name] = z.instanceof(FileList).optional();
-            break;
-          default:
-            shape[field.name] = z.unknown().optional();
-        }
-      }
-    });
-  });
-  return z.object(shape);
+const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
+const uploadingFiles = ref<Record<string, boolean>>({});
+const fileInputKeys = ref<Record<string, number>>({});
+
+const isEditMode = computed(() => Boolean(props.id));
+
+const typedSchema = computed(() => toTypedSchema(props.formSchema));
+
+const { handleSubmit, values, meta, resetForm, setFieldValue } = useForm({
+  validationSchema: typedSchema,
+  initialValues: props.initialValues || {},
 });
 
-const typedSchema = computed(() => toTypedSchema(dynamicSchema.value));
+const fieldOptions = ref<Record<string, FormFieldOption[]>>({});
+const loadingOptions = ref<Record<string, boolean>>({});
 
-const { handleSubmit, values, setValues, meta, resetForm, setFieldValue } =
-  useForm({
-    validationSchema: typedSchema,
-    initialValues: initialValues?.value || {},
-  });
-
-watch(
-  initialValues,
-  (newValues) => {
-    if (newValues) {
-      resetForm({ values: newValues });
+const getNestedValue = (obj: unknown, path: string): unknown => {
+  if (!path) return obj;
+  const keys = path.split(".");
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (
+      current &&
+      typeof current === "object" &&
+      key in (current as Record<string, unknown>)
+    ) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return null;
     }
-  },
-  { deep: true, immediate: true }
-);
-
-watch(
-  values,
-  (newValues) => {
-    emit("update:values", newValues);
-  },
-  { deep: true }
-);
-
-const onSubmit = handleSubmit((formData) => {
-  emit("submit", formData);
-});
-
-const onCancel = () => {
-  emit("cancel");
+  }
+  return current;
 };
 
-defineExpose({
-  submit: onSubmit,
-  cancel: onCancel,
-  resetForm,
-  setValues,
-  values,
-  meta,
+const loadFieldOptions = async (field: FormFieldDefinition) => {
+  if (!field.dataSource || field.type !== "select") return;
+
+  if (loadingOptions.value[field.name]) return;
+  loadingOptions.value[field.name] = true;
+
+  try {
+    const response = await field.dataSource();
+    let data: unknown = response;
+
+    const dataPath = field.fieldOptions?.dataPath;
+    if (dataPath) {
+      data = getNestedValue(response, dataPath);
+    }
+
+    if (!data) {
+      return;
+    }
+
+    if (!Array.isArray(data)) {
+      return;
+    }
+
+    const valueKey = field.fieldOptions?.valueKey || "value";
+    const labelKey = field.fieldOptions?.labelKey || "label";
+
+    fieldOptions.value[field.name] = data.map((item) => {
+      if (typeof item === "string" || typeof item === "number") {
+        return {
+          value: String(item),
+          label: String(item),
+        };
+      }
+      if (item && typeof item === "object") {
+        const itemObj = item as Record<string, unknown>;
+        return {
+          value: String(itemObj[valueKey] ?? ""),
+          label: String(itemObj[labelKey] ?? itemObj[valueKey] ?? ""),
+        };
+      }
+      return {
+        value: String(item),
+        label: String(item),
+      };
+    });
+  } catch {
+    // Error loading options
+  } finally {
+    loadingOptions.value[field.name] = false;
+  }
+};
+
+onMounted(() => {
+  props.fields.forEach((field) => {
+    if (field.dataSource && field.type === "select") {
+      loadFieldOptions(field);
+    }
+    // Handle existing file values in edit mode
+    if (field.type === "file" && isEditMode.value && props.initialValues) {
+      const initialValue = props.initialValues[field.name];
+      if (initialValue && typeof initialValue === "string") {
+        // Store the existing filename so it displays in the form
+        uploadedFiles.value[field.name] = {
+          filename: initialValue,
+          file: null as unknown as File, // No actual File object for existing files
+        };
+      }
+    }
+  });
+});
+
+const showDiscardDialog = ref(false);
+const hasChanges = computed(() => {
+  if (!props.initialValues) return false;
+  const initial = JSON.stringify(props.initialValues);
+  const current = JSON.stringify(values);
+  return initial !== current;
 });
 
 const getFormattedDate = (date: unknown) => {
@@ -160,216 +219,357 @@ const getFormattedDate = (date: unknown) => {
   return null;
 };
 
-const isLoading = ref(false);
+const onSubmit = handleSubmit((formData) => {
+  emit("submit", formData);
+});
 
-onMounted(async () => {
-  if (props.id) {
-    isLoading.value = true;
-    try {
-      // TODO: Replace with your API call
-      const response = await fetch("/api/form/" + props.id);
-      const data = await response.json();
-      Object.entries(data).forEach(([key, value]) => {
-        setFieldValue(key, value);
-      });
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      isLoading.value = false;
-    }
+const handleDiscard = () => {
+  if (hasChanges.value) {
+    showDiscardDialog.value = true;
+  } else {
+    router.back();
   }
+};
+
+const confirmDiscard = () => {
+  showDiscardDialog.value = false;
+  router.back();
+};
+
+const clearFileField = (fieldName: string) => {
+  const newUploadedFiles = Object.fromEntries(
+    Object.entries(uploadedFiles.value).filter(([key]) => key !== fieldName)
+  );
+  uploadedFiles.value = newUploadedFiles;
+  setFieldValue(fieldName, undefined);
+  fileInputKeys.value[fieldName] = (fileInputKeys.value[fieldName] || 0) + 1;
+};
+
+const handleFileChange = async (fieldName: string, files: FileList | null) => {
+  if (!files || files.length === 0) {
+    return;
+  }
+
+  const file = files[0];
+  uploadingFiles.value[fieldName] = true;
+
+  try {
+    const location = await uploadMmioFile(file);
+
+    if (location) {
+      const filename = location.split("/").pop() || file.name;
+      uploadedFiles.value[fieldName] = { filename, file };
+      setFieldValue(fieldName, file);
+    }
+  } catch {
+    clearFileField(fieldName);
+  } finally {
+    uploadingFiles.value[fieldName] = false;
+  }
+};
+
+const handleFileDelete = async (fieldName: string) => {
+  const uploaded = uploadedFiles.value[fieldName];
+  if (!uploaded) return;
+
+  // Only delete from server if it's a newly uploaded file (has a File object)
+  // For existing files in edit mode, just clear the field locally
+  if (uploaded.file) {
+    try {
+      const success = await deleteMmioFile(uploaded.filename);
+      if (success) {
+        clearFileField(fieldName);
+      }
+    } catch {
+      // Error deleting file
+    }
+  } else {
+    // Existing file - just clear locally without deleting from server
+    clearFileField(fieldName);
+  }
+};
+
+const isFieldVisible = (field: FormFieldDefinition): boolean => {
+  if (!field.conditions || field.conditions.length === 0) return true;
+  return field.conditions.every((condition) => {
+    const fieldValue = values[condition.field];
+    return fieldValue === condition.value;
+  });
+};
+
+defineExpose({
+  submit: onSubmit,
+  resetForm,
+  values,
+  meta,
+  getUploadedFile: (fieldName: string) =>
+    uploadedFiles.value[fieldName]?.filename,
+  isEditMode,
 });
 </script>
 
 <template>
-  <form class="space-y-10" @submit.prevent="onSubmit">
-    <template v-for="group in formSchema" :key="group.label">
-      <div class="w-full">
-        <div class="grid gap-4 grid-cols-2 w-full mb-4">
-          <div class="mb-2">
-            <h3 class="text-lg font-semibold mb-2">
-              {{ t(`fieldset.${group.label}`) }}
-            </h3>
-          </div>
-          <div class="flex flex-col gap-4">
-            <template v-for="field in group.fields" :key="field.name">
-              <FormField
-                v-slot="{ componentField, value: fieldValue }"
-                :name="field.name"
+  <form class="space-y-6" @submit.prevent="onSubmit">
+    <div v-if="props.title || props.description" class="mb-6">
+      <h2 v-if="props.title" class="text-2xl font-semibold mb-2">
+        {{ props.title }}
+      </h2>
+      <p v-if="props.description" class="text-sm text-muted-foreground">
+        {{ props.description }}
+      </p>
+    </div>
+    <template v-for="field in fields" :key="field.name">
+      <FormField
+        v-if="isFieldVisible(field)"
+        v-slot="{ componentField, value: fieldValue }"
+        :name="field.name"
+      >
+        <FormItem>
+          <FormLabel v-if="field.type !== 'checkbox'" :for="field.name">{{
+            field.label
+          }}</FormLabel>
+          <template v-if="field.type === 'text'">
+            <FormControl>
+              <Input
+                :id="field.name"
+                type="text"
+                :placeholder="field.placeholder"
+                v-bind="componentField"
+                :disabled="field.disabled || props.disabled"
+              />
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'textarea'">
+            <FormControl>
+              <Textarea
+                :id="field.name"
+                :placeholder="field.placeholder"
+                v-bind="componentField"
+                :disabled="field.disabled || props.disabled"
+                :rows="field.props?.rows || 3"
+              />
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'select'">
+            <Select
+              v-bind="componentField"
+              :disabled="
+                field.disabled ||
+                props.disabled ||
+                loadingOptions[field.name] ||
+                (isEditMode && field.name === 'item_type')
+              "
+              class="w-full"
+            >
+              <FormControl>
+                <SelectTrigger class="w-full">
+                  <SelectValue
+                    :placeholder="
+                      loadingOptions[field.name]
+                        ? t('placeholder.loading')
+                        : field.placeholder || t('placeholder.select_option')
+                    "
+                  />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem
+                    v-for="option in fieldOptions[field.name] ||
+                    field.options ||
+                    []"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </template>
+          <template v-else-if="field.type === 'date'">
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button
+                  :id="field.name"
+                  variant="outline"
+                  :class="
+                    cn(
+                      'w-full justify-start text-left font-normal',
+                      !fieldValue && 'text-muted-foreground',
+                      (field.disabled || props.disabled) &&
+                        'cursor-not-allowed opacity-50'
+                    )
+                  "
+                  type="button"
+                  :disabled="field.disabled || props.disabled"
+                >
+                  <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
+                  <span>{{
+                    fieldValue
+                      ? getFormattedDate(fieldValue)
+                      : field.placeholder || t("placeholder.pick_date")
+                  }}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                v-if="!(field.disabled || props.disabled)"
+                class="w-auto p-0"
               >
-                <FormItem>
-                  <FormLabel
-                    v-if="field.type !== 'checkbox'"
-                    :for="field.name"
-                    >{{ field.label }}</FormLabel
+                <FormControl>
+                  <Calendar
+                    initial-focus
+                    :v-model="fieldValue instanceof Date ? fieldValue : null"
+                    @update:model-value="
+                      (v) => {
+                        if (v) {
+                          setFieldValue(field.name, v.toString());
+                        } else {
+                          setFieldValue(field.name, undefined);
+                        }
+                      }
+                    "
+                  />
+                </FormControl>
+              </PopoverContent>
+            </Popover>
+          </template>
+          <template v-else-if="field.type === 'checkbox'">
+            <FormControl>
+              <label
+                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
+              >
+                <Checkbox
+                  :id="field.name"
+                  v-bind="componentField"
+                  :disabled="field.disabled || props.disabled"
+                  :checked="fieldValue"
+                />
+                <span class="ml-2">{{ field.label }}</span>
+              </label>
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'tags'">
+            <FormControl>
+              <TagsInput
+                :id="field.name"
+                :model-value="componentField.modelValue"
+                :disabled="field.disabled || props.disabled"
+                :placeholder="field.placeholder"
+                :delimiter="/[\n,]+/"
+                @update:model-value="componentField['onUpdate:modelValue']"
+              >
+                <TagsInputItem
+                  v-for="tag in componentField.modelValue || []"
+                  :key="tag"
+                  :value="tag"
+                >
+                  <TagsInputItemText />
+                  <TagsInputItemDelete />
+                </TagsInputItem>
+                <TagsInputInput
+                  :placeholder="
+                    field.placeholder || t('placeholder.tags_input')
+                  "
+                />
+              </TagsInput>
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'file'">
+            <FormControl>
+              <div class="space-y-2">
+                <Input
+                  :id="field.name"
+                  :key="`file-input-${field.name}-${
+                    fileInputKeys[field.name] || 0
+                  }`"
+                  type="file"
+                  :placeholder="field.placeholder"
+                  :multiple="Boolean(field.props?.multiple)"
+                  :accept="field.accept || String(field.props?.accept || '')"
+                  :disabled="
+                    field.disabled ||
+                    props.disabled ||
+                    uploadingFiles[field.name]
+                  "
+                  @change="(e: Event) => {
+                    const input = e.target as HTMLInputElement;
+                    if (input?.files) {
+                      handleFileChange(field.name, input.files);
+                    }
+                  }"
+                />
+                <div
+                  v-if="uploadingFiles[field.name]"
+                  class="text-sm text-muted-foreground"
+                >
+                  {{ t("hint.uploading") }}
+                </div>
+                <div
+                  v-if="
+                    uploadedFiles[field.name] && !uploadingFiles[field.name]
+                  "
+                  class="flex items-center gap-2"
+                >
+                  <span class="text-sm text-muted-foreground">
+                    {{ uploadedFiles[field.name].file?.name || uploadedFiles[field.name].filename }}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    :disabled="field.disabled || props.disabled"
+                    @click="handleFileDelete(field.name)"
                   >
-                  <template v-if="field.type === 'text'">
-                    <FormControl>
-                      <Input
-                        :id="field.name"
-                        type="text"
-                        :placeholder="field.placeholder"
-                        v-bind="componentField"
-                        :disabled="field.disabled"
-                      />
-                    </FormControl>
-                  </template>
-                  <template v-else-if="field.type === 'textarea'">
-                    <FormControl>
-                      <Textarea
-                        :id="field.name"
-                        :placeholder="field.placeholder"
-                        v-bind="componentField"
-                        :disabled="field.disabled"
-                        :rows="field.props?.rows || 3"
-                      />
-                    </FormControl>
-                  </template>
-                  <template
-                    v-else-if="field.type === 'select' && field.options"
-                  >
-                    <Select
-                      v-bind="componentField"
-                      :disabled="field.disabled"
-                      class="w-full"
-                    >
-                      <FormControl>
-                        <SelectTrigger class="w-full">
-                          <SelectValue
-                            :placeholder="
-                              field.placeholder ||
-                              t('placeholder.select_option')
-                            "
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem
-                            v-for="option in field.options"
-                            :key="option.value"
-                            :value="option.value"
-                          >
-                            {{ option.label }}
-                          </SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </template>
-                  <template v-else-if="field.type === 'date'">
-                    <Popover>
-                      <PopoverTrigger as-child>
-                        <Button
-                          :id="field.name"
-                          variant="outline"
-                          :class="
-                            cn(
-                              'w-full justify-start text-left font-normal',
-                              !fieldValue && 'text-muted-foreground',
-                              field.disabled && 'cursor-not-allowed opacity-50'
-                            )
-                          "
-                          type="button"
-                          :disabled="field.disabled"
-                        >
-                          <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
-                          <span>{{
-                            fieldValue
-                              ? getFormattedDate(fieldValue)
-                              : field.placeholder || t("placeholder.pick_date")
-                          }}</span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent v-if="!field.disabled" class="w-auto p-0">
-                        <FormControl>
-                          <Calendar
-                            initial-focus
-                            :v-model="
-                              fieldValue instanceof Date ? fieldValue : null
-                            "
-                            @update:model-value="
-                              (v) => {
-                                if (v) {
-                                  setFieldValue(field.name, v.toString());
-                                } else {
-                                  setFieldValue(field.name, undefined);
-                                }
-                              }
-                            "
-                          />
-                        </FormControl>
-                      </PopoverContent>
-                    </Popover>
-                  </template>
-                  <template v-else-if="field.type === 'checkbox'">
-                    <FormControl>
-                      <label
-                        class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        <Checkbox
-                          :id="field.name"
-                          v-bind="componentField"
-                          :disabled="field.disabled"
-                          :checked="fieldValue"
-                        />
-                        <span class="ml-2">{{ field.label }}</span>
-                      </label>
-                    </FormControl>
-                  </template>
-                  <template v-else-if="field.type === 'tags'">
-                    <FormControl>
-                      <TagsInput
-                        :id="field.name"
-                        :model-value="componentField.modelValue"
-                        :disabled="field.disabled"
-                        :placeholder="field.placeholder"
-                        :delimiter="/[\n,]+/"
-                        @update:model-value="
-                          componentField['onUpdate:modelValue']
-                        "
-                      >
-                        <TagsInputItem
-                          v-for="tag in componentField.modelValue || []"
-                          :key="tag"
-                          :value="tag"
-                        >
-                          <TagsInputItemText />
-                          <TagsInputItemDelete />
-                        </TagsInputItem>
-                        <TagsInputInput
-                          :placeholder="
-                            field.placeholder || t('placeholder.tags_input')
-                          "
-                        />
-                      </TagsInput>
-                    </FormControl>
-                  </template>
-                  <template v-else-if="field.type === 'file'">
-                    <FormControl>
-                      <Input
-                        :id="field.name"
-                        type="file"
-                        :placeholder="field.placeholder"
-                        :multiple="Boolean(field.props?.multiple)"
-                        :accept="String(field.props?.accept || '')"
-                        :disabled="field.disabled"
-                        @change="(e: Event) => {
-                          const input = e.target as HTMLInputElement;
-                          if (input && componentField['onUpdate:modelValue']) {
-                            componentField['onUpdate:modelValue'](input.files);
-                          }
-                        }"
-                      />
-                    </FormControl>
-                  </template>
-                  <FormMessage />
-                </FormItem>
-              </FormField>
-            </template>
-          </div>
-        </div>
-        <Separator />
-      </div>
+                    {{ t("action.delete") }}
+                  </Button>
+                </div>
+              </div>
+            </FormControl>
+          </template>
+          <FormMessage />
+          <p v-if="field.hint" class="text-sm text-muted-foreground mt-1">
+            {{ field.hint }}
+          </p>
+        </FormItem>
+      </FormField>
     </template>
+
+    <div class="actions flex justify-start gap-2 pt-4">
+      <Button
+        type="button"
+        variant="outline"
+        :disabled="props.disabled"
+        @click="handleDiscard"
+      >
+        {{ t("action.discard") }}
+      </Button>
+      <Button
+        type="submit"
+        :disabled="props.disabled || !meta.valid || meta.pending"
+      >
+        {{ isEditMode ? t("action.update") : t("action.save") }}
+      </Button>
+    </div>
   </form>
+
+  <AlertDialog
+    :open="showDiscardDialog"
+    @update:open="showDiscardDialog = $event"
+  >
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>{{ t("title.unsaved_changes") }}</AlertDialogTitle>
+        <AlertDialogDescription>
+          {{ t("alert.unsaved_changes_description") }}
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel>{{ t("action.cancel") }}</AlertDialogCancel>
+        <AlertDialogAction variant="destructive" @click="confirmDiscard">
+          {{ t("action.discard") }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

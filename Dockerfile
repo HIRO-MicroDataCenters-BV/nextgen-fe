@@ -20,6 +20,9 @@ FROM base AS build
 ARG NUXT_PUBLIC_APP_VERSION=1.0.0
 ENV NUXT_PUBLIC_APP_VERSION=$NUXT_PUBLIC_APP_VERSION
 
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Leverage bind mounts to package.json and yarn.lock to avoid having to copy them
 # into this layer.
@@ -32,6 +35,7 @@ RUN --mount=type=bind,source=package.json,target=package.json \
 
 # Copy the rest of the source files into the image.
 COPY . .
+
 # Run the build script.
 RUN yarn build
 
