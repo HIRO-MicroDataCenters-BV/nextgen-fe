@@ -642,6 +642,15 @@ function flattenObject(
     if (Array.isArray(value)) {
       if (value.length === 0) continue;
 
+      if (key === "dspace:extraMetadata") {
+        value.forEach((item) => {
+          if (typeof item === "object" && item !== null) {
+            flattenObject(item, preferredLanguage, currentPath, result);
+          }
+        });
+        continue;
+      }
+
       const firstItem = value[0];
       if (typeof firstItem === "object" && firstItem !== null) {
         const itemObj = firstItem as Record<string, unknown>;
