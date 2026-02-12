@@ -66,7 +66,7 @@ const formSchema = z.object({
   item_type: z.string().min(1),
   related_data_product: z.string().optional().nullable(),
   file: z.any().optional().nullable(),
-  metadata_content: z.string().min(1),
+  metadata_content: z.union([z.string().min(1), z.record(z.unknown())]),
 });
 
 const fields = computed<FormFieldDefinition[]>(() => [
@@ -108,11 +108,8 @@ const fields = computed<FormFieldDefinition[]>(() => [
   {
     name: "metadata_content",
     label: t("label.metadata_content"),
-    type: "textarea",
+    type: "jsonld-editor",
     placeholder: t("placeholder.enter_metadata_content"),
-    props: {
-      rows: 18,
-    },
   },
 ]);
 

@@ -44,6 +44,7 @@ import {
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
+import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
 import { useApi } from "@/composables/useApi";
 
 export interface FormFieldOption {
@@ -54,7 +55,7 @@ export interface FormFieldOption {
 export interface FormFieldDefinition {
   name: string;
   label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file";
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "jsonld-editor";
   placeholder?: string;
   hint?: string | null;
   options?: FormFieldOption[];
@@ -473,6 +474,17 @@ defineExpose({
                   "
                 />
               </TagsInput>
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'jsonld-editor'">
+            <FormControl>
+              <JsonLdEditor
+                :id="field.name"
+                :model-value="componentField.modelValue"
+                :readonly="field.disabled || props.disabled"
+                :title="field.label"
+                @update:model-value="componentField['onUpdate:modelValue']"
+              />
             </FormControl>
           </template>
           <template v-else-if="field.type === 'file'">
