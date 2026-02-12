@@ -141,7 +141,7 @@ const getNodeIcon = (type: NodeType): string => {
   return icons[type] || 'lucide:circle';
 };
 
-const handleFieldUpdate = (value: any) => {
+const handleFieldUpdate = (value: unknown) => {
   emit('update', {
     ...props.node,
     value,

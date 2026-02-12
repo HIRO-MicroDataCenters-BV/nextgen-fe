@@ -80,7 +80,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  update: [value: any];
+  update: [value: unknown];
 }>();
 
 const displayValue = computed(() => {
@@ -104,7 +104,7 @@ const languageCode = computed(() => {
   return 'en';
 });
 
-const handleUpdate = (value: any) => {
+const handleUpdate = (value: unknown) => {
   emit('update', value);
 };
 

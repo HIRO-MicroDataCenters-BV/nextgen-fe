@@ -54,6 +54,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
+  context: () => ({}),
 });
 
 const emit = defineEmits<{

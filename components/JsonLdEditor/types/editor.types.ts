@@ -24,7 +24,7 @@ export interface JsonLdNode {
     id: string;
     key: string;
     type: JsonLdNodeType;
-    value?: any;
+    value?: unknown;
     children?: JsonLdNode[];
     metadata: JsonLdNodeMetadata;
 }
@@ -40,8 +40,8 @@ export interface FieldDefinition {
     description?: string;
     placeholder?: string;
     children?: Record<string, FieldDefinition>;
-    validation?: (value: any) => boolean | string;
-    defaultValue?: any;
+    validation?: (value: unknown) => boolean | string;
+    defaultValue?: unknown;
 }
 
 export interface JsonLdEditorProps {
