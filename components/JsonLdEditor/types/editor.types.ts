@@ -18,6 +18,9 @@ export interface JsonLdNodeMetadata {
     language?: string;
     description?: string;
     placeholder?: string;
+    hidden?: boolean; // NEW: Hide field from UI
+    autoGenerate?: boolean; // NEW: Auto-generate value
+    defaultValue?: unknown; // NEW: Default value for field
 }
 
 export interface JsonLdNode {
@@ -42,6 +45,9 @@ export interface FieldDefinition {
     children?: Record<string, FieldDefinition>;
     validation?: (value: unknown) => boolean | string;
     defaultValue?: unknown;
+    hidden?: boolean; // NEW: Hide field from UI
+    autoGenerate?: boolean; // NEW: Auto-generate value
+    category?: string; // NEW: Category for grouping fields
 }
 
 export interface JsonLdEditorProps {

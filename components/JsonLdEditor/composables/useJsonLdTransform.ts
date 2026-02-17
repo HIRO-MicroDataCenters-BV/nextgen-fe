@@ -1,8 +1,10 @@
 import type { JsonLdNode, JsonLdNodeType } from '../types/editor.types';
 import { useJsonLdSchema } from './useJsonLdSchema';
+import { useIdGenerator } from '@/composables/useIdGenerator';
 
 export function useJsonLdTransform() {
     const { getFieldDefinition } = useJsonLdSchema();
+    const { generateDatasetId, generateDistributionId } = useIdGenerator();
 
     const generateId = (): string => {
         return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -57,6 +59,9 @@ export function useJsonLdTransform() {
                     xsdType: fieldDef?.xsdType,
                     description: fieldDef?.description,
                     placeholder: fieldDef?.placeholder,
+                    hidden: fieldDef?.hidden ?? false,
+                    autoGenerate: fieldDef?.autoGenerate ?? false,
+                    defaultValue: fieldDef?.defaultValue,
                 },
             };
 
@@ -125,7 +130,8 @@ export function useJsonLdTransform() {
 
     const serializeTreeToJsonLd = (
         nodes: JsonLdNode[],
-        context?: Record<string, string>
+        context?: Record<string, string>,
+        parentContext?: 'dataset' | 'distribution'
     ): Record<string, unknown> => {
         const result: Record<string, unknown> = {};
 
@@ -133,16 +139,47 @@ export function useJsonLdTransform() {
             result['@context'] = context;
         }
 
+        // Auto-generate @id if marked as autoGenerate and not present
+        const idNode = nodes.find(n => n.key === '@id');
+        if (idNode?.metadata.autoGenerate && (!idNode.value || idNode.value === '')) {
+            if (parentContext === 'distribution') {
+                // For distributions, we need parent dataset ID - will be set by parent
+                result['@id'] = generateDistributionId('temp', 0);
+            } else {
+                result['@id'] = generateDatasetId();
+            }
+        }
+
+        // Always include @type even if hidden
+        const typeNode = nodes.find(n => n.key === '@type');
+        if (typeNode?.metadata.hidden && typeNode.metadata.defaultValue) {
+            result['@type'] = typeNode.metadata.defaultValue;
+        }
+
         for (const node of nodes) {
             const { key, type, value, children, metadata } = node;
 
+            // Skip if already handled above
+            if (key === '@id' && metadata.autoGenerate && (!value || value === '')) {
+                continue;
+            }
+            if (key === '@type' && metadata.hidden) {
+                continue; // Already added above
+            }
+
             if (type === 'object' && children) {
-                result[key] = serializeTreeToJsonLd(children);
+                result[key] = serializeTreeToJsonLd(children, undefined, key === 'dcat:distribution' ? 'distribution' : parentContext);
             } else if (type === 'array' && children) {
                 if (key === 'dcat:distribution' || key === 'dspace:extraMetadata') {
-                    result[key] = children.map(child =>
-                        child.children ? serializeTreeToJsonLd(child.children) : {}
-                    );
+                    result[key] = children.map((child, index) => {
+                        const serialized = child.children ? serializeTreeToJsonLd(child.children, undefined, 'distribution') : {};
+                        // Auto-generate distribution IDs
+                        if (key === 'dcat:distribution' && !serialized['@id']) {
+                            const datasetId = result['@id'] as string || generateDatasetId();
+                            serialized['@id'] = generateDistributionId(datasetId, index);
+                        }
+                        return serialized;
+                    });
                 } else {
                     result[key] = value;
                 }

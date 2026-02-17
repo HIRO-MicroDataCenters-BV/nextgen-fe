@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="!node.metadata.hidden"
     ref="nodeRef"
     :data-node-id="node.id"
     class="jsonld-node"
@@ -14,6 +15,7 @@
     <div class="node-header flex items-center gap-2 py-2">
       <Button
         v-if="hasChildren"
+        type="button"
         variant="ghost"
         size="icon"
         class="size-6"
@@ -42,6 +44,7 @@
       </span>
 
       <NodeControls
+        v-if="!node.metadata.readonly"
         :node-type="node.type"
         :can-add="node.type === 'array' && node.metadata.repeatable"
         :can-remove="canRemoveNode"
@@ -61,6 +64,7 @@
 
       <Button
         v-if="!readonly && !node.metadata.readonly"
+        type="button"
         variant="ghost"
         size="icon"
         class="size-6 opacity-0 group-hover:opacity-100"
@@ -70,12 +74,13 @@
       </Button>
     </div>
 
+
     <div v-if="isExpanded && hasChildren" class="node-children">
       <JsonLdNode
         v-for="child in node.children"
         :key="child.id"
         :node="child"
-        :readonly="readonly"
+        :readonly="readonly || node.metadata.readonly"
         :depth="depth + 1"
         @update="handleChildUpdate"
         @remove="handleChildRemove"
@@ -102,6 +107,15 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   depth: 0,
 });
+
+// Debug: Log readonly status for extraMetadata
+if (props.node.key === 'dspace:extraMetadata') {
+  console.log('ExtraMetadata node:', {
+    key: props.node.key,
+    readonly: props.node.metadata.readonly,
+    metadata: props.node.metadata,
+  });
+}
 
 const emit = defineEmits<{
   update: [node: JsonLdNodeType];

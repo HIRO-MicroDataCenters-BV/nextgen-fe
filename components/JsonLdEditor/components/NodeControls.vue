@@ -1,5 +1,6 @@
 <template>
   <div 
+    v-if="(canAdd && !readonly) || (canRemove && !readonly)"
     class="node-controls"
     :class="{ 'node-controls--visible': isHovered }"
   >

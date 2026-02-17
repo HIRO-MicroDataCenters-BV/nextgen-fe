@@ -1115,17 +1115,20 @@ export function createDatasetJsonLd(
 
   // Parse metadata_content if provided
   let parsedMetadataContent: Record<string, unknown> | null = null;
-  if (
-    formData.metadata_content &&
-    typeof formData.metadata_content === "string"
-  ) {
-    try {
-      const parsed = JSON.parse(formData.metadata_content);
-      if (parsed && typeof parsed === "object") {
-        parsedMetadataContent = parsed;
+  if (formData.metadata_content) {
+    if (typeof formData.metadata_content === "object") {
+      // Already an object from JsonLdEditor
+      parsedMetadataContent = formData.metadata_content as Record<string, unknown>;
+    } else if (typeof formData.metadata_content === "string") {
+      // String - try to parse as JSON
+      try {
+        const parsed = JSON.parse(formData.metadata_content);
+        if (parsed && typeof parsed === "object") {
+          parsedMetadataContent = parsed;
+        }
+      } catch {
+        // Failed to parse metadata_content
       }
-    } catch {
-      // Failed to parse metadata_content
     }
   }
 
