@@ -225,6 +225,17 @@ watch(() => props.node.metadata.isNew, (isNew) => {
   if (isNew) {
     isNewlyAdded.value = true;
     
+    // Scroll to the new element
+    setTimeout(() => {
+      if (nodeRef.value) {
+        nodeRef.value.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
+    
     // Remove highlight after 2.5 seconds
     setTimeout(() => {
       isNewlyAdded.value = false;
