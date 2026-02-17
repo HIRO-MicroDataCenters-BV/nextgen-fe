@@ -1,9 +1,41 @@
+import { jsonldFieldsEn } from './jsonld-fields';
+
 export default defineI18nConfig(() => {
   return {
     legacy: false,
     locale: "en",
     messages: {
       en: {
+        jsonld: {
+          fields: jsonldFieldsEn,
+          editor: {
+            visual: 'Visual',
+            code: 'Code',
+            noMetadata: 'No metadata to display',
+            addField: 'Add Field',
+            validationErrors: 'Validation Errors:',
+            addFieldDialog: {
+              title: 'Add New Field',
+              description: 'Select the type of field you want to add',
+              fieldName: 'Field Name',
+              fieldType: 'Field Type',
+              fieldNamePlaceholder: 'e.g., dcat:title',
+              selectTypePlaceholder: 'Select type',
+              types: {
+                string: 'String',
+                uri: 'URI',
+                date: 'Date',
+                number: 'Number',
+                boolean: 'Boolean',
+                languageString: 'Language String',
+                object: 'Object',
+                array: 'Array',
+              },
+              cancel: 'Cancel',
+              confirm: 'Add Field',
+            },
+          },
+        },
         app: {
           title: "NextGen",
           description:

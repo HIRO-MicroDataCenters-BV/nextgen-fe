@@ -1,17 +1,18 @@
 <template>
-  <div class="jsonld-editor border rounded-lg">
-    <div class="editor-header flex items-center justify-end p-4 border-b bg-muted/30">
-      <div class="flex items-center gap-2">
-        <Label for="mode-switch" class="text-sm">Visual</Label>
-        <Switch
-          id="mode-switch"
-          :model-value="currentMode === 'code'"
-          :disabled="readonly"
-          @update:model-value="toggleMode"
-        />
-        <Label for="mode-switch" class="text-sm">Code</Label>
+  <TooltipProvider>
+    <div class="jsonld-editor border rounded-lg">
+      <div class="editor-header flex items-center justify-end p-4 border-b bg-muted/30">
+        <div class="flex items-center gap-2">
+          <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.visual') }}</Label>
+          <Switch
+            id="mode-switch"
+            :model-value="currentMode === 'code'"
+            :disabled="readonly"
+            @update:model-value="toggleMode"
+          />
+          <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.code') }}</Label>
+        </div>
       </div>
-    </div>
 
     <div ref="editorContentRef" class="editor-content">
       <VisualEditor
@@ -32,7 +33,7 @@
     </div>
 
     <div v-if="validationResult.errors.length > 0" class="editor-footer p-4 border-t bg-muted/20">
-      <div class="text-sm font-medium mb-2">Validation Errors:</div>
+      <div class="text-sm font-medium mb-2">{{ t('jsonld.editor.validationErrors') }}</div>
       <div class="space-y-1">
         <div
           v-for="(error, index) in validationResult.errors"
@@ -49,15 +50,18 @@
             <span class="ml-2">{{ error.message }}</span>
           </div>
         </div>
+        </div>
       </div>
     </div>
-  </div>
+  </TooltipProvider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import type { EditorMode, JsonLdNode } from './types/editor.types';
 import { useJsonLdTransform } from './composables/useJsonLdTransform';
 import { useJsonLdValidation } from './composables/useJsonLdValidation';
@@ -76,6 +80,8 @@ const props = withDefaults(defineProps<Props>(), {
   initialMode: 'visual',
   title: 'Metadata Editor',
 });
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | Record<string, unknown>];

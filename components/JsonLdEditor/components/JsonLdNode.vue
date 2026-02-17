@@ -33,7 +33,27 @@
         class="size-4 text-muted-foreground"
       />
 
-      <span class="node-key font-mono text-sm flex items-center gap-1">
+      <Tooltip v-if="fieldDescription">
+        <TooltipTrigger as-child>
+          <span class="node-key font-mono text-sm flex items-center gap-1 cursor-help">
+            {{ node.key }}
+            <span v-if="node.metadata.required && !node.value" class="text-destructive font-bold">*</span>
+            <Icon
+              v-if="node.metadata.readonly"
+              name="lucide:lock"
+              class="size-3 text-muted-foreground"
+            />
+            <Icon
+              name="lucide:help-circle"
+              class="size-3 text-muted-foreground/50"
+            />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent class="max-w-xs">
+          <p class="text-sm">{{ fieldDescription }}</p>
+        </TooltipContent>
+      </Tooltip>
+      <span v-else class="node-key font-mono text-sm flex items-center gap-1">
         {{ node.key }}
         <span v-if="node.metadata.required && !node.value" class="text-destructive font-bold">*</span>
         <Icon
@@ -92,7 +112,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
 import NodeControls from './NodeControls.vue';
@@ -106,6 +128,16 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   depth: 0,
+});
+
+const { t } = useI18n();
+
+// Get description from i18n or fallback to metadata
+const fieldDescription = computed(() => {
+  const i18nKey = `jsonld.fields.${props.node.key}.description`;
+  const translated = t(i18nKey);
+  // If translation key not found, use metadata description
+  return translated !== i18nKey ? translated : props.node.metadata.description;
 });
 
 // Debug: Log readonly status for extraMetadata

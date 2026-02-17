@@ -2,45 +2,45 @@
   <Dialog v-model:open="isOpen">
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Add New Field</DialogTitle>
+        <DialogTitle>{{ t('jsonld.editor.addFieldDialog.title') }}</DialogTitle>
         <DialogDescription>
-          Select the type of field you want to add
+          {{ t('jsonld.editor.addFieldDialog.description') }}
         </DialogDescription>
       </DialogHeader>
       
       <div class="space-y-4">
         <div class="space-y-2">
-          <Label for="field-name">Field Name</Label>
+          <Label for="field-name">{{ t('jsonld.editor.addFieldDialog.fieldName') }}</Label>
           <Input
             id="field-name"
             v-model="fieldName"
-            placeholder="e.g., dcat:title"
+            :placeholder="t('jsonld.editor.addFieldDialog.fieldNamePlaceholder')"
           />
         </div>
         
         <div class="space-y-2">
-          <Label for="field-type">Field Type</Label>
+          <Label for="field-type">{{ t('jsonld.editor.addFieldDialog.fieldType') }}</Label>
           <Select v-model="fieldType">
             <SelectTrigger id="field-type">
-              <SelectValue placeholder="Select type" />
+              <SelectValue :placeholder="t('jsonld.editor.addFieldDialog.selectTypePlaceholder')" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="string">String</SelectItem>
-              <SelectItem value="uri">URI</SelectItem>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="number">Number</SelectItem>
-              <SelectItem value="boolean">Boolean</SelectItem>
-              <SelectItem value="language-string">Language String</SelectItem>
-              <SelectItem value="object">Object</SelectItem>
-              <SelectItem value="array">Array</SelectItem>
+              <SelectItem value="string">{{ t('jsonld.editor.addFieldDialog.types.string') }}</SelectItem>
+              <SelectItem value="uri">{{ t('jsonld.editor.addFieldDialog.types.uri') }}</SelectItem>
+              <SelectItem value="date">{{ t('jsonld.editor.addFieldDialog.types.date') }}</SelectItem>
+              <SelectItem value="number">{{ t('jsonld.editor.addFieldDialog.types.number') }}</SelectItem>
+              <SelectItem value="boolean">{{ t('jsonld.editor.addFieldDialog.types.boolean') }}</SelectItem>
+              <SelectItem value="language-string">{{ t('jsonld.editor.addFieldDialog.types.languageString') }}</SelectItem>
+              <SelectItem value="object">{{ t('jsonld.editor.addFieldDialog.types.object') }}</SelectItem>
+              <SelectItem value="array">{{ t('jsonld.editor.addFieldDialog.types.array') }}</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" @click="cancel">Cancel</Button>
-        <Button type="button" :disabled="!fieldName || !fieldType" @click="confirm">Add Field</Button>
+        <Button type="button" variant="outline" @click="cancel">{{ t('jsonld.editor.addFieldDialog.cancel') }}</Button>
+        <Button type="button" :disabled="!fieldName || !fieldType" @click="confirm">{{ t('jsonld.editor.addFieldDialog.confirm') }}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -48,12 +48,15 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { JsonLdNodeType } from '../types/editor.types';
+
+const { t } = useI18n();
 
 interface Props {
   open: boolean;

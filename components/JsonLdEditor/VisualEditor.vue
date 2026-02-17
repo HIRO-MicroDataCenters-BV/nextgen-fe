@@ -2,10 +2,10 @@
   <div class="visual-editor p-4">
     <div v-if="modelValue.length === 0" class="empty-state text-center py-12">
       <Icon name="lucide:file-json" class="size-12 mx-auto text-muted-foreground mb-4" />
-      <p class="text-muted-foreground">No metadata to display</p>
+      <p class="text-muted-foreground">{{ t('jsonld.editor.noMetadata') }}</p>
       <Button type="button" class="mt-4" @click="showAddFieldDialog = true">
         <Icon name="lucide:plus" class="size-4 mr-2" />
-        Add Field
+        {{ t('jsonld.editor.addField') }}
       </Button>
     </div>
 
@@ -28,7 +28,7 @@
         @click="showAddFieldDialog = true"
       >
         <Icon name="lucide:plus" class="size-4 mr-2" />
-        Add Field
+        {{ t('jsonld.editor.addField') }}
       </Button>
     </div>
 
@@ -41,6 +41,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType } from './types/editor.types';
 import JsonLdNode from './components/JsonLdNode.vue';
@@ -56,6 +57,8 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   context: () => ({}),
 });
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   'update:modelValue': [nodes: JsonLdNodeType[]];

@@ -9,7 +9,6 @@ interface TarFile {
  * Supports basic POSIX tar format
  */
 function parseTar(arrayBuffer: ArrayBuffer): TarFile[] {
-    const view = new DataView(arrayBuffer);
     const files: TarFile[] = [];
     let offset = 0;
 
