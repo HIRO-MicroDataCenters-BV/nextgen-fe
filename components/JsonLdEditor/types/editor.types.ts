@@ -21,7 +21,6 @@ export interface JsonLdNodeMetadata {
     hidden?: boolean; // NEW: Hide field from UI
     autoGenerate?: boolean; // NEW: Auto-generate value
     defaultValue?: unknown; // NEW: Default value for field
-    vocabulary?: 'accessRights' | 'language'; // NEW: Controlled vocabulary type
 }
 
 export interface JsonLdNode {
@@ -49,7 +48,6 @@ export interface FieldDefinition {
     hidden?: boolean; // NEW: Hide field from UI
     autoGenerate?: boolean; // NEW: Auto-generate value
     category?: string; // NEW: Category for grouping fields
-    vocabulary?: 'accessRights' | 'language'; // NEW: Controlled vocabulary type
 }
 
 export interface JsonLdEditorProps {
