@@ -14,6 +14,14 @@ export default defineI18nConfig(() => {
             noMetadata: 'No metadata to display',
             addField: 'Add Field',
             validationErrors: 'Validation Errors:',
+            categories: {
+              basic: 'Basic Information',
+              coverage: 'Coverage',
+              rights: 'Rights & Access',
+              contact: 'Contact & Publisher',
+              technical: 'Technical Details',
+              other: 'Other Fields',
+            },
             addFieldDialog: {
               title: 'Add New Field',
               description: 'Select the type of field you want to add',

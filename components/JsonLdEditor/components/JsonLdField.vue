@@ -1,7 +1,18 @@
 <template>
   <div class="jsonld-field">
+    <!-- Controlled Vocabulary Select for URI fields with vocabulary -->
+    <ControlledVocabularySelect
+      v-if="node.type === 'uri' && node.metadata.vocabulary"
+      :model-value="String(node.value || '')"
+      :vocabulary="node.metadata.vocabulary"
+      :readonly="readonly"
+      :placeholder="node.metadata.placeholder"
+      @update:model-value="handleUpdate"
+    />
+
+    <!-- Regular Input for string/uri without vocabulary -->
     <Input
-      v-if="node.type === 'string' || node.type === 'uri'"
+      v-else-if="node.type === 'string' || node.type === 'uri'"
       :model-value="displayValue"
       :readonly="readonly"
       :placeholder="node.metadata.placeholder"
@@ -49,17 +60,24 @@
       @update:checked="handleUpdate"
     />
 
-    <Input
+    <!-- Date Picker for date fields -->
+    <DatePickerField
       v-else-if="node.type === 'date'"
-      type="datetime-local"
-      :model-value="displayValue"
+      :model-value="String(node.value || '')"
       :readonly="readonly"
+      :placeholder="node.metadata.placeholder"
       @update:model-value="handleUpdate"
     />
 
     <span v-else class="text-sm text-muted-foreground">
       {{ node.type }}
     </span>
+
+    <!-- Inline Validation Errors -->
+    <Alert v-for="(error, index) in validationErrors" :key="index" :variant="error.severity === 'error' ? 'destructive' : 'default'" class="mt-2">
+      <Icon :name="error.severity === 'error' ? 'lucide:circle-x' : 'lucide:triangle-alert'" class="size-4" />
+      <AlertDescription>{{ error.message }}</AlertDescription>
+    </Alert>
   </div>
 </template>
 
@@ -68,15 +86,20 @@ import { computed } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { JsonLdNode } from '../types/editor.types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import ControlledVocabularySelect from './ControlledVocabularySelect.vue';
+import DatePickerField from './DatePickerField.vue';
+import type { JsonLdNode, ValidationError } from '../types/editor.types';
 
 interface Props {
   node: JsonLdNode;
   readonly?: boolean;
+  validationErrors?: ValidationError[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
+  validationErrors: () => [],
 });
 
 const emit = defineEmits<{

@@ -421,6 +421,7 @@ export function useJsonLdSchema() {
                     repeatable: false,
                     placeholder: 'http://publications.europa.eu/resource/authority/access-right/PUBLIC',
                     description: 'URI from EU Vocabularies (PUBLIC, RESTRICTED, NON_PUBLIC)',
+                    vocabulary: 'accessRights',
                 },
                 '@type': {
                     key: '@type',
@@ -446,13 +447,14 @@ export function useJsonLdSchema() {
             children: {
                 '@id': {
                     key: '@id',
-                    label: 'Language Code',
+                    label: 'Language URI',
                     type: 'uri',
                     required: true,
                     readonly: false,
                     repeatable: false,
                     placeholder: 'http://publications.europa.eu/resource/authority/language/ENG',
-                    description: 'ISO 639-1 language code URI (e.g., ENG, NLD, DEU)',
+                    description: 'URI from EU Vocabularies (ENG, NLD, DEU, FRA, etc.)',
+                    vocabulary: 'language',
                 },
             },
         },

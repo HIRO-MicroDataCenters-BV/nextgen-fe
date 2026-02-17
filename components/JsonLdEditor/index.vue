@@ -21,6 +21,7 @@
         :model-value="treeData"
         :readonly="readonly"
         :context="preservedContext"
+        :validation-errors="validationResult.errors"
         @update:model-value="handleVisualUpdate"
       />
       <CodeEditor

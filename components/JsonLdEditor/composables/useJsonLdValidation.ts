@@ -186,9 +186,17 @@ export function useJsonLdValidation() {
         };
     };
 
+    /**
+     * Get validation errors for a specific field path
+     */
+    const getFieldErrors = (errors: ValidationError[], path: string): ValidationError[] => {
+        return errors.filter(err => err.path === path);
+    };
+
     return {
         validateNode,
         validateTree,
         validateJsonLd,
+        getFieldErrors,
     };
 }

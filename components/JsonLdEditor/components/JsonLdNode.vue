@@ -78,6 +78,7 @@
         <JsonLdField
           :node="node"
           :readonly="readonly || node.metadata.readonly"
+          :validation-errors="fieldErrors"
           @update="handleFieldUpdate"
         />
       </div>
@@ -115,7 +116,7 @@ import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType } from '../types/editor.types';
+import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
 import NodeControls from './NodeControls.vue';
 
@@ -123,11 +124,15 @@ interface Props {
   node: JsonLdNodeType;
   readonly?: boolean;
   depth?: number;
+  validationErrors?: ValidationError[];
+  nodePath?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   depth: 0,
+  validationErrors: () => [],
+  nodePath: '',
 });
 
 const { t } = useI18n();
@@ -138,6 +143,15 @@ const fieldDescription = computed(() => {
   const translated = t(i18nKey);
   // If translation key not found, use metadata description
   return translated !== i18nKey ? translated : props.node.metadata.description;
+});
+
+// Compute field-specific validation errors
+const currentPath = computed(() => {
+  return props.nodePath ? `${props.nodePath}.${props.node.key}` : props.node.key;
+});
+
+const fieldErrors = computed(() => {
+  return props.validationErrors.filter(err => err.path === currentPath.value);
 });
 
 // Debug: Log readonly status for extraMetadata
