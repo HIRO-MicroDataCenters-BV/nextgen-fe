@@ -11,6 +11,7 @@ export function useJsonLdSchema() {
             readonly: true,
             repeatable: false,
             autoGenerate: true,
+            category: 'technical',
             description: 'Automatically generated unique identifier',
         },
         '@type': {
@@ -22,6 +23,7 @@ export function useJsonLdSchema() {
             readonly: true,
             repeatable: false,
             hidden: true,
+            category: 'technical',
             defaultValue: 'dcat:Dataset',
         },
         'dcterms:identifier': {
@@ -138,6 +140,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: false,
             repeatable: false,
+            category: 'rights',
             description: 'A legal document under which the dataset is made available',
             placeholder: 'e.g., EUPL, CC-BY-4.0',
         },
@@ -522,6 +525,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: true,
             repeatable: false,
+            category: 'technical',
             description: 'Backend-managed region identifier',
         },
         'dspace:isDeleted': {
@@ -532,6 +536,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: true,
             repeatable: false,
+            category: 'technical',
         },
         'dspace:isShared': {
             key: 'dspace:isShared',
@@ -541,6 +546,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: true,
             repeatable: false,
+            category: 'technical',
         },
         'dspace:metadataFilename': {
             key: 'dspace:metadataFilename',
@@ -550,6 +556,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: true,
             repeatable: false,
+            category: 'technical',
         },
         'dspace:extraMetadata': {
             key: 'dspace:extraMetadata',

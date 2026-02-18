@@ -154,15 +154,6 @@ const fieldErrors = computed(() => {
   return props.validationErrors.filter(err => err.path === currentPath.value);
 });
 
-// Debug: Log readonly status for extraMetadata
-if (props.node.key === 'dspace:extraMetadata') {
-  console.log('ExtraMetadata node:', {
-    key: props.node.key,
-    readonly: props.node.metadata.readonly,
-    metadata: props.node.metadata,
-  });
-}
-
 const emit = defineEmits<{
   update: [node: JsonLdNodeType];
   remove: [nodeId: string];

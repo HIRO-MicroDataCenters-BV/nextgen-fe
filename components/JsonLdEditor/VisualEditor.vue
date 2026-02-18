@@ -17,26 +17,6 @@
     </div>
 
     <div v-else class="tree-container space-y-4">
-      <!-- Field Search -->
-      <div class="search-container mb-4">
-        <div class="relative">
-          <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input 
-            v-model="searchQuery"
-            placeholder="Search fields..."
-            class="pl-9"
-          />
-          <Button
-            v-if="searchQuery"
-            variant="ghost"
-            size="sm"
-            class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-            @click="searchQuery = ''"
-          >
-            <Icon name="lucide:x" class="size-4" />
-          </Button>
-        </div>
-      </div>
 
       <!-- Grouped by Category -->
       <Collapsible
@@ -64,6 +44,19 @@
           />
         </CollapsibleContent>
       </Collapsible>
+
+      <!-- Other fields (without category wrapper) -->
+      <div v-if="filteredNodes.other?.length > 0" class="space-y-2">
+        <JsonLdNode
+          v-for="node in filteredNodes.other"
+          :key="node.id"
+          :node="node"
+          :readonly="readonly"
+          :validation-errors="validationErrors"
+          @update="handleNodeUpdate"
+          @remove="handleNodeRemove"
+        />
+      </div>
       
       <Button
         v-if="!readonly"
@@ -101,12 +94,14 @@ interface Props {
   readonly?: boolean;
   context?: Record<string, string>;
   validationErrors?: ValidationError[];
+  searchQuery?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   context: () => ({}),
   validationErrors: () => [],
+  searchQuery: '',
 });
 
 const { t } = useI18n();
@@ -116,7 +111,6 @@ const emit = defineEmits<{
 }>();
 
 const showAddFieldDialog = ref(false);
-const searchQuery = ref('');
 
 // Category order for display
 const categoryOrder = ['basic', 'coverage', 'rights', 'contact', 'technical', 'other'] as const;
@@ -151,9 +145,9 @@ const visibleCategories = computed(() => {
 
 // Filter nodes by search query
 const filteredNodes = computed(() => {
-  if (!searchQuery.value) return groupedNodes.value;
+  if (!props.searchQuery) return groupedNodes.value;
   
-  const query = searchQuery.value.toLowerCase();
+  const query = props.searchQuery.toLowerCase();
   const filtered: Record<string, typeof props.modelValue> = {
     basic: [],
     coverage: [],
@@ -177,7 +171,11 @@ const filteredNodes = computed(() => {
 
 // Get filtered categories (only show categories with filtered nodes)
 const filteredCategories = computed(() => {
-  return categoryOrder.filter(cat => filteredNodes.value[cat].length > 0);
+  return categoryOrder.filter(cat => {
+    // Skip 'other' category - don't show it in UI
+    if (cat === 'other') return false;
+    return filteredNodes.value[cat].length > 0;
+  });
 });
 
 // Handle jump to error from validation summary

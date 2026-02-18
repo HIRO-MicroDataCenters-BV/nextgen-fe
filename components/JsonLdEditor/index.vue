@@ -1,7 +1,29 @@
 <template>
   <TooltipProvider>
     <div class="jsonld-editor border rounded-lg">
-      <div class="editor-header flex items-center justify-end p-4 border-b bg-muted/30">
+      <div class="editor-header flex items-center justify-between gap-4 p-4 border-b bg-muted/30">
+        <!-- Search Field -->
+        <div class="flex-1 max-w-md">
+          <div class="relative">
+            <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input 
+              v-model="searchQuery"
+              :placeholder="currentMode === 'visual' ? 'Search fields...' : 'Search in code...'"
+              class="pl-9 h-9"
+            />
+            <Button
+              v-if="searchQuery"
+              variant="ghost"
+              size="sm"
+              class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              @click="searchQuery = ''"
+            >
+              <Icon name="lucide:x" class="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        <!-- Mode Toggle -->
         <div class="flex items-center gap-2">
           <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.visual') }}</Label>
           <Switch
@@ -22,6 +44,7 @@
         :readonly="readonly"
         :context="preservedContext"
         :validation-errors="validationResult.errors"
+        :search-query="searchQuery"
         @update:model-value="handleVisualUpdate"
       />
       <CodeEditor
@@ -29,6 +52,7 @@
         key="code-editor"
         :model-value="codeData"
         :readonly="readonly"
+        :search-query="searchQuery"
         @update:model-value="handleCodeUpdate"
       />
     </div>
@@ -62,6 +86,8 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { EditorMode, JsonLdNode } from './types/editor.types';
 import { useJsonLdTransform } from './composables/useJsonLdTransform';
@@ -92,6 +118,7 @@ const { parseJsonLd, serializeJsonLd } = useJsonLdTransform();
 const { validateTree } = useJsonLdValidation();
 
 const currentMode = ref<EditorMode>(props.initialMode);
+const searchQuery = ref('');
 const treeData = ref<JsonLdNode[]>([]);
 const codeData = ref<string>('');
 const preservedContext = ref<Record<string, string>>();
