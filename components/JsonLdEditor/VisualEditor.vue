@@ -21,8 +21,8 @@
       <!-- Grouped by Category -->
       <Collapsible
         v-for="category in filteredCategories"
-        :key="category"
         v-show="filteredNodes[category]?.length > 0"
+        :key="category"
         :default-open="true"
         class="category-group"
       >
@@ -82,7 +82,6 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType, ValidationError } from './types/editor.types';
 import JsonLdNode from './components/JsonLdNode.vue';
@@ -138,10 +137,7 @@ const groupedNodes = computed(() => {
   return groups;
 });
 
-// Get visible categories (with nodes)
-const visibleCategories = computed(() => {
-  return categoryOrder.filter(cat => groupedNodes.value[cat].length > 0);
-});
+
 
 // Filter nodes by search query
 const filteredNodes = computed(() => {

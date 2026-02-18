@@ -1,6 +1,7 @@
 <template>
   <div class="code-editor">
-    <div v-if="searchQuery && highlightedCode" v-html="highlightedCode" class="code-display font-mono text-sm" />
+    <!-- eslint-disable-next-line vue/no-v-html -->
+    <div v-if="searchQuery && highlightedCode" class="code-display font-mono text-sm" v-html="highlightedCode" />
     <textarea
       v-else
       v-model="code"

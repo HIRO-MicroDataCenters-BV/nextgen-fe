@@ -25,7 +25,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { CalendarDate, parseDate } from '@internationalized/date';
+import type { CalendarDate} from '@internationalized/date';
+import { parseDate } from '@internationalized/date';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
