@@ -1,5 +1,12 @@
 <template>
   <div class="visual-editor p-4">
+    <!-- Validation Summary -->
+    <ValidationSummary 
+      v-if="validationErrors.length > 0"
+      :errors="validationErrors"
+      @jump-to-error="handleJumpToError"
+    />
+
     <div v-if="modelValue.length === 0" class="empty-state text-center py-12">
       <Icon name="lucide:file-json" class="size-12 mx-auto text-muted-foreground mb-4" />
       <p class="text-muted-foreground">{{ t('jsonld.editor.noMetadata') }}</p>
@@ -10,10 +17,32 @@
     </div>
 
     <div v-else class="tree-container space-y-4">
+      <!-- Field Search -->
+      <div class="search-container mb-4">
+        <div class="relative">
+          <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input 
+            v-model="searchQuery"
+            placeholder="Search fields..."
+            class="pl-9"
+          />
+          <Button
+            v-if="searchQuery"
+            variant="ghost"
+            size="sm"
+            class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+            @click="searchQuery = ''"
+          >
+            <Icon name="lucide:x" class="size-4" />
+          </Button>
+        </div>
+      </div>
+
       <!-- Grouped by Category -->
       <Collapsible
-        v-for="category in visibleCategories"
+        v-for="category in filteredCategories"
         :key="category"
+        v-show="filteredNodes[category]?.length > 0"
         :default-open="true"
         class="category-group"
       >
@@ -25,7 +54,7 @@
         </CollapsibleTrigger>
         <CollapsibleContent class="space-y-2 pt-2">
           <JsonLdNode
-            v-for="node in groupedNodes[category]"
+            v-for="node in filteredNodes[category]"
             :key="node.id"
             :node="node"
             :readonly="readonly"
@@ -60,10 +89,12 @@
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { JsonLdNode as JsonLdNodeType, JsonLdNodeType as NodeType, ValidationError } from './types/editor.types';
 import JsonLdNode from './components/JsonLdNode.vue';
 import AddFieldDialog from './components/AddFieldDialog.vue';
+import ValidationSummary from './components/ValidationSummary.vue';
 
 interface Props {
   modelValue: JsonLdNodeType[];
@@ -85,6 +116,7 @@ const emit = defineEmits<{
 }>();
 
 const showAddFieldDialog = ref(false);
+const searchQuery = ref('');
 
 // Category order for display
 const categoryOrder = ['basic', 'coverage', 'rights', 'contact', 'technical', 'other'] as const;
@@ -116,6 +148,45 @@ const groupedNodes = computed(() => {
 const visibleCategories = computed(() => {
   return categoryOrder.filter(cat => groupedNodes.value[cat].length > 0);
 });
+
+// Filter nodes by search query
+const filteredNodes = computed(() => {
+  if (!searchQuery.value) return groupedNodes.value;
+  
+  const query = searchQuery.value.toLowerCase();
+  const filtered: Record<string, typeof props.modelValue> = {
+    basic: [],
+    coverage: [],
+    rights: [],
+    contact: [],
+    technical: [],
+    other: [],
+  };
+  
+  for (const [category, nodes] of Object.entries(groupedNodes.value)) {
+    filtered[category] = nodes.filter(node => {
+      const matchesKey = node.key.toLowerCase().includes(query);
+      const matchesLabel = node.metadata.label?.toLowerCase().includes(query);
+      const matchesDescription = node.metadata.description?.toLowerCase().includes(query);
+      return matchesKey || matchesLabel || matchesDescription;
+    });
+  }
+  
+  return filtered;
+});
+
+// Get filtered categories (only show categories with filtered nodes)
+const filteredCategories = computed(() => {
+  return categoryOrder.filter(cat => filteredNodes.value[cat].length > 0);
+});
+
+// Handle jump to error from validation summary
+const handleJumpToError = (path: string) => {
+  // Scroll to the field with error
+  // For now, just expand all categories to show the field
+  console.log('Jump to error:', path);
+  // TODO: Implement smooth scroll to field
+};
 
 const handleNodeUpdate = (updatedNode: JsonLdNodeType) => {
   const updateNodeInTree = (nodes: JsonLdNodeType[]): JsonLdNodeType[] => {

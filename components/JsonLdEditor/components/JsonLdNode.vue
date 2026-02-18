@@ -177,7 +177,22 @@ const hasChildren = computed(() => {
 });
 
 const canRemoveNode = computed(() => {
-  return !props.node.metadata.required;
+  // Don't allow removing required fields
+  if (props.node.metadata.required) return false;
+  
+  // Don't allow removing child fields inside objects
+  // Child fields are part of the object structure and should only be removed
+  // by deleting the entire parent object
+  // Only allow removing:
+  // 1. Top-level fields (depth === 0)
+  // 2. Items in arrays (parent is array type)
+  if (props.depth && props.depth > 0) {
+    // This is a child node - don't show remove button
+    // Children of objects are structural and can't be individually removed
+    return false;
+  }
+  
+  return true;
 });
 
 const toggleExpanded = () => {
