@@ -24,7 +24,7 @@
             class="search-input"
             type="text"
             :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
-          />
+          >
           <button v-if="searchQuery" class="clear-btn" type="button" @click="searchQuery = ''">
             <Icon name="lucide:x" class="size-3.5" />
           </button>
@@ -95,7 +95,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { FieldDefinition, DcatApCompliance } from '../types/editor.types';
+import type { FieldDefinition } from '../types/editor.types';
 import { useJsonLdSchema } from '../composables/useJsonLdSchema';
 
 interface Props {
