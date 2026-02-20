@@ -482,19 +482,13 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.78rem;
-  padding: 0.3rem 0.5rem;
-  border-radius: 0.4rem;
+  padding: 0.2rem 0;
   line-height: 1.4;
+  color: hsl(var(--muted-foreground));
 }
 
-.validation-item--error {
-  background: hsl(0 72% 95%);
-  color: hsl(0 60% 35%);
-}
-.validation-item--warn {
-  background: hsl(38 92% 94%);
-  color: hsl(38 70% 32%);
-}
-:root.dark .validation-item--error { background: hsl(0 45% 16%); color: hsl(0 80% 78%); }
-:root.dark .validation-item--warn  { background: hsl(38 50% 14%); color: hsl(38 80% 72%); }
+.validation-item--error .iconify { color: hsl(0 70% 48%); }
+.validation-item--warn  .iconify { color: hsl(38 80% 42%); }
+:root.dark .validation-item--error .iconify { color: hsl(0 80% 72%); }
+:root.dark .validation-item--warn  .iconify { color: hsl(38 80% 65%); }
 </style>

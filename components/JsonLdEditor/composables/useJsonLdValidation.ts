@@ -10,11 +10,27 @@ const fieldLabel = (key: string) =>
 export function useJsonLdValidation() {
     const { getRequiredFields, getFieldDefinition: _getFieldDefinition } = useJsonLdSchema();
 
+    /** Returns true when a node has no meaningful value (handles language-string objects). */
+    const isEffectivelyEmpty = (node: JsonLdNode): boolean => {
+        // No value and no children
+        if (node.value === undefined || node.value === null || node.value === '') {
+            return !node.children?.length;
+        }
+        // language-string: { '@value': '', '@language': 'en' } → empty
+        if (typeof node.value === 'object' && !Array.isArray(node.value)) {
+            const v = node.value as Record<string, unknown>;
+            if ('@value' in v) {
+                return v['@value'] === '' || v['@value'] === undefined || v['@value'] === null;
+            }
+        }
+        return false;
+    };
+
     const validateNode = (node: JsonLdNode, path: string = ''): ValidationError[] => {
         const errors: ValidationError[] = [];
         const currentPath = path ? `${path}.${node.key}` : node.key;
 
-        if (node.metadata.required && !node.value && (!node.children || node.children.length === 0)) {
+        if (node.metadata.required && isEffectivelyEmpty(node)) {
             errors.push({
                 path: currentPath,
                 message: `${fieldLabel(node.key)} is required`,
@@ -137,18 +153,19 @@ export function useJsonLdValidation() {
         }
 
         const requiredDatasetFields = getRequiredFields('dataset');
-        const presentKeys = tree.map(node => node.key);
 
         // Only check for missing required fields if we have some data
         // (at least one non-empty node)
         const hasData = tree.some(node =>
-            node.value !== undefined && node.value !== null && node.value !== '' ||
-            (node.children && node.children.length > 0)
+            !isEffectivelyEmpty(node)
         );
 
         if (hasData) {
+            const presentKeys = new Set(tree.map(n => n.key));
             for (const requiredField of requiredDatasetFields) {
-                if (!presentKeys.includes(requiredField)) {
+                // Only fire here if the field is completely absent from the tree.
+                // If it IS present (even empty), validateNode above already generated the error.
+                if (!presentKeys.has(requiredField)) {
                     errors.push({
                         path: requiredField,
                         message: `${fieldLabel(requiredField)} is required`,
