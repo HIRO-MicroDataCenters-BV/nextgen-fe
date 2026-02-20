@@ -10,7 +10,7 @@ interface VocabularyOption {
 
 interface Props {
   modelValue: string;
-  vocabulary: 'accessRights' | 'language';
+  vocabulary: import('../types/editor.types').ControlledVocabulary;
   readonly?: boolean;
   placeholder?: string;
 }

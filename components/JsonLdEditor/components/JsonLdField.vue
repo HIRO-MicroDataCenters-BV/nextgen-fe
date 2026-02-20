@@ -19,7 +19,7 @@
       @update:model-value="handleUpdate"
     />
 
-    <div v-else-if="node.type === 'language-string'" class="flex gap-2">
+    <div v-else-if="node.type === 'language-string'" class="flex gap-2 w-full">
       <Input
         :model-value="languageValue"
         :readonly="readonly"
@@ -73,11 +73,6 @@
       {{ node.type }}
     </span>
 
-    <!-- Inline Validation Errors -->
-    <Alert v-for="(error, index) in validationErrors" :key="index" :variant="error.severity === 'error' ? 'destructive' : 'default'" class="mt-2">
-      <Icon :name="error.severity === 'error' ? 'lucide:circle-x' : 'lucide:triangle-alert'" class="size-4" />
-      <AlertDescription>{{ error.message }}</AlertDescription>
-    </Alert>
   </div>
 </template>
 
@@ -86,7 +81,6 @@ import { computed } from 'vue';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import ControlledVocabularySelect from './ControlledVocabularySelect.vue';
 import DatePickerField from './DatePickerField.vue';
 import type { JsonLdNode, ValidationError } from '../types/editor.types';
@@ -153,3 +147,17 @@ const handleLanguageCodeUpdate = (lang: string) => {
   gap: 0.5rem;
 }
 </style>
+
+<style scoped>
+.jsonld-field {
+  width: 100%;
+}
+
+/* Ensure every direct child input/select stretches */
+.jsonld-field > :deep(input),
+.jsonld-field > :deep(.input),
+.jsonld-field > :deep([data-slot="input"]) {
+  width: 100%;
+}
+</style>
+

@@ -1,148 +1,196 @@
 export const jsonldFieldsEn = {
-    'dcterms:identifier': {
-        label: 'Identifier',
-        description: 'A unique identifier of the dataset',
-        placeholder: 'e.g., clinical-gwas-cardiology-001',
-    },
+    // ── IDENTIFICATION ───────────────────────────────────────────────────
     'dcterms:title': {
         label: 'Title',
-        description: 'A name given to the dataset',
-        placeholder: 'Enter dataset title',
+        description: 'The name of the dataset — be clear and descriptive',
+        placeholder: 'e.g., Cardiovascular Genomic Cohort 2024',
     },
     'dcterms:description': {
         label: 'Description',
-        description: 'A free-text account of the dataset',
-        placeholder: 'Enter dataset description',
+        description: 'A clear, plain-language summary of what the dataset contains',
+        placeholder: 'Describe the dataset, its content, and how it was collected',
+    },
+    'dcterms:identifier': {
+        label: 'Identifier',
+        description: 'A unique identifier for this dataset (e.g. an internal catalogue ID)',
+        placeholder: 'e.g., clinical-gwas-cardiology-001',
     },
     'dcat:keyword': {
         label: 'Keywords',
-        description: 'A keyword or tag describing the dataset',
+        description: 'Keywords or tags that help researchers find this dataset',
         placeholder: 'e.g., genomics, cardiology',
     },
     'dcat:theme': {
-        label: 'Theme',
-        description: 'A category of the dataset (EU Vocabulary)',
+        label: 'Theme / Category',
+        description: 'The main thematic category of the dataset',
         placeholder: 'http://publications.europa.eu/resource/authority/data-theme/HEAL',
     },
-    'dcterms:issued': {
-        label: 'Issue Date',
-        description: 'Date of formal issuance of the dataset',
+    'dcterms:type': {
+        label: 'Dataset Type',
+        description: 'The nature or classification of the dataset',
     },
-    'dcterms:modified': {
-        label: 'Modification Date',
-        description: 'Most recent date on which the dataset was changed',
+    'dcat:landingPage': {
+        label: 'Landing Page',
+        description: 'A webpage where users can learn more about and access the dataset',
+        placeholder: 'https://example.com/dataset-info',
     },
+
+    // ── PROVENANCE ───────────────────────────────────────────────────────
     'dcterms:publisher': {
         label: 'Publisher',
-        description: 'The entity responsible for making the dataset available',
+        description: 'The organisation responsible for making the dataset available',
     },
     'dcterms:creator': {
         label: 'Creator',
-        description: 'The entity responsible for producing the dataset',
+        description: 'The person or organisation that created or collected the dataset',
     },
-    'dcat:contactPoint': {
-        label: 'Contact Point',
-        description: 'Contact information for inquiries about the dataset',
+    'dcterms:issued': {
+        label: 'Release Date',
+        description: 'The date the dataset was first published',
     },
-    'vcard:fn': {
-        label: 'Full Name',
-        description: 'The formatted text corresponding to the name of the contact',
-        placeholder: 'John Doe',
+    'dcterms:modified': {
+        label: 'Last Updated',
+        description: 'The date the dataset was most recently changed',
     },
-    'vcard:hasEmail': {
-        label: 'Email',
-        description: 'Email address for the contact',
-        placeholder: 'mailto:contact@example.com',
+    'dcat:version': {
+        label: 'Version',
+        description: 'Version number or name of this dataset',
+        placeholder: 'e.g., 1.0.0',
     },
-    'vcard:hasTelephone': {
-        label: 'Telephone',
-        description: 'Telephone number for the contact',
-        placeholder: 'tel:+1-234-567-8900',
+    'dcterms:accrualPeriodicity': {
+        label: 'Update Frequency',
+        description: 'How often the dataset is updated (e.g., annually, monthly)',
     },
-    'vcard:hasURL': {
-        label: 'Website',
-        description: 'Website URL for the contact',
-        placeholder: 'https://example.com',
+    'dcat:inSeries': {
+        label: 'Part of Series',
+        description: 'The dataset series this dataset belongs to',
     },
+
+    // ── COVERAGE ─────────────────────────────────────────────────────────
     'dcterms:spatial': {
-        label: 'Spatial Coverage',
-        description: 'Geographic area covered by the dataset',
+        label: 'Geographical Coverage',
+        description: 'The geographic region(s) covered by the data',
     },
     'dcterms:temporal': {
-        label: 'Temporal Coverage',
-        description: 'Time period covered by the dataset',
+        label: 'Time Period Covered',
+        description: 'The time range of the data (start and end dates)',
     },
     'dcat:startDate': {
         label: 'Start Date',
-        description: 'Start date of the period',
+        description: 'Start of the time period covered',
         placeholder: '2024-01-01',
     },
     'dcat:endDate': {
         label: 'End Date',
-        description: 'End date of the period',
+        description: 'End of the time period covered',
         placeholder: '2024-12-31',
-    },
-    'dcterms:accessRights': {
-        label: 'Access Rights',
-        description: 'Information about who can access the dataset',
     },
     'dcterms:language': {
         label: 'Language',
-        description: 'Language(s) of the dataset',
+        description: 'The language(s) in which the dataset content is available',
     },
-    'dcterms:conformsTo': {
-        label: 'Conforms To',
-        description: 'An established standard to which the dataset conforms',
+
+    // ── ACCESS ───────────────────────────────────────────────────────────
+    'dcterms:accessRights': {
+        label: 'Access Rights',
+        description: 'Who is allowed to access this dataset (Public / Restricted / Non-Public)',
     },
+    'dcterms:license': {
+        label: 'Licence',
+        description: 'The licence that governs use of this dataset',
+        placeholder: 'e.g., CC-BY-4.0, EUPL-1.2',
+    },
+    'dcat:contactPoint': {
+        label: 'Contact Point',
+        description: 'Who to contact for questions or requests about this dataset',
+    },
+
+    // ── DISTRIBUTION FIELDS ───────────────────────────────────────────────
     'dcat:distribution': {
-        label: 'Distribution',
-        description: 'An available distribution of the dataset',
+        label: 'Distributions',
+        description: 'Available formats and access points for this dataset',
     },
     'dcat:accessURL': {
         label: 'Access URL',
-        description: 'A URL that gives access to the distribution',
+        description: 'The URL that gives access to this distribution',
         placeholder: 'https://example.com/data',
     },
     'dcat:downloadURL': {
         label: 'Download URL',
-        description: 'A URL that is a direct link to a downloadable file',
-        placeholder: 'https://example.com/download/data.csv',
+        description: 'A direct download link for this distribution',
+        placeholder: 'https://example.com/data.csv',
     },
-    'dcterms:format': {
-        label: 'Format',
-        description: 'The file format of the distribution',
+    'dcat:mediaType': {
+        label: 'Media Type',
+        description: 'The IANA media type of the file (e.g. text/csv)',
         placeholder: 'text/csv',
     },
-    'dcterms:license': {
-        label: 'License',
-        description: 'A legal document under which the distribution is made available',
+    'dcat:format': {
+        label: 'Format',
+        description: 'The file format of this distribution',
+        placeholder: 'e.g., CSV, JSON, DICOM',
     },
     'dcat:byteSize': {
-        label: 'Byte Size',
-        description: 'The size of the distribution in bytes',
+        label: 'File Size',
+        description: 'The size of the file in bytes',
+    },
+    'data:availability': {
+        label: 'Availability',
+        description: 'Planned availability of this distribution',
     },
     'spdx:checksum': {
         label: 'Checksum',
-        description: 'The checksum property provides a mechanism for verifying the integrity of the distribution',
+        description: 'A hash value for verifying the integrity of the downloaded file',
     },
     'spdx:checksumValue': {
         label: 'Checksum Value',
-        description: 'The hexadecimal value of the checksum',
+        description: 'The hexadecimal hash value',
     },
     'spdx:algorithm': {
-        label: 'Algorithm',
-        description: 'The algorithm used to produce the checksum value',
+        label: 'Hash Algorithm',
+        description: 'The algorithm used (e.g., SHA-256)',
     },
+
+    // ── CONTACT SUB-FIELDS ────────────────────────────────────────────────
+    'vcard:fn': {
+        label: 'Contact Name',
+        description: 'Full name of the contact person or team',
+        placeholder: 'e.g., Dr. Jane Smith or Data Access Office',
+    },
+    'vcard:hasEmail': {
+        label: 'Email Address',
+        description: 'Contact email address',
+        placeholder: 'mailto:contact@example.com',
+    },
+    'vcard:hasTelephone': {
+        label: 'Phone Number',
+        description: 'Contact phone number',
+        placeholder: 'tel:+31-20-555-0100',
+    },
+    'vcard:hasURL': {
+        label: 'Website',
+        description: 'Website or contact page URL',
+        placeholder: 'https://example.com/contact',
+    },
+
+    // ── AGENT / PUBLISHER SUB-FIELDS ──────────────────────────────────────
+    'foaf:name': {
+        label: 'Name',
+        description: 'Name of the person or organisation',
+        placeholder: 'e.g., Amsterdam UMC',
+    },
+    'skos:prefLabel': {
+        label: 'Label',
+        description: 'A human-readable label',
+    },
+
+    // ── DSPACE ───────────────────────────────────────────────────────────
     'dspace:extraMetadata': {
         label: 'Extra Metadata',
-        description: 'Additional semantic metadata from MMIO files (readonly)',
+        description: 'Additional semantic metadata from uploaded MMIO files (read-only)',
     },
     'dspace:region': {
         label: 'Region',
-        description: 'Geographic region',
-    },
-    'dcat:inSeries': {
-        label: 'In Series',
-        description: 'The dataset series of which the dataset is part',
+        description: 'Database region (managed automatically)',
     },
 };

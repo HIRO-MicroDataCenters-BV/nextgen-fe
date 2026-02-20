@@ -9,19 +9,33 @@ export type XsdType =
     | 'xsd:integer'
     | 'xsd:hexBinary';
 
+export type DcatApCompliance = 'mandatory' | 'recommended' | 'optional';
+
+export type ControlledVocabulary =
+    | 'accessRights'
+    | 'language'
+    | 'theme'
+    | 'frequency'
+    | 'fileType'
+    | 'licenseType'
+    | 'availability';
+
 export interface JsonLdNodeMetadata {
     required: boolean;
     readonly: boolean;
     repeatable: boolean;
+    label?: string; // Friendly display label (from schema)
+    category?: string; // DCAT-AP category for grouping
     isNew?: boolean;
     xsdType?: XsdType;
     language?: string;
     description?: string;
     placeholder?: string;
-    hidden?: boolean; // NEW: Hide field from UI
-    autoGenerate?: boolean; // NEW: Auto-generate value
-    defaultValue?: unknown; // NEW: Default value for field
-    vocabulary?: 'accessRights' | 'language'; // NEW: Controlled vocabulary type
+    hidden?: boolean;
+    autoGenerate?: boolean;
+    defaultValue?: unknown;
+    vocabulary?: ControlledVocabulary;
+    dcatApCompliance?: DcatApCompliance;
 }
 
 export interface JsonLdNode {
@@ -46,10 +60,11 @@ export interface FieldDefinition {
     children?: Record<string, FieldDefinition>;
     validation?: (value: unknown) => boolean | string;
     defaultValue?: unknown;
-    hidden?: boolean; // NEW: Hide field from UI
-    autoGenerate?: boolean; // NEW: Auto-generate value
-    category?: string; // NEW: Category for grouping fields
-    vocabulary?: 'accessRights' | 'language'; // NEW: Controlled vocabulary type
+    hidden?: boolean;
+    autoGenerate?: boolean;
+    category?: string;
+    vocabulary?: ControlledVocabulary;
+    dcatApCompliance?: DcatApCompliance;
 }
 
 export interface JsonLdEditorProps {

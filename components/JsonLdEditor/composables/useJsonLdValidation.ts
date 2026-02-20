@@ -1,5 +1,11 @@
 import type { JsonLdNode, ValidationResult, ValidationError } from '../types/editor.types';
 import { useJsonLdSchema } from './useJsonLdSchema';
+import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
+
+type FieldKey = keyof typeof jsonldFieldsEn;
+const fieldLabel = (key: string) =>
+    (jsonldFieldsEn[key as FieldKey] as { label?: string } | undefined)?.label
+    || key.split(':').pop()?.replace(/([A-Z])/g, ' $1') || key;
 
 export function useJsonLdValidation() {
     const { getRequiredFields, getFieldDefinition: _getFieldDefinition } = useJsonLdSchema();
@@ -11,7 +17,7 @@ export function useJsonLdValidation() {
         if (node.metadata.required && !node.value && (!node.children || node.children.length === 0)) {
             errors.push({
                 path: currentPath,
-                message: `${node.key} is required`,
+                message: `${fieldLabel(node.key)} is required`,
                 severity: 'error',
             });
         }
@@ -21,7 +27,7 @@ export function useJsonLdValidation() {
             if (!urlPattern.test(String(node.value))) {
                 errors.push({
                     path: currentPath,
-                    message: `${node.key} must be a valid URI`,
+                    message: `${fieldLabel(node.key)} must be a valid URI`,
                     severity: 'error',
                 });
             }
@@ -145,7 +151,7 @@ export function useJsonLdValidation() {
                 if (!presentKeys.includes(requiredField)) {
                     errors.push({
                         path: requiredField,
-                        message: `Required field ${requiredField} is missing`,
+                        message: `${fieldLabel(requiredField)} is required`,
                         severity: 'error',
                     });
                 }

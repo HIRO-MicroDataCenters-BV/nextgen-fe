@@ -56,12 +56,16 @@ export function useJsonLdTransform() {
                     required: fieldDef?.required ?? false,
                     readonly: fieldDef?.readonly ?? false,
                     repeatable: fieldDef?.repeatable ?? false,
+                    label: fieldDef?.label,
+                    category: fieldDef?.category,
                     xsdType: fieldDef?.xsdType,
                     description: fieldDef?.description,
                     placeholder: fieldDef?.placeholder,
                     hidden: fieldDef?.hidden ?? false,
                     autoGenerate: fieldDef?.autoGenerate ?? false,
                     defaultValue: fieldDef?.defaultValue,
+                    vocabulary: fieldDef?.vocabulary,
+                    dcatApCompliance: fieldDef?.dcatApCompliance,
                 },
             };
 
