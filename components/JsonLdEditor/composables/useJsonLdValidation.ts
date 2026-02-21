@@ -44,7 +44,7 @@ export function useJsonLdValidation() {
             'foaf:homepage', 'dcat:landingPage', 'foaf:page', 'schema:url', 'vcard:hasURL',
         ]);
 
-        if (node.type === 'uri' && node.value && !DEDICATED_FORMAT_KEYS.has(node.key)) {
+        if (node.type === 'uri' && node.value && !DEDICATED_FORMAT_KEYS.has(node.key) && !node.metadata.vocabulary) {
             // Accept http, https, file, mailto, tel — all valid URI schemes in DCAT-AP context
             const uriPattern = /^(https?|file|mailto|tel):.+/;
             if (!uriPattern.test(String(node.value))) {

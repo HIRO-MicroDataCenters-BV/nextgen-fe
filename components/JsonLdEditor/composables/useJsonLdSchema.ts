@@ -916,7 +916,20 @@ export function useJsonLdSchema() {
 
     const getFieldDefinition = (key: string, context: 'dataset' | 'distribution' = 'dataset'): FieldDefinition | undefined => {
         const schema = context === 'dataset' ? datasetSchema : distributionSchema;
-        return schema[key];
+
+        // Depth-first recursive search through the schema tree
+        const searchSchema = (fields: Record<string, FieldDefinition>): FieldDefinition | undefined => {
+            if (fields[key]) return fields[key];
+            for (const fieldDef of Object.values(fields)) {
+                if (fieldDef.children) {
+                    const found = searchSchema(fieldDef.children);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        };
+
+        return searchSchema(schema);
     };
 
     const getRequiredFields = (context: 'dataset' | 'distribution' = 'dataset'): string[] => {

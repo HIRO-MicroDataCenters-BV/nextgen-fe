@@ -1,4 +1,4 @@
-import type { JsonLdNode, JsonLdNodeType } from '../types/editor.types';
+import type { JsonLdNode, JsonLdNodeType, FieldDefinition } from '../types/editor.types';
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { useIdGenerator } from '@/composables/useIdGenerator';
 
@@ -24,7 +24,12 @@ export function useJsonLdTransform() {
                 if (xsdType === 'xsd:boolean') return 'boolean';
                 if (xsdType === 'xsd:integer' || xsdType === 'xsd:nonNegativeInteger') return 'number';
             }
-            if ('@id' in obj && Object.keys(obj).length === 1) return 'uri';
+            if ('@value' in obj) return 'string'; // bare {@value} without @type/@language
+            if ('@id' in obj) {
+                // URI reference only when @id is the sole domain key (may have @type/@context alongside)
+                const domainKeys = Object.keys(obj).filter(k => k !== '@type' && k !== '@context');
+                if (domainKeys.length === 1) return 'uri';
+            }
             return 'object';
         }
         if (typeof value === 'string') {
@@ -38,14 +43,15 @@ export function useJsonLdTransform() {
     const parseJsonLdToTree = (
         data: Record<string, unknown>,
         _parentKey: string = '',
-        context: 'dataset' | 'distribution' = 'dataset'
+        context: 'dataset' | 'distribution' = 'dataset',
+        parentChildSchema?: Record<string, FieldDefinition>
     ): JsonLdNode[] => {
         const nodes: JsonLdNode[] = [];
 
         for (const [key, value] of Object.entries(data)) {
             if (key === '@context') continue;
 
-            const fieldDef = getFieldDefinition(key, context);
+            const fieldDef = parentChildSchema?.[key] ?? getFieldDefinition(key, context);
             const type = detectType(value);
 
             const node: JsonLdNode = {
@@ -71,7 +77,7 @@ export function useJsonLdTransform() {
 
             if (type === 'object') {
                 const objValue = value as Record<string, unknown>;
-                node.children = parseJsonLdToTree(objValue, key, context);
+                node.children = parseJsonLdToTree(objValue, key, context, fieldDef?.children as Record<string, FieldDefinition> | undefined);
             } else if (type === 'array') {
                 const arrValue = value as unknown[];
                 if (key === 'dcat:distribution') {
@@ -115,7 +121,7 @@ export function useJsonLdTransform() {
                     const objValue = value as Record<string, unknown>;
                     if ('@value' in objValue) {
                         node.value = objValue['@value'];
-                    } else if ('@id' in objValue && Object.keys(objValue).length === 1) {
+                    } else if ('@id' in objValue) {
                         node.value = objValue['@id'];
                     } else {
                         node.value = value;
@@ -212,10 +218,16 @@ export function useJsonLdTransform() {
                     '@value': value,
                 };
             } else if (type === 'uri') {
-                if (key.endsWith('URL') || key.endsWith('url') || key === '@id') {
-                    result[key] = { '@id': value };
-                } else {
+                // URL fields store as plain string; @id-referenced nodes wrap back in {@id}
+                const isUrlField = key.endsWith('URL') || key.endsWith('url')
+                    || key === '@id'
+                    || key === 'dcat:accessURL' || key === 'dcat:downloadURL'
+                    || key === 'dcat:landingPage' || key === 'foaf:homepage'
+                    || key === 'vcard:hasURL';
+                if (isUrlField) {
                     result[key] = value;
+                } else {
+                    result[key] = { '@id': value };
                 }
             } else if (type === 'string') {
                 // Simple string value

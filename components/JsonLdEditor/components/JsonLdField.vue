@@ -2,7 +2,7 @@
   <div class="jsonld-field">
     <!-- Controlled Vocabulary Select -->
     <ControlledVocabularySelect
-      v-if="node.type === 'uri' && node.metadata.vocabulary"
+      v-if="node.metadata.vocabulary"
       :model-value="String(node.value || '')"
       :vocabulary="node.metadata.vocabulary"
       :readonly="readonly"
