@@ -87,6 +87,29 @@ const vocabularies: Record<string, VocabularyOption[]> = {
       chipLabel: 'RU',
     },
   ],
+  algorithm: [
+    {
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha256',
+      label: 'SHA-256',
+      chipLabel: 'SHA-256',
+      icon: 'lucide:shield-check',
+      description: 'SHA-256 (recommended)',
+    },
+    {
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha512',
+      label: 'SHA-512',
+      chipLabel: 'SHA-512',
+      icon: 'lucide:shield',
+      description: 'SHA-512',
+    },
+    {
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_md5',
+      label: 'MD5',
+      chipLabel: 'MD5',
+      icon: 'lucide:hash',
+      description: 'MD5 (legacy)',
+    },
+  ],
 };
 
 const options = computed(() => vocabularies[props.vocabulary] || []);

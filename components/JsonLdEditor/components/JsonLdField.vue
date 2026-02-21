@@ -61,7 +61,7 @@
       <Select
         :model-value="languageCode"
         :disabled="readonly"
-        @update:model-value="(v: string | number | null) => handleLanguageCodeUpdate(String(v ?? 'en'))"
+        @update:model-value="(v) => handleLanguageCodeUpdate(String(v ?? 'en'))"
       >
         <SelectTrigger class="w-24">
           <SelectValue />
@@ -99,9 +99,14 @@
       @update:model-value="handleUpdate"
     />
 
-    <span v-else class="text-sm text-muted-foreground">
-      {{ node.type }}
-    </span>
+    <!-- Fallback: render as plain text for any unrecognised type -->
+    <Input
+      v-else
+      :model-value="displayValue"
+      :readonly="readonly"
+      :placeholder="node.metadata.placeholder"
+      @update:model-value="handleUpdate"
+    />
   </div>
 </template>
 

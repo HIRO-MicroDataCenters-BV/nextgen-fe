@@ -14,6 +14,7 @@ export type DcatApCompliance = 'mandatory' | 'recommended' | 'optional';
 export type ControlledVocabulary =
     | 'accessRights'
     | 'language'
+    | 'algorithm'
     | 'theme'
     | 'frequency'
     | 'fileType'
