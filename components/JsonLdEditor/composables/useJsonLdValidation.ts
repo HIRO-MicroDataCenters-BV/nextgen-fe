@@ -38,9 +38,16 @@ export function useJsonLdValidation() {
             });
         }
 
-        if (node.type === 'uri' && node.value) {
-            const urlPattern = /^(https?|file):\/\/.+/;
-            if (!urlPattern.test(String(node.value))) {
+        // Keys with dedicated format validators — skip generic URI check to avoid duplicates
+        const DEDICATED_FORMAT_KEYS = new Set([
+            'vcard:hasEmail', 'vcard:hasTelephone',
+            'foaf:homepage', 'dcat:landingPage', 'foaf:page', 'schema:url', 'vcard:hasURL',
+        ]);
+
+        if (node.type === 'uri' && node.value && !DEDICATED_FORMAT_KEYS.has(node.key)) {
+            // Accept http, https, file, mailto, tel — all valid URI schemes in DCAT-AP context
+            const uriPattern = /^(https?|file|mailto|tel):.+/;
+            if (!uriPattern.test(String(node.value))) {
                 errors.push({
                     path: currentPath,
                     message: `${fieldLabel(node.key)} must be a valid URI`,
@@ -78,25 +85,50 @@ export function useJsonLdValidation() {
             }
         }
 
-        // Email validation for vcard:hasEmail
+        // ── Email (vcard:hasEmail) ─────────────────────────────
         if (node.key === 'vcard:hasEmail' && node.value) {
-            const emailValue = String(node.value);
-            if (emailValue.startsWith('mailto:')) {
-                const email = emailValue.substring(7);
-                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailPattern.test(email)) {
-                    errors.push({
-                        path: currentPath,
-                        message: 'Invalid email format',
-                        severity: 'error',
-                    });
+            const emailVal = String(node.value).trim();
+            if (emailVal.startsWith('mailto:')) {
+                const email = emailVal.slice(7);
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    errors.push({ path: currentPath, message: 'Invalid email format after mailto:', severity: 'error' });
                 }
+            } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                // bare email — warn to add mailto: prefix (DCAT-AP expects URI)
+                errors.push({ path: currentPath, message: 'Email should be in the form mailto:name@example.com', severity: 'warning' });
             } else {
-                errors.push({
-                    path: currentPath,
-                    message: 'Email must start with mailto:',
-                    severity: 'warning',
-                });
+                errors.push({ path: currentPath, message: 'Email must be in the form mailto:name@example.com', severity: 'error' });
+            }
+        }
+
+        // ── Telephone (vcard:hasTelephone) ────────────────────
+        if (node.key === 'vcard:hasTelephone' && node.value) {
+            const telVal = String(node.value).trim();
+            if (telVal.startsWith('tel:')) {
+                const digits = telVal.slice(4);
+                if (!/^\+?[\d\s\-().]{5,20}$/.test(digits)) {
+                    errors.push({ path: currentPath, message: 'Invalid phone number format after tel:', severity: 'warning' });
+                }
+            } else if (/^\+?[\d\s\-().]{5,20}$/.test(telVal)) {
+                errors.push({ path: currentPath, message: 'Phone should use tel: prefix, e.g. tel:+31201234567', severity: 'warning' });
+            } else {
+                errors.push({ path: currentPath, message: 'Phone must be in the form tel:+31201234567', severity: 'error' });
+            }
+        }
+
+        // ── URL fields ────────────────────────────────────────
+        const URL_KEYS = new Set([
+            'foaf:homepage', 'dcat:landingPage', 'foaf:page',
+            'schema:url', 'vcard:hasURL',
+        ]);
+        if (URL_KEYS.has(node.key) && node.value) {
+            try {
+                const u = new URL(String(node.value));
+                if (!['http:', 'https:'].includes(u.protocol)) {
+                    errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be an http(s) URL`, severity: 'warning' });
+                }
+            } catch {
+                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid URL`, severity: 'error' });
             }
         }
 

@@ -28,18 +28,18 @@ const vocabularies: Record<string, VocabularyOption[]> = {
   accessRights: [
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/PUBLIC',
-      label: 'PUBLIC',
-      description: 'Publicly accessible',
+      label: '🌐 Public',
+      description: 'Freely accessible to everyone',
     },
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/RESTRICTED',
-      label: 'RESTRICTED',
-      description: 'Restricted access',
+      label: '🔒 Restricted',
+      description: 'Access limited to authorised users',
     },
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/NON_PUBLIC',
-      label: 'NON_PUBLIC',
-      description: 'Not publicly accessible',
+      label: '🚫 Non-public',
+      description: 'Not externally accessible',
     },
   ],
   language: [
@@ -81,8 +81,8 @@ const selectedLabel = computed(() => {
   return option?.label || props.placeholder;
 });
 
-const handleValueChange = (value: string | null) => {
-  if (value) {
+const handleValueChange = (value: unknown) => {
+  if (value && typeof value === 'string') {
     emit('update:modelValue', value);
   }
 };

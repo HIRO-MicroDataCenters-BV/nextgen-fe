@@ -10,8 +10,24 @@
       </button>
     </div>
 
-    <!-- Field list grouped by category -->
+    <!-- ── Field list grouped by category -->
     <div v-else class="editor-body">
+
+      <!-- Onboarding hint: shown once per session when all mandatory fields are empty -->
+      <Transition name="banner-fade">
+        <div v-if="showOnboarding" class="onboarding-banner">
+          <Icon name="lucide:lightbulb" class="onboarding-icon size-4" />
+          <div class="onboarding-text">
+            <strong>Getting started?</strong>
+            Fill in <em>Title</em> and <em>Description</em> first — they're required for DCAT-AP compliance.
+          </div>
+          <button type="button" class="onboarding-dismiss" title="Dismiss" @click="dismissOnboarding">
+            <Icon name="lucide:x" class="size-3.5" />
+          </button>
+        </div>
+      </Transition>
+
+
       <template v-for="category in filteredCategories" :key="category">
         <div v-if="filteredNodes[category]?.length" class="category-section">
           <!-- Section header -->
@@ -61,7 +77,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from './types/editor.types';
 import JsonLdNode from './components/JsonLdNode.vue';
@@ -89,6 +105,23 @@ const emit = defineEmits<{
 }>();
 
 
+// ── Onboarding banner ──────────────────────────────────────────
+const ONBOARDING_KEY = 'jsonld-onboarding-dismissed';
+const showOnboarding = ref(false);
+
+const dismissOnboarding = () => {
+  showOnboarding.value = false;
+  sessionStorage.setItem(ONBOARDING_KEY, '1');
+};
+
+onMounted(() => {
+  if (sessionStorage.getItem(ONBOARDING_KEY)) return;
+  // Only show when mandatory fields are all empty (fresh dataset)
+  const mandatoryEmpty = props.modelValue
+    .filter(n => n.metadata.required && !n.metadata.hidden)
+    .every(n => !n.value && !n.children?.some(c => c.value));
+  if (mandatoryEmpty) showOnboarding.value = true;
+});
 
 // ── Category config ────────────────────────────────────────────
 const categoryOrder = ['identification', 'provenance', 'coverage', 'access', 'distribution'] as const;
@@ -266,4 +299,50 @@ const handleNodeRemove = (nodeId: string) => {
   padding-top: 0.5rem;
   display: flex;
 }
+
+/* ── Onboarding banner ───────────────────────────────────────── */
+.onboarding-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.75rem;
+  background: hsl(38 92% 96%);
+  border: 1px solid hsl(38 80% 85%);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: hsl(38 50% 25%);
+}
+:root.dark .onboarding-banner {
+  background: hsl(38 40% 14%);
+  border-color: hsl(38 50% 28%);
+  color: hsl(38 70% 75%);
+}
+.onboarding-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: hsl(38 80% 42%);
+}
+.onboarding-text { flex: 1; }
+.onboarding-text em { font-style: normal; font-weight: 600; }
+.onboarding-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.5;
+  padding: 2px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+.onboarding-dismiss:hover { opacity: 1; }
+
+.banner-fade-enter-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.banner-fade-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.banner-fade-enter-from  { opacity: 0; transform: translateY(-6px); }
+.banner-fade-leave-to    { opacity: 0; transform: translateY(-6px); }
 </style>

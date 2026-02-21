@@ -1,12 +1,12 @@
 <template>
   <TooltipProvider>
     <div class="jsonld-editor border rounded-lg">
-      <div class="editor-header flex items-center justify-between gap-4 p-4 border-b bg-muted/30">
+      <div class="editor-header">
         <!-- Search Field -->
         <div class="flex-1 max-w-md">
           <div class="relative">
             <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input 
+            <Input
               v-model="searchQuery"
               :placeholder="currentMode === 'visual' ? 'Search fields...' : 'Search in code...'"
               class="pl-9 h-9"
@@ -23,16 +23,29 @@
           </div>
         </div>
 
-        <!-- Mode Toggle -->
-        <div class="flex items-center gap-2">
-          <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.visual') }}</Label>
-          <Switch
-            id="mode-switch"
-            :model-value="currentMode === 'code'"
-            :disabled="readonly"
-            @update:model-value="toggleMode"
-          />
-          <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.code') }}</Label>
+        <!-- Right: mode toggle + auto-save -->
+        <div class="header-right">
+          <!-- Auto-save indicator -->
+          <Transition name="save-fade">
+            <span v-if="saveStatus === 'saved'" class="save-indicator save-indicator--saved">
+              <Icon name="lucide:check" class="size-3" /> Saved
+            </span>
+            <span v-else-if="saveStatus === 'saving'" class="save-indicator save-indicator--saving">
+              <Icon name="lucide:loader-circle" class="size-3 animate-spin" /> Saving…
+            </span>
+          </Transition>
+
+          <!-- Mode Toggle -->
+          <div class="flex items-center gap-2">
+            <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.visual') }}</Label>
+            <Switch
+              id="mode-switch"
+              :model-value="currentMode === 'code'"
+              :disabled="readonly"
+              @update:model-value="toggleMode"
+            />
+            <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.code') }}</Label>
+          </div>
         </div>
       </div>
 
@@ -62,19 +75,38 @@
     <div class="editor-footer border-t">
       <!-- Add Field row (visual mode only) -->
       <div v-if="currentMode === 'visual' && !readonly" class="add-field-row">
-        <!-- Left: field stats -->
-        <div class="footer-stats">
-          <span class="stat-badge stat-fields">
-            <Icon name="lucide:layers" class="size-3" />
-            {{ treeData.filter(n => !n.metadata.hidden && !n.metadata.readonly).length }}
-            {{ t('jsonld.editor.fields', 'fields') }}
-          </span>
-          <span
-            v-if="complianceScore === 100"
-            class="stat-badge stat-ok"
-          >
-            <Icon name="lucide:circle-check" class="size-3" />
-            DCAT-AP ✓
+        <!-- Left: completion progress -->
+        <div class="completion-block">
+          <div class="completion-label">
+            <span class="completion-text">
+              <template v-if="mandatoryProgress.total === 0">
+                No required fields
+              </template>
+              <template v-else-if="mandatoryProgress.filled === mandatoryProgress.total">
+                <Icon name="lucide:circle-check" class="size-3 inline" />
+                All required fields complete
+              </template>
+              <template v-else>
+                {{ mandatoryProgress.filled }} of {{ mandatoryProgress.total }} required fields
+              </template>
+            </span>
+            <span class="completion-pct">
+              {{ mandatoryProgress.pct }}%
+            </span>
+          </div>
+          <div class="progress-track">
+            <div
+              class="progress-bar"
+              :class="progressColorClass"
+              :style="{ width: mandatoryProgress.pct + '%' }"
+            />
+          </div>
+        </div>
+
+        <!-- DCAT-AP compliance badge -->
+        <div class="footer-compliance">
+          <span v-if="complianceScore === 100" class="stat-badge stat-ok">
+            <Icon name="lucide:circle-check" class="size-3" /> DCAT-AP ✓
           </span>
           <span
             v-else-if="validationResult.errors.filter(e => e.severity === 'error').length > 0"
@@ -167,6 +199,19 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | Record<string, unknown>];
 }>();
 
+// ── Auto-save indicator ─────────────────────────────────────────
+const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle');
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const triggerSaveIndicator = () => {
+  saveStatus.value = 'saving';
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveStatus.value = 'saved';
+    saveTimer = setTimeout(() => { saveStatus.value = 'idle'; }, 2500);
+  }, 400);
+};
+onUnmounted(() => { if (saveTimer) clearTimeout(saveTimer); });
+
 const { parseJsonLd, serializeJsonLd } = useJsonLdTransform();
 const { validateTree } = useJsonLdValidation();
 const { buildDefaultDatasetTree, isEmptyDataset } = useDefaultDataset();
@@ -196,18 +241,37 @@ const handleKeydown = (e: KeyboardEvent) => {
 onMounted(() => window.addEventListener('keydown', handleKeydown));
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 
-// ── Compliance score ───────────────────────────────────────────
-const complianceScore = computed(() => {
-  const mandatory = treeData.value.filter(
-    n => n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden,
-  );
-  if (!mandatory.length) return 100;
-  const filled = mandatory.filter(n => {
-    if (n.value !== undefined && n.value !== '') return true;
-    if (n.children?.length) return true;
-    return false;
-  });
-  return Math.round((filled.length / mandatory.length) * 100);
+// ── Mandatory progress (replaces old complianceScore) ────────────────────
+const isNodeFilled = (n: JsonLdNode): boolean => {
+  if (n.value === undefined || n.value === null || n.value === '') {
+    return !!(n.children?.length);
+  }
+  if (typeof n.value === 'object' && !Array.isArray(n.value)) {
+    const v = n.value as Record<string, unknown>;
+    if ('@value' in v) return v['@value'] !== '' && v['@value'] !== undefined;
+  }
+  return true;
+};
+
+const mandatoryNodes = computed(() =>
+  treeData.value.filter(n => n.metadata.required && !n.metadata.hidden && !n.metadata.readonly),
+);
+
+const mandatoryProgress = computed(() => {
+  const total = mandatoryNodes.value.length;
+  const filled = mandatoryNodes.value.filter(isNodeFilled).length;
+  const pct = total === 0 ? 100 : Math.round((filled / total) * 100);
+  return { total, filled, pct };
+});
+
+// Keep complianceScore for template badges
+const complianceScore = computed(() => mandatoryProgress.value.pct);
+
+const progressColorClass = computed(() => {
+  const pct = mandatoryProgress.value.pct;
+  if (pct === 100) return 'progress--green';
+  if (pct >= 60)  return 'progress--amber';
+  return 'progress--red';
 });
 
 const parseInitialData = () => {
@@ -293,6 +357,7 @@ const updateArrayIndices = (nodes: JsonLdNode[]): JsonLdNode[] => {
 };
 
 const handleVisualUpdate = (newTree: JsonLdNode[]) => {
+  triggerSaveIndicator();
   // Save current scroll position
   const savedScroll = editorContentRef.value?.scrollTop || 0;
   
@@ -315,6 +380,7 @@ const handleVisualUpdate = (newTree: JsonLdNode[]) => {
 };
 
 const handleCodeUpdate = (newCode: string) => {
+  triggerSaveIndicator();
   codeData.value = newCode;
   try {
     const parsed = JSON.parse(newCode);
@@ -324,12 +390,42 @@ const handleCodeUpdate = (newCode: string) => {
   }
 };
 const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
+  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Build child nodes from schema definition (same as useDefaultDataset)
+  const buildChildren = (def: FieldDefinition): JsonLdNode[] => {
+    if (!def.children) return [];
+    return Object.values(def.children)
+      .filter(c => !c.hidden)
+      .map((childDef): JsonLdNode => ({
+        id: makeId(),
+        key: childDef.key,
+        type: childDef.type as JsonLdNode['type'],
+        value: childDef.type === 'object' ? undefined : (childDef.defaultValue ?? ''),
+        children: childDef.type === 'object' ? [] : undefined,
+        metadata: {
+          required: childDef.required,
+          readonly: childDef.readonly,
+          repeatable: childDef.repeatable,
+          label: childDef.label,
+          hidden: childDef.hidden ?? false,
+          placeholder: childDef.placeholder,
+          description: childDef.description,
+          defaultValue: childDef.defaultValue,
+          vocabulary: childDef.vocabulary,
+        },
+      }));
+  };
+
+  const isObject = fieldDef.type === 'object';
+  const isArray  = fieldDef.type === 'array';
+
   const newNode: JsonLdNode = {
-    id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: makeId(),
     key: fieldDef.key,
     type: fieldDef.type,
-    value: (fieldDef.type === 'object' || fieldDef.type === 'array') ? undefined : '',
-    children: fieldDef.type === 'array' ? [] : undefined,
+    value: (isObject || isArray) ? undefined : '',
+    children: isObject ? buildChildren(fieldDef) : (isArray ? [] : undefined),
     metadata: {
       required: fieldDef.required,
       readonly: false,
@@ -359,6 +455,51 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   overflow: hidden;
 }
 
+/* ── Header ─────────────────────────────────────────────────── */
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.3);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* Auto-save */
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.save-indicator--saving {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+}
+.save-indicator--saved {
+  color: hsl(142 50% 32%);
+  background: hsl(142 60% 92%);
+}
+:root.dark .save-indicator--saved { background: hsl(142 40% 18%); color: hsl(142 70% 65%); }
+
+/* save-fade transition */
+.save-fade-enter-active { transition: opacity 0.2s ease; }
+.save-fade-leave-active { transition: opacity 0.6s ease; }
+.save-fade-enter-from,
+.save-fade-leave-to   { opacity: 0; }
+
 .editor-content {
   flex: 1;
   overflow: auto;
@@ -380,12 +521,62 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   border-bottom: 1px solid hsl(var(--border) / 0.4);
 }
 
-/* ── Stats badges ────────────────────────────────────────────── */
-.footer-stats {
+/* ── Progress block ──────────────────────────────────────────── */
+.completion-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 180px;
+  flex: 1;
+  max-width: 280px;
+}
+
+.completion-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+}
+
+.completion-text {
+  color: hsl(var(--muted-foreground));
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.completion-pct {
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+.progress-track {
+  height: 5px;
+  width: 100%;
+  background: hsl(var(--muted));
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.4s;
+}
+
+/* Colors */
+.progress--red   { background: hsl(0 72% 51%);    color: hsl(0 60% 38%); }
+.progress--amber { background: hsl(38 92% 50%);   color: hsl(38 70% 36%); }
+.progress--green { background: hsl(142 60% 42%);  color: hsl(142 50% 28%); }
+:root.dark .progress--red   { background: hsl(0 72% 58%);   color: hsl(0 80% 75%); }
+:root.dark .progress--amber { background: hsl(38 80% 55%);  color: hsl(38 80% 70%); }
+:root.dark .progress--green { background: hsl(142 60% 52%); color: hsl(142 70% 65%); }
+
+/* ── Compliance badge ────────────────────────────────────────── */
+.footer-compliance {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .stat-badge {
@@ -398,30 +589,14 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   padding: 2px 8px;
   border-radius: 999px;
   line-height: 1.6;
+  white-space: nowrap;
 }
-
-.stat-fields {
-  background: hsl(var(--muted));
-  color: hsl(var(--muted-foreground));
-}
-
-.stat-ok {
-  background: hsl(142 60% 90%);
-  color: hsl(142 50% 28%);
-}
-:root.dark .stat-ok { background: hsl(142 40% 18%); color: hsl(142 70% 65%); }
-
-.stat-error {
-  background: hsl(0 72% 93%);
-  color: hsl(0 60% 38%);
-}
-:root.dark .stat-error { background: hsl(0 45% 20%); color: hsl(0 80% 75%); }
-
-.stat-warn {
-  background: hsl(38 92% 92%);
-  color: hsl(38 70% 36%);
-}
-:root.dark .stat-warn { background: hsl(38 50% 18%); color: hsl(38 80% 70%); }
+.stat-ok    { background: hsl(142 60% 90%); color: hsl(142 50% 28%); }
+.stat-error { background: hsl(0 72% 93%);   color: hsl(0 60% 38%); }
+.stat-warn  { background: hsl(38 92% 92%);  color: hsl(38 70% 36%); }
+:root.dark .stat-ok    { background: hsl(142 40% 18%); color: hsl(142 70% 65%); }
+:root.dark .stat-error { background: hsl(0 45% 20%);  color: hsl(0 80% 75%); }
+:root.dark .stat-warn  { background: hsl(38 50% 18%); color: hsl(38 80% 70%); }
 
 /* ── Add button (gradient) ───────────────────────────────────── */
 .add-btn-gradient {

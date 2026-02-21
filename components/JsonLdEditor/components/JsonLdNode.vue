@@ -16,7 +16,7 @@
       <div class="field-meta">
         <div class="field-label-row">
           <span class="field-label">{{ fieldLabel }}</span>
-          <span v-if="node.metadata.required && !hasValue" class="required-dot" title="Required" />
+          <span v-if="node.metadata.required && !hasValue" class="required-asterisk" title="This field is required">*</span>
           <span
             v-if="node.metadata.dcatApCompliance"
             class="compliance-pill"
@@ -56,13 +56,18 @@
     </div>
 
     <!-- ── Single-value input ───────────────────────────── -->
-    <div v-if="!hasChildren" class="field-input">
+    <div v-if="!hasChildren" class="field-input" @focusin="isFocused = true" @focusout="isFocused = false">
       <JsonLdField
         :node="node"
         :readonly="readonly || node.metadata.readonly"
         :validation-errors="fieldErrors"
         @update="handleFieldUpdate"
       />
+      <!-- Char counter for text fields -->
+      <div v-if="isFocused && showCharCount" class="char-counter" :class="charCountClass">
+        {{ charCount }}
+        <span v-if="charCountMax">/ {{ charCountMax }}</span>
+      </div>
     </div>
 
     <!-- ── Nested / object fields ───────────────────────── -->
@@ -74,6 +79,7 @@
             v-for="child in visibleChildren"
             :key="child.id"
             :node="child"
+            :node-path="currentPath"
             :readonly="readonly || node.metadata.readonly"
             :depth="depth + 1"
             :validation-errors="validationErrors"
@@ -176,8 +182,19 @@ const fieldLabel = computed(() => {
   return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/([A-Z])/g, ' $1');
 });
 
+// Fallback descriptions for JSON-LD meta-keys that have no schema description
+const META_KEY_DESCRIPTIONS: Record<string, string> = {
+  '@value':    'The text value of this field',
+  '@id':       'Unique identifier (URI)',
+  '@language': 'Language code, e.g. en, nl, de',
+  '@type':     'The type of this resource',
+};
+
 const fieldDescription = computed(() =>
-  fieldI18n.value?.description || props.node.metadata.description || null,
+  fieldI18n.value?.description ||
+  props.node.metadata.description ||
+  META_KEY_DESCRIPTIONS[props.node.key] ||
+  null,
 );
 
 const fieldIconName = computed(() =>
@@ -186,7 +203,8 @@ const fieldIconName = computed(() =>
 
 // ── Children ───────────────────────────────────────────────────
 const hasChildren = computed(() =>
-  Array.isArray(props.node.children) && props.node.children.length > 0,
+  Array.isArray(props.node.children) &&
+  (props.node.children.length > 0 || props.node.type === 'object' || props.node.type === 'array'),
 );
 
 const visibleChildren = computed(() =>
@@ -203,9 +221,57 @@ const currentPath = computed(() =>
 const fieldErrors = computed(() =>
   props.validationErrors.filter(e => e.path === currentPath.value),
 );
-const hasValue = computed(() =>
-  props.node.value !== undefined && props.node.value !== null && props.node.value !== '',
+const hasValue = computed(() => {
+  const v = props.node.value;
+  if (v === undefined || v === null || v === '') return false;
+  // language-string object: { '@value': '', '@language': 'en' }
+  if (typeof v === 'object' && !Array.isArray(v)) {
+    const obj = v as Record<string, unknown>;
+    if ('@value' in obj) return obj['@value'] !== '' && obj['@value'] !== undefined && obj['@value'] !== null;
+  }
+  return true;
+});
+
+// ── Char counter ─────────────────────────────────────────────────────────────
+const isFocused = ref(false);
+
+// Which types show a char counter?
+const TEXT_TYPES = new Set(['string', 'language-string', 'uri']);
+// These uri-type keys have dedicated format inputs — no char counter needed
+const NO_CHAR_COUNT_KEYS = new Set([
+  'vcard:hasEmail', 'vcard:hasTelephone', 'foaf:homepage',
+  'dcat:landingPage', 'foaf:page', 'schema:url', 'vcard:hasURL',
+]);
+const charCountMax = computed(() => {
+  if (props.node.key === 'dcterms:description') return 500;
+  if (props.node.key === 'dcterms:title') return 120;
+  return null;
+});
+const showCharCount = computed(() =>
+  charCountMax.value !== null &&
+  TEXT_TYPES.has(props.node.type) &&
+  !NO_CHAR_COUNT_KEYS.has(props.node.key) &&
+  !props.node.metadata.readonly,
 );
+
+const charCount = computed(() => {
+  const v = props.node.value;
+  if (!v) return 0;
+  if (typeof v === 'string') return v.length;
+  if (typeof v === 'object' && !Array.isArray(v)) {
+    const obj = v as Record<string, unknown>;
+    return typeof obj['@value'] === 'string' ? (obj['@value'] as string).length : 0;
+  }
+  return 0;
+});
+
+const charCountClass = computed(() => {
+  const max = charCountMax.value;
+  if (!max) return '';
+  if (charCount.value > max) return 'char-counter--danger';
+  if (charCount.value > max * 0.85) return 'char-counter--warn';
+  return '';
+});
 const canRemoveNode = computed(() =>
   !props.node.metadata.required && (props.depth === 0),
 );
@@ -355,14 +421,26 @@ const handleAddArrayItem = () => {
   line-height: 1.4;
 }
 
-/* ── Required dot ───────────────────────────────────────────── */
-.required-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #ef4444;
+/* ── Required asterisk ───────────────────────────────────────── */
+.required-asterisk {
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
   flex-shrink: 0;
+  margin-left: 1px;
 }
+
+/* ── Char counter ────────────────────────────────────────────── */
+.char-counter {
+  text-align: right;
+  font-size: 0.68rem;
+  color: hsl(var(--muted-foreground) / 0.7);
+  padding-top: 2px;
+  transition: color 0.2s;
+}
+.char-counter--warn   { color: hsl(38 70% 42%); }
+.char-counter--danger { color: hsl(0 65% 48%); font-weight: 600; }
 
 /* ── Compliance pill ────────────────────────────────────────── */
 .compliance-pill {
