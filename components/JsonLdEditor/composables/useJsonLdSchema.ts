@@ -101,8 +101,8 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'mandatory',
-            description: 'The name of the dataset',
-            placeholder: 'Enter dataset title',
+            description: 'The name of the dataset — be specific enough for a stranger to know what it contains',
+            placeholder: 'e.g. Monthly Air Quality Measurements Amsterdam 2020–2024',
         },
         'dcterms:description': {
             key: 'dcterms:description',
@@ -113,8 +113,8 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'mandatory',
-            description: 'A free-text description of the dataset',
-            placeholder: 'Enter a clear description of the dataset',
+            description: 'Explain what the dataset contains, why it was collected, and who would find it useful',
+            placeholder: 'e.g. Hourly PM2.5 readings from 12 sensor stations across Amsterdam, collected by the Municipality Environmental Service from Jan 2020 to Dec 2024.',
         },
         'dcterms:identifier': {
             key: 'dcterms:identifier',
@@ -139,8 +139,8 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'identification',
             dcatApCompliance: 'recommended',
-            description: 'Keywords or tags that describe the dataset',
-            placeholder: 'e.g., genomics, cardiology',
+            description: 'Search tags that help people discover this dataset — add one per field',
+            placeholder: 'e.g. air quality, PM2.5, environment, Amsterdam',
         },
         'dcat:theme': {
             key: 'dcat:theme',

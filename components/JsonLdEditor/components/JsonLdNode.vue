@@ -4,7 +4,12 @@
     ref="nodeRef"
     :data-node-id="node.id"
     class="field-card"
-    :class="{ 'field-highlight': isNewlyAdded, 'field-card--nested': depth > 0 }"
+    :class="{
+      'field-highlight': isNewlyAdded,
+      'field-card--nested': depth > 0,
+      'field-card--required-empty': node.metadata.required && !hasValue,
+      'field-card--required-filled': node.metadata.required && hasValue,
+    }"
   >
     <!-- ── Field Header ──────────────────────────────────── -->
     <div class="field-header" @click="hasChildren ? toggleExpand() : undefined">
@@ -23,6 +28,26 @@
             :class="`compliance-${node.metadata.dcatApCompliance}`"
           >
             {{ t(`jsonld.editor.compliance.${node.metadata.dcatApCompliance}`) }}
+          </span>
+          <!-- ── Contextual help tooltip ── -->
+          <TooltipProvider v-if="fieldDescription" :delay-duration="300">
+            <Tooltip>
+              <TooltipTrigger as-child>
+                <button type="button" class="help-btn" tabindex="-1" @click.stop>
+                  <Icon name="lucide:info" class="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" class="help-tooltip">
+                <p class="help-tooltip__desc">{{ fieldDescription }}</p>
+                <p v-if="node.metadata.placeholder" class="help-tooltip__example">
+                  <span class="help-tooltip__eg">e.g.</span> {{ node.metadata.placeholder }}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <!-- char counter inline in label row -->
+          <span v-if="showCharCount" class="char-counter" :class="charCountClass">
+            {{ charCount }} / {{ charCountMax }}
           </span>
         </div>
         <p v-if="fieldDescription" class="field-desc">{{ fieldDescription }}</p>
@@ -56,18 +81,13 @@
     </div>
 
     <!-- ── Single-value input ───────────────────────────── -->
-    <div v-if="!hasChildren" class="field-input" @focusin="isFocused = true" @focusout="isFocused = false">
+    <div v-if="!hasChildren" class="field-input">
       <JsonLdField
         :node="node"
         :readonly="readonly || node.metadata.readonly"
         :validation-errors="fieldErrors"
         @update="handleFieldUpdate"
       />
-      <!-- Char counter for text fields -->
-      <div v-if="isFocused && showCharCount" class="char-counter" :class="charCountClass">
-        {{ charCount }}
-        <span v-if="charCountMax">/ {{ charCountMax }}</span>
-      </div>
     </div>
 
     <!-- ── Nested / object fields ───────────────────────── -->
@@ -115,6 +135,7 @@ import { useI18n } from 'vue-i18n';
 import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // ── Icon map (mirrors AddFieldDialog) ─────────────────────────
 const FIELD_ICON_MAP: Record<string, string> = {
@@ -358,6 +379,61 @@ const handleAddArrayItem = () => {
   border-radius: 0;
 }
 
+/* ── Required field visual states ───────────────────────────── */
+.field-card--required-empty {
+  border-left: 3px solid hsl(38 92% 50% / 0.7); /* amber */
+  transition: border-left-color 0.3s ease;
+}
+.field-card--required-filled {
+  border-left: 3px solid hsl(142 71% 45% / 0.7); /* green */
+  transition: border-left-color 0.3s ease;
+}
+
+/* ── Help (?) button ────────────────────────────────────────── */
+.help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+.help-btn:hover {
+  opacity: 1;
+  color: hsl(var(--foreground));
+}
+
+/* ── Help tooltip content ────────────────────────────────────── */
+:global(.help-tooltip) {
+  max-width: 260px;
+}
+:global(.help-tooltip__desc) {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 0;
+  color: inherit;
+}
+:global(.help-tooltip__example) {
+  margin: 0.4rem 0 0;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+:global(.help-tooltip__eg) {
+  font-weight: 600;
+  font-style: normal;
+  margin-right: 0.2rem;
+}
+
+
 .field-highlight {
   animation: highlight-pulse 2.5s ease-out;
 }
@@ -371,7 +447,7 @@ const handleAddArrayItem = () => {
   display: flex;
   align-items: flex-start;
   gap: 0.625rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.35rem 0.75rem;
 }
 
 /* ── Inline icon ────────────────────────────────────────────── */
@@ -500,8 +576,21 @@ const handleAddArrayItem = () => {
 
 /* ── Input area ─────────────────────────────────────────────── */
 .field-input {
-  padding: 0 0.75rem 0.5rem;
+  position: relative;
+  padding: 0 0.75rem 0.15rem;
 }
+
+/* ── Char counter ────────────────────────────────────────────── */
+.char-counter {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: hsl(var(--muted-foreground) / 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+.char-counter--warn   { color: hsl(38 70% 42%); }
+.char-counter--danger { color: hsl(0 65% 48%); font-weight: 600; }
 
 /* ── Nested fields ──────────────────────────────────────────── */
 .nested-fields {
