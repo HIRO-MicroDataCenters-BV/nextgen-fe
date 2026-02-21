@@ -47,7 +47,7 @@
           </TooltipProvider>
           <!-- char counter inline in label row -->
           <span v-if="showCharCount" class="char-counter" :class="charCountClass">
-            {{ charCount }} / {{ charCountMax }}
+            {{ charCount }} / {{ charCountMax }}
           </span>
         </div>
         <p v-if="fieldDescription" class="field-desc">{{ fieldDescription }}</p>
@@ -254,7 +254,7 @@ const hasValue = computed(() => {
 });
 
 // ── Char counter ─────────────────────────────────────────────────────────────
-const isFocused = ref(false);
+
 
 // Which types show a char counter?
 const TEXT_TYPES = new Set(['string', 'language-string', 'uri']);
