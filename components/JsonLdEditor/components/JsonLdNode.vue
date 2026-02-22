@@ -59,7 +59,7 @@
         type="button"
         class="expand-btn"
         :aria-expanded="isExpanded"
-        :title="isExpanded ? 'Collapse' : 'Expand'"
+        :title="isExpanded ? t('jsonld.editor.collapseField') : t('jsonld.editor.expandField')"
         @click.stop="toggleExpand"
       >
         <Icon

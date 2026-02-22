@@ -8,7 +8,7 @@
             <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               v-model="searchQuery"
-              :placeholder="currentMode === 'visual' ? 'Search fields...' : 'Search in code...'"
+            :placeholder="currentMode === 'visual' ? t('jsonld.editor.searchPlaceholderVisual') : t('jsonld.editor.searchPlaceholderCode')"
               class="pl-9 h-9"
             />
             <Button
@@ -23,28 +23,30 @@
           </div>
         </div>
 
-        <!-- Right: mode toggle + auto-save -->
+        <!-- Right: fixed-width save indicator slot -->
         <div class="header-right">
-          <!-- Auto-save indicator -->
-          <Transition name="save-fade">
-            <span v-if="saveStatus === 'saved'" class="save-indicator save-indicator--saved">
-              <Icon name="lucide:check" class="size-3" /> Saved
+          <!-- Save indicator — always occupies space to prevent search jumping -->
+          <div class="save-slot">
+            <span v-if="saveStatus === 'saving'" class="save-indicator save-indicator--saving">
+              <Icon name="lucide:loader-circle" class="size-3 animate-spin" />
+              <span>{{ t('jsonld.editor.saving') }}</span>
             </span>
-            <span v-else-if="saveStatus === 'saving'" class="save-indicator save-indicator--saving">
-              <Icon name="lucide:loader-circle" class="size-3 animate-spin" /> Saving…
+            <span v-else-if="saveStatus === 'saved'" class="save-indicator save-indicator--saved">
+              <Icon name="lucide:check" class="size-3" />
+              <span>{{ t('jsonld.editor.saved') }}</span>
             </span>
-          </Transition>
+          </div>
 
-          <!-- Mode Toggle -->
-          <div class="flex items-center gap-2">
-            <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.visual') }}</Label>
+          <!-- Mode Toggle (compact) -->
+          <div class="mode-toggle-wrap" :title="t('jsonld.editor.modeToggleTitle')">
+            <Label for="mode-switch" class="text-xs text-muted-foreground">{{ t('jsonld.editor.modeVisual') }}</Label>
             <Switch
               id="mode-switch"
               :model-value="currentMode === 'code'"
               :disabled="readonly"
               @update:model-value="toggleMode"
             />
-            <Label for="mode-switch" class="text-sm">{{ t('jsonld.editor.code') }}</Label>
+            <Label for="mode-switch" class="text-xs text-muted-foreground">{{ t('jsonld.editor.modeJson') }}</Label>
           </div>
         </div>
       </div>
@@ -80,14 +82,14 @@
           <div class="completion-label">
             <span class="completion-text">
               <template v-if="mandatoryProgress.total === 0">
-                No required fields
+                {{ t('jsonld.editor.noRequiredFields') }}
               </template>
               <template v-else-if="mandatoryProgress.filled === mandatoryProgress.total">
                 <Icon name="lucide:circle-check" class="size-3 inline" />
-                All required fields complete
+                {{ t('jsonld.editor.allRequiredComplete') }}
               </template>
               <template v-else>
-                {{ mandatoryProgress.filled }} of {{ mandatoryProgress.total }} required fields
+                {{ mandatoryProgress.filled }} {{ t('jsonld.editor.ofRequiredFields', { total: mandatoryProgress.total }) }}
               </template>
             </span>
             <span class="completion-pct">
@@ -448,8 +450,8 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
 
 <style scoped>
 .jsonld-editor {
-  min-height: 400px;
-  max-height: 600px;
+  min-height: 800px;
+  max-height: 1200px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -473,7 +475,25 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   flex-shrink: 0;
 }
 
-/* Auto-save */
+/* Mode toggle — subtle */
+.mode-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  opacity: 0.65;
+  transition: opacity 0.2s;
+}
+.mode-toggle-wrap:hover { opacity: 1; }
+
+/* Save slot — fixed width so search doesn't jump */
+.save-slot {
+  min-width: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* save indicator fades in/out but slot stays fixed */
 .save-indicator {
   display: inline-flex;
   align-items: center;
@@ -483,7 +503,9 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
+  animation: save-appear 0.2s ease;
 }
+@keyframes save-appear { from { opacity: 0; } to { opacity: 1; } }
 .save-indicator--saving {
   color: hsl(var(--muted-foreground));
   background: hsl(var(--muted));
@@ -493,12 +515,6 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   background: hsl(142 60% 92%);
 }
 :root.dark .save-indicator--saved { background: hsl(142 40% 18%); color: hsl(142 70% 65%); }
-
-/* save-fade transition */
-.save-fade-enter-active { transition: opacity 0.2s ease; }
-.save-fade-leave-active { transition: opacity 0.6s ease; }
-.save-fade-enter-from,
-.save-fade-leave-to   { opacity: 0; }
 
 .editor-content {
   flex: 1;

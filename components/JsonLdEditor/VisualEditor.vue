@@ -15,13 +15,22 @@
 
       <!-- Onboarding hint: shown once per session when all mandatory fields are empty -->
       <Transition name="banner-fade">
-        <div v-if="showOnboarding" class="onboarding-banner">
+        <!-- Completion banner -->
+        <div v-if="allRequiredFilled" class="completion-banner">
+          <Icon name="lucide:circle-check" class="completion-icon size-4" />
+          <div class="onboarding-text">
+            <strong>{{ t('jsonld.editor.bannerAllSet') }}</strong>
+            {{ t('jsonld.editor.bannerAllSetDesc') }}
+          </div>
+        </div>
+        <!-- Onboarding hint -->
+        <div v-else-if="showOnboarding" class="onboarding-banner">
           <Icon name="lucide:lightbulb" class="onboarding-icon size-4" />
           <div class="onboarding-text">
-            <strong>Getting started?</strong>
-            Fill in <em>Title</em> and <em>Description</em> first — they're required for DCAT-AP compliance.
+            <strong>{{ t('jsonld.editor.bannerGettingStarted') }}</strong>
+            {{ t('jsonld.editor.bannerGettingStartedDesc') }}
           </div>
-          <button type="button" class="onboarding-dismiss" title="Dismiss" @click="dismissOnboarding">
+          <button type="button" class="onboarding-dismiss" :title="t('jsonld.editor.bannerDismiss')" @click="dismissOnboarding">
             <Icon name="lucide:x" class="size-3.5" />
           </button>
         </div>
@@ -33,7 +42,10 @@
           <!-- Section header -->
           <div class="section-header">
             <span class="section-emoji">{{ categoryEmoji[category] ?? '📋' }}</span>
-            <span class="section-title">{{ t(`jsonld.editor.categories.${category}`) }}</span>
+            <div class="section-title-block">
+              <span class="section-title">{{ t(`jsonld.editor.categories.${category}`) }}</span>
+              <span class="section-subtitle">{{ categorySubtitle[category] }}</span>
+            </div>
             <span class="section-count">{{ filteredNodes[category]?.length }}</span>
           </div>
 
@@ -105,7 +117,12 @@ const emit = defineEmits<{
 }>();
 
 
-// ── Onboarding banner ──────────────────────────────────────────
+const allRequiredFilled = computed(() =>
+  props.modelValue
+    .filter(n => n.metadata.required && !n.metadata.hidden)
+    .every(n => !!(n.value && n.value !== '') || !!(n.children?.some(c => c.value))),
+);
+
 const ONBOARDING_KEY = 'jsonld-onboarding-dismissed';
 const showOnboarding = ref(false);
 
@@ -134,6 +151,14 @@ const categoryEmoji: Record<string, string> = {
   distribution:   '📦',
 };
 
+const categorySubtitle: Record<string, string> = {
+  identification: 'What is this dataset?',
+  provenance:     'Who made it and when?',
+  coverage:       'Where and when does the data apply?',
+  access:         'Who can access it and under what terms?',
+  distribution:   'Where and in what format is the data available?',
+};
+
 // ── Node filtering & grouping ──────────────────────────────────
 const visibleNodes = computed(() =>
   props.modelValue.filter(n => !n.metadata.hidden && !n.metadata.readonly),
@@ -147,6 +172,18 @@ const groupedNodes = computed(() => {
   for (const node of visibleNodes.value) {
     const cat = node.metadata.category || 'other';
     (groups[cat] ?? groups.other).push(node);
+  }
+  // Sort within each group: required → recommended → optional
+  const complianceRank: Record<string, number> = { mandatory: 0, recommended: 1, optional: 2 };
+  for (const nodes of Object.values(groups)) {
+    nodes.sort((a, b) => {
+      const reqA = a.metadata.required ? 0 : 1;
+      const reqB = b.metadata.required ? 0 : 1;
+      if (reqA !== reqB) return reqA - reqB;
+      const rankA = complianceRank[a.metadata.dcatApCompliance ?? 'optional'] ?? 2;
+      const rankB = complianceRank[b.metadata.dcatApCompliance ?? 'optional'] ?? 2;
+      return rankA - rankB;
+    });
   }
   return groups;
 });
@@ -271,14 +308,24 @@ const handleNodeRemove = (nodeId: string) => {
   gap: 0.5rem;
   padding: 0 0.25rem;
 }
-.section-emoji { font-size: 0.95rem; line-height: 1; }
+.section-emoji { font-size: 0.95rem; line-height: 1; flex-shrink: 0; }
+.section-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+}
 .section-title {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #9ca3af;
-  flex: 1;
+}
+.section-subtitle {
+  font-size: 0.68rem;
+  color: hsl(var(--muted-foreground) / 0.7);
+  font-style: italic;
 }
 .section-count {
   font-size: 0.7rem;
@@ -345,4 +392,29 @@ const handleNodeRemove = (nodeId: string) => {
 .banner-fade-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .banner-fade-enter-from  { opacity: 0; transform: translateY(-6px); }
 .banner-fade-leave-to    { opacity: 0; transform: translateY(-6px); }
+
+/* ── Completion banner ────────────────────────────────────────── */
+.completion-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.75rem;
+  background: hsl(142 60% 94%);
+  border: 1px solid hsl(142 50% 78%);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: hsl(142 50% 22%);
+}
+:root.dark .completion-banner {
+  background: hsl(142 40% 14%);
+  border-color: hsl(142 40% 28%);
+  color: hsl(142 60% 72%);
+}
+.completion-icon {
+  flex-shrink: 0;
+  color: hsl(142 60% 38%);
+}
+:root.dark .completion-icon { color: hsl(142 60% 60%); }
 </style>

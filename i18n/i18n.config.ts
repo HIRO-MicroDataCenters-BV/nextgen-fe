@@ -51,6 +51,26 @@ export default defineI18nConfig(() => {
               cancel: 'Cancel',
               confirm: 'Add Field',
             },
+            addAnotherItem: 'Add another item',
+            errors: 'errors',
+            warnings: 'warnings',
+            saving: 'Saving…',
+            saved: 'Saved',
+            searchPlaceholderVisual: 'Search fields…',
+            searchPlaceholderCode: 'Search in code…',
+            noRequiredFields: 'No required fields',
+            allRequiredComplete: 'All required fields complete',
+            ofRequiredFields: 'of {total} required fields complete',
+            collapseField: 'Collapse',
+            expandField: 'Expand',
+            modeVisual: 'Visual',
+            modeJson: 'JSON',
+            modeToggleTitle: 'Switch between visual and JSON code view',
+            bannerAllSet: 'All set!',
+            bannerAllSetDesc: 'Your dataset meets DCAT-AP 3 requirements — every required field is complete.',
+            bannerGettingStarted: 'Getting started?',
+            bannerGettingStartedDesc: 'Fill in Title and Description first — they’re required for DCAT-AP compliance.',
+            bannerDismiss: 'Dismiss',
           },
         },
         app: {
@@ -130,6 +150,8 @@ export default defineI18nConfig(() => {
         },
         breadcrumb: {
           marketplace: "Marketplace",
+          my_catalog: "My Catalog",
+          create: "Create",
         },
         filter: {
           distribution: "Distribution",
@@ -387,6 +409,10 @@ export default defineI18nConfig(() => {
           quarter: "Q{quarter}, {year}",
           try_changing_search_query_or_filters:
             "Try changing search query or filters, filters is required",
+          open_menu: "Open menu",
+        },
+        common: {
+          remove: "Remove",
         },
         validation: {
           required: "This field is required",
@@ -518,6 +544,7 @@ export default defineI18nConfig(() => {
           types: {
             string: "Expected string",
             null: "Expected null",
+            object: "Expected object",
           },
           errors: {
             required: "This field is required",
@@ -539,6 +566,7 @@ export default defineI18nConfig(() => {
             invalid_type_received_boolean: "Invalid type received",
             invalid_type_received_object: "Invalid type received",
             invalid_type_received_array: "Invalid type received",
+            invalid_union: "Invalid value",
             custom: "Validation failed",
           },
         },
