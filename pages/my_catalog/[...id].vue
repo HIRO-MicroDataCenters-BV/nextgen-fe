@@ -16,6 +16,7 @@
     <div v-else class="px-14 py-6">
       <AppForm
         :id="datasetId"
+        :key="String(selectedClient)"
         ref="formRef"
         :title="t('title.edit_catalog_item')"
         :description="t('subtitle.edit_catalog_item_desc')"
@@ -43,6 +44,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
 const { saveDataset, getDataset, getDataproducts } = useApi();
+const { selectedClient } = useClientSelector();
 const { setPage, page } = useApp();
 
 const route = useRoute();
@@ -82,14 +84,26 @@ const fields = computed<FormFieldDefinition[]>(() => [
     disabled: true,
   },
   {
+    name: "client_selector",
+    label: "",
+    type: "client-selector",
+    conditions: [
+      {
+        field: "item_type",
+        value: "dataset",
+      },
+    ],
+  },
+  {
     name: "related_data_product",
     label: t("label.related_data_product"),
     type: "select",
     placeholder: t("placeholder.select_data_product"),
-    dataSource: getDataproducts,
+    dataSource: () => getDataproducts(selectedClient.value ?? "local"),
     fieldOptions: {
       dataPath: "dataproducts",
     },
+    hint: null,
     conditions: [
       {
         field: "item_type",

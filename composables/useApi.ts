@@ -65,12 +65,12 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-          body: isFormData
-            ? (body as BodyInit)
-            : hasRawData
+        body: isFormData
+          ? (body as BodyInit)
+          : hasRawData
             ? (body as BodyInit)
             : JSON.stringify(body),
-        }),
+      }),
     };
 
     try {
@@ -162,12 +162,12 @@ export const useApi = () => {
       "@type": "Filters",
       filters: Array.isArray(compacted.filters)
         ? (compacted.filters as Array<{
-            "@type": string;
-            [key: string]: unknown;
-          }>)
+          "@type": string;
+          [key: string]: unknown;
+        }>)
         : compacted.filters
-        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
-        : [],
+          ? [compacted.filters as { "@type": string;[key: string]: unknown }]
+          : [],
     };
 
     return result;
@@ -176,6 +176,13 @@ export const useApi = () => {
   return {
     healthCheck: async () => {
       return request<{ status: string }>("search", `/health-check`);
+    },
+
+    connectorHealthCheck: async (interfaceId: string) => {
+      return request<{ status: string }>("connector", `/interface-health/${interfaceId}`, "GET", undefined, {
+        showToast: false,
+        timeout: 10000,
+      });
     },
 
     getMetrics: async () => {
@@ -345,10 +352,11 @@ export const useApi = () => {
       return response !== null;
     },
 
-    getDataproducts: async (): Promise<{ dataproducts: string[] } | null> => {
+    getDataproducts: async (interfaceId?: string): Promise<{ dataproducts: string[] } | null> => {
+      const id = interfaceId || "local";
       const response = await request<{ dataproducts: string[] }>(
         "connector",
-        "/file",
+        `/dataproducts/${id}`,
         "GET"
       );
       return response || null;

@@ -54,7 +54,7 @@ export interface FormFieldOption {
 export interface FormFieldDefinition {
   name: string;
   label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file";
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "client-selector";
   placeholder?: string;
   hint?: string | null;
   options?: FormFieldOption[];
@@ -319,8 +319,12 @@ defineExpose({
       </p>
     </div>
     <template v-for="field in fields" :key="field.name">
+      <!-- Client selector is rendered outside the FormField wrapper -->
+      <div v-if="field.type === 'client-selector' && isFieldVisible(field)">
+        <AppClientSelector />
+      </div>
       <FormField
-        v-if="isFieldVisible(field)"
+        v-else-if="isFieldVisible(field)"
         v-slot="{ componentField, value: fieldValue }"
         :name="field.name"
       >
