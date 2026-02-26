@@ -185,6 +185,16 @@ export const useApi = () => {
       });
     },
 
+    getConnectorMetadata: async () => {
+      return request<{
+        connector_id: string;
+        region: string;
+        supported_interfaces: string[];
+        status: string;
+        version: string;
+      }>("connector", `/connector-metadata`, "GET", undefined, { showToast: false });
+    },
+
     getMetrics: async () => {
       return request<Record<string, unknown>>("search", `/metrics`);
     },

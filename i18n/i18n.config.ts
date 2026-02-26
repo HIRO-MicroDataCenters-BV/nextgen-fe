@@ -467,9 +467,12 @@ export default defineI18nConfig(() => {
         },
         client_selector: {
           label: "Client",
-          s3: "S3",
-          local: "Local File Server",
           placeholder: "Select a client",
+          interfaces: {
+            s3: "S3",
+            file: "Local File Server",
+            rest: "REST API",
+          },
           status: {
             checking: "Checking connection...",
             valid: "Client is reachable",

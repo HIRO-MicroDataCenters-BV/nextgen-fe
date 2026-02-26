@@ -1,12 +1,13 @@
-export type ClientType = "S3" | "local";
+export type ClientType = string;
 export type ClientStatus = "idle" | "checking" | "valid" | "error";
 
 export const useClientSelector = () => {
-    const selectedClient = useState<ClientType>("client_selector_type", () => "S3");
+    const selectedClient = useState<ClientType>("client_selector_type", () => "s3");
     const clientStatus = useState<ClientStatus>("client_selector_status", () => "idle");
     const clientError = useState<string | null>("client_selector_error", () => null);
+    const availableClients = useState<string[]>("client_selector_available", () => []);
 
-    const { connectorHealthCheck } = useApi();
+    const { connectorHealthCheck, getConnectorMetadata } = useApi();
     const { t } = useI18n();
 
     const selectClient = async (type: ClientType) => {
@@ -32,16 +33,29 @@ export const useClientSelector = () => {
         }
     };
 
-    // Auto-run health check on first client-side load
-    if (import.meta.client && clientStatus.value === "idle") {
-        const stored = localStorage.getItem("selected_client") as ClientType | null;
+    const initClient = async () => {
+        if (!import.meta.client) return;
+
+        const meta = await getConnectorMetadata();
+        if (meta?.supported_interfaces?.length) {
+            availableClients.value = meta.supported_interfaces;
+        }
+
+        const stored = localStorage.getItem("selected_client");
+        const first = availableClients.value[0] ?? "s3";
         const initial: ClientType =
-            stored === "S3" || stored === "local" ? stored : "S3";
-        selectClient(initial);
+            stored && availableClients.value.includes(stored) ? stored : first;
+
+        await selectClient(initial);
+    };
+
+    if (import.meta.client && clientStatus.value === "idle") {
+        initClient();
     }
 
     const clearClient = () => {
-        selectedClient.value = "S3";
+        const first = availableClients.value[0] ?? "s3";
+        selectedClient.value = first;
         clientStatus.value = "idle";
         clientError.value = null;
         if (import.meta.client) {
@@ -55,6 +69,7 @@ export const useClientSelector = () => {
         selectedClient,
         clientStatus,
         clientError,
+        availableClients,
         isClientValid,
         selectClient,
         clearClient,
