@@ -3,9 +3,11 @@
     v-if="!node.metadata.hidden"
     ref="nodeRef"
     :data-node-id="node.id"
+    :data-node-path="currentPath"
     class="field-card"
     :class="{
       'field-highlight': isNewlyAdded,
+      'field-flash': isFlashing,
       'field-card--nested': depth > 0,
       'field-card--required-empty': node.metadata.required && !hasValue,
       'field-card--required-filled': node.metadata.required && hasValue,
@@ -130,7 +132,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
@@ -269,9 +271,27 @@ const canRemoveNode = computed(() =>
   !props.node.metadata.required && (props.depth === 0),
 );
 
+// ── Flash highlight (triggered externally via scrollToError) ───
+const isFlashing = ref(false);
+
+const flashHighlight = () => {
+  isFlashing.value = true;
+  setTimeout(() => { isFlashing.value = false; }, 1400);
+};
+
+defineExpose({ flashHighlight, currentPath });
+
 // ── New-highlight ──────────────────────────────────────────────
 const nodeRef = ref<HTMLElement | null>(null);
 const isNewlyAdded = ref(false);
+
+// Listen for flash-field DOM event dispatched by scrollToError in index.vue
+onMounted(() => {
+  nodeRef.value?.addEventListener('flash-field', flashHighlight);
+});
+onUnmounted(() => {
+  nodeRef.value?.removeEventListener('flash-field', flashHighlight);
+});
 
 watch(
   () => props.node.metadata.isNew,
@@ -656,5 +676,19 @@ const handleAddArrayItem = () => {
   color: #dc2626;
   padding: 0 1rem 0.25rem;
   margin: 0;
+}
+
+/* ── Flash highlight (scroll-to-error) ──────────────────────── */
+@keyframes field-flash-pulse {
+  0%   { box-shadow: 0 0 0 3px hsl(38 95% 55% / 0);   background: transparent; }
+  20%  { box-shadow: 0 0 0 4px hsl(38 95% 55% / 0.35); background: hsl(38 95% 97%); }
+  60%  { box-shadow: 0 0 0 4px hsl(38 95% 55% / 0.2);  background: hsl(38 95% 97%); }
+  100% { box-shadow: 0 0 0 3px hsl(38 95% 55% / 0);   background: transparent; }
+}
+:root.dark .field-flash {
+  --flash-bg: hsl(38 60% 12%);
+}
+.field-flash {
+  animation: field-flash-pulse 1.4s ease-out forwards;
 }
 </style>

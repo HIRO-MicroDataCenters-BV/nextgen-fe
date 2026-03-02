@@ -151,13 +151,28 @@
             v-for="(error, index) in validationResult.errors"
             :key="index"
             class="validation-item"
-            :class="error.severity === 'error' ? 'validation-item--error' : 'validation-item--warn'"
+            :class="[
+              error.severity === 'error' ? 'validation-item--error' : 'validation-item--warn',
+              canScrollToError(error.path) ? 'validation-item--navigable' : '',
+            ]"
+            v-bind="canScrollToError(error.path) ? {
+              role: 'button',
+              tabindex: '0',
+              title: t('jsonld.editor.clickToNavigate', 'Click to navigate to field'),
+            } : {}"
+            @click="canScrollToError(error.path) ? scrollToError(error.path) : undefined"
+            @keydown.enter="canScrollToError(error.path) ? scrollToError(error.path) : undefined"
           >
             <Icon
               :name="error.severity === 'error' ? 'lucide:circle-x' : 'lucide:triangle-alert'"
               class="size-3.5 flex-shrink-0"
             />
             <span>{{ error.message }}</span>
+            <Icon
+              v-if="canScrollToError(error.path)"
+              name="lucide:arrow-up-right"
+              class="size-3 ml-auto flex-shrink-0 opacity-40"
+            />
           </div>
         </div>
       </div>
@@ -250,6 +265,33 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 onMounted(() => window.addEventListener('keydown', handleKeydown));
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
+
+const findErrorEl = (errorPath: string): Element | null => {
+  const root = editorContentRef.value;
+  if (!root) return null;
+  const candidates: string[] = [];
+  let path = errorPath;
+  while (path) {
+    candidates.push(path);
+    const dot = path.lastIndexOf('.');
+    path = dot > -1 ? path.slice(0, dot) : '';
+  }
+  const allNodes = Array.from(root.querySelectorAll('[data-node-path]'));
+  for (const candidate of candidates) {
+    const el = allNodes.find(n => n.getAttribute('data-node-path') === candidate);
+    if (el) return el;
+  }
+  return null;
+};
+
+const canScrollToError = (errorPath: string): boolean => !!findErrorEl(errorPath);
+
+const scrollToError = (errorPath: string) => {
+  const el = findErrorEl(errorPath);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.dispatchEvent(new CustomEvent('flash-field', { bubbles: false }));
+};
 
 // ── Mandatory progress (replaces old complianceScore) ────────────────────
 const isNodeFilled = (n: JsonLdNode): boolean => {
@@ -769,13 +811,24 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.78rem;
-  padding: 0.2rem 0;
+  padding: 0.3rem 0.5rem;
+  margin: 0 -0.5rem;
+  border-radius: 0.375rem;
   line-height: 1.4;
   color: hsl(var(--muted-foreground));
+  transition: background 0.15s ease;
 }
+.validation-item--navigable {
+  cursor: pointer;
+}
+.validation-item--navigable:hover {
+  background: hsl(var(--muted) / 0.5);
+  color: hsl(var(--foreground));
+}
+.validation-item--navigable:hover .iconify:last-child { opacity: 0.7; }
 
-.validation-item--error .iconify { color: hsl(0 70% 48%); }
-.validation-item--warn  .iconify { color: hsl(38 80% 42%); }
-:root.dark .validation-item--error .iconify { color: hsl(0 80% 72%); }
-:root.dark .validation-item--warn  .iconify { color: hsl(38 80% 65%); }
+.validation-item--error .iconify:first-child { color: hsl(0 70% 48%); }
+.validation-item--warn  .iconify:first-child { color: hsl(38 80% 42%); }
+:root.dark .validation-item--error .iconify:first-child { color: hsl(0 80% 72%); }
+:root.dark .validation-item--warn  .iconify:first-child { color: hsl(38 80% 65%); }
 </style>
