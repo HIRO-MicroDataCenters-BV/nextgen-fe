@@ -44,7 +44,7 @@ const formSchema = z.object({
   file: z
     .any()
     .refine((val) => val !== null && val !== undefined && val !== ""),
-  metadata_content: z.string().min(1),
+  metadata_content: z.union([z.record(z.unknown()), z.string()]).optional(),
 });
 
 const formRef = ref();
@@ -54,7 +54,7 @@ const initialValues = {
   item_type: "dataset",
   related_data_product: null,
   file: null,
-  metadata_content: "",
+  metadata_content: {},
 };
 
 const fields = computed<FormFieldDefinition[]>(() => [
@@ -117,7 +117,7 @@ const fields = computed<FormFieldDefinition[]>(() => [
   {
     name: "metadata_content",
     label: t("label.metadata_content"),
-    type: "textarea",
+    type: "jsonld-editor",
     placeholder: t("placeholder.enter_metadata_content"),
     hint: null,
     disabled: false,

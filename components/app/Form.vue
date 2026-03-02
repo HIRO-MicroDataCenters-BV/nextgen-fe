@@ -44,7 +44,9 @@ import {
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
+import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
 import { useApi } from "@/composables/useApi";
+import { useMmioProcessor } from "@/composables/useMmioProcessor";
 
 export interface FormFieldOption {
   value: string;
@@ -54,7 +56,7 @@ export interface FormFieldOption {
 export interface FormFieldDefinition {
   name: string;
   label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "client-selector";
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "jsonld-editor" | "client-selector";
   placeholder?: string;
   hint?: string | null;
   options?: FormFieldOption[];
@@ -95,6 +97,7 @@ const { t } = useI18n();
 const dayjs = useDayjs();
 const df = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 const { uploadMmioFile, deleteMmioFile } = useApi();
+const { processMmioFile } = useMmioProcessor();
 
 const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
 const uploadingFiles = ref<Record<string, boolean>>({});
@@ -260,6 +263,37 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
       const filename = location.split("/").pop() || file.name;
       uploadedFiles.value[fieldName] = { filename, file };
       setFieldValue(fieldName, file);
+
+      // Process MMIO files if this is the 'file' field
+      if (fieldName === 'file' && (file.name.endsWith('.json') || file.name.endsWith('.tar'))) {
+        try {
+          const mmioMetadata = await processMmioFile(file);
+          
+          if (mmioMetadata) {
+            // Get existing metadata_content or create new object
+            const existingMetadata = values.metadata_content || {};
+            const metadataObj = typeof existingMetadata === 'object' 
+              ? existingMetadata as Record<string, unknown>
+              : {};
+            
+            // Add MMIO extraMetadata to dspace:extraMetadata
+            const updatedMetadata = {
+              ...metadataObj,
+              'dspace:extraMetadata': mmioMetadata.extraMetadata,
+            };
+            
+            setFieldValue('metadata_content', updatedMetadata);
+            
+            console.log('MMIO file processed successfully:', {
+              modalities: mmioMetadata.mmio?.modalities.length,
+              ocaAttributes: mmioMetadata.ocaAttributes.length,
+            });
+          }
+        } catch (error) {
+          console.error('Error processing MMIO file:', error);
+          // Continue anyway - file is uploaded, just couldn't process MMIO
+        }
+      }
     }
   } catch {
     clearFileField(fieldName);
@@ -477,6 +511,17 @@ defineExpose({
                   "
                 />
               </TagsInput>
+            </FormControl>
+          </template>
+          <template v-else-if="field.type === 'jsonld-editor'">
+            <FormControl>
+              <JsonLdEditor
+                :id="field.name"
+                :model-value="componentField.modelValue"
+                :readonly="field.disabled || props.disabled"
+                :title="field.label"
+                @update:model-value="componentField['onUpdate:modelValue']"
+              />
             </FormControl>
           </template>
           <template v-else-if="field.type === 'file'">

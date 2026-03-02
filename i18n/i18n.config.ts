@@ -1,9 +1,78 @@
+import { jsonldFieldsEn } from './jsonld-fields';
+
 export default defineI18nConfig(() => {
   return {
     legacy: false,
     locale: "en",
     messages: {
       en: {
+        jsonld: {
+          fields: jsonldFieldsEn,
+          editor: {
+            visual: 'Visual',
+            code: 'Code',
+            noMetadata: 'No metadata to display',
+            addField: 'Add Field',
+            validationErrors: 'Validation Errors:',
+            categories: {
+              identification: 'Identification',
+              provenance: 'Provenance',
+              coverage: 'Coverage',
+              access: 'Access & Rights',
+              distribution: 'Distributions',
+              // Legacy (kept for backwards compatibility)
+              basic: 'Basic Information',
+              rights: 'Rights & Access',
+              contact: 'Contact & Publisher',
+              technical: 'Technical Details',
+              other: 'Other Fields',
+            },
+            compliance: {
+              mandatory: 'Required',
+              recommended: 'Recommended',
+              optional: 'Optional',
+              mandatoryTooltip: 'This field is required by DCAT-AP 3',
+              recommendedTooltip: 'Strongly recommended for interoperability',
+              optionalTooltip: 'Optional additional information',
+            },
+            addFieldDialog: {
+              title: 'Add Metadata Field',
+              description: 'Choose a metadata field to add to this dataset',
+              searchPlaceholder: 'Search fields...',
+              noFieldsAvailable: 'All available fields are already added',
+              alreadyAdded: 'Already added',
+              categories: {
+                identification: 'Identification',
+                provenance: 'Provenance',
+                coverage: 'Coverage',
+                access: 'Access & Rights',
+                distribution: 'Distributions',
+              },
+              cancel: 'Cancel',
+              confirm: 'Add Field',
+            },
+            addAnotherItem: 'Add another item',
+            errors: 'errors',
+            warnings: 'warnings',
+            saving: 'Saving…',
+            saved: 'Saved',
+            searchPlaceholderVisual: 'Search fields…',
+            searchPlaceholderCode: 'Search in code…',
+            noRequiredFields: 'No required fields',
+            allRequiredComplete: 'All required fields complete',
+            ofRequiredFields: 'of {total} required fields complete',
+            collapseField: 'Collapse',
+            expandField: 'Expand',
+            modeVisual: 'Visual',
+            modeJson: 'JSON',
+            modeToggleTitle: 'Switch between visual and JSON code view',
+            bannerAllSet: 'All set!',
+            bannerAllSetDesc: 'Your dataset meets DCAT-AP 3 requirements — every required field is complete.',
+            bannerGettingStarted: 'Getting started?',
+            bannerGettingStartedDesc: 'Fill in Title and Description first — they’re required for DCAT-AP compliance.',
+            bannerDismiss: 'Dismiss',
+          },
+        },
         app: {
           title: "NextGen",
           description:
@@ -81,6 +150,8 @@ export default defineI18nConfig(() => {
         },
         breadcrumb: {
           marketplace: "Marketplace",
+          my_catalog: "My Catalog",
+          create: "Create",
         },
         filter: {
           distribution: "Distribution",
@@ -338,6 +409,10 @@ export default defineI18nConfig(() => {
           quarter: "Q{quarter}, {year}",
           try_changing_search_query_or_filters:
             "Try changing search query or filters, filters is required",
+          open_menu: "Open menu",
+        },
+        common: {
+          remove: "Remove",
         },
         validation: {
           required: "This field is required",
@@ -485,6 +560,7 @@ export default defineI18nConfig(() => {
           types: {
             string: "Expected string",
             null: "Expected null",
+            object: "Expected object",
           },
           errors: {
             required: "This field is required",
@@ -506,6 +582,7 @@ export default defineI18nConfig(() => {
             invalid_type_received_boolean: "Invalid type received",
             invalid_type_received_object: "Invalid type received",
             invalid_type_received_array: "Invalid type received",
+            invalid_union: "Invalid value",
             custom: "Validation failed",
           },
         },
