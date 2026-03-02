@@ -137,35 +137,6 @@ import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/edi
 import JsonLdField from './JsonLdField.vue';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-// ── Icon map (mirrors AddFieldDialog) ─────────────────────────
-const FIELD_ICON_MAP: Record<string, string> = {
-  'dcterms:title':              'lucide:type',
-  'dcterms:description':        'lucide:align-left',
-  'dcterms:identifier':         'lucide:fingerprint',
-  'dcat:keyword':               'lucide:tag',
-  'dcat:theme':                 'lucide:folder',
-  'dcterms:type':               'lucide:layers',
-  'dcat:landingPage':           'lucide:external-link',
-  'dcterms:publisher':          'lucide:building-2',
-  'dcterms:creator':            'lucide:user',
-  'dcterms:issued':             'lucide:calendar-plus',
-  'dcterms:modified':           'lucide:calendar-clock',
-  'dcat:version':               'lucide:git-branch',
-  'dcterms:accrualPeriodicity': 'lucide:refresh-cw',
-  'dcat:inSeries':              'lucide:list-tree',
-  'dcterms:spatial':            'lucide:map-pin',
-  'dcterms:temporal':           'lucide:clock',
-  'dcterms:language':           'lucide:languages',
-  'dcterms:accessRights':       'lucide:shield',
-  'dcterms:license':            'lucide:scale',
-  'dcat:contactPoint':          'lucide:mail',
-  'dcat:distribution':          'lucide:package',
-  'dcat:accessURL':             'lucide:link',
-  'dcat:downloadURL':           'lucide:download',
-  'dcat:mediaType':             'lucide:file',
-  'dcat:format':                'lucide:file-type',
-  'dcat:byteSize':              'lucide:hard-drive',
-};
 
 interface Props {
   node: JsonLdNodeType;
@@ -218,8 +189,9 @@ const fieldDescription = computed(() =>
   null,
 );
 
+// ── Icon (schema-driven, propagated via node.metadata.icon) ────
 const fieldIconName = computed(() =>
-  FIELD_ICON_MAP[props.node.key] ?? 'lucide:circle-dot',
+  props.node.metadata.icon ?? 'lucide:circle-dot',
 );
 
 // ── Children ───────────────────────────────────────────────────

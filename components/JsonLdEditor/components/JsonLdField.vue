@@ -10,9 +10,9 @@
       @update:model-value="handleUpdate"
     />
 
-    <!-- Email (vcard:hasEmail) — type="email", auto mailto: -->
+    <!-- Email (format: 'email') — type="email", strips/adds mailto: prefix -->
     <Input
-      v-else-if="node.key === 'vcard:hasEmail'"
+      v-else-if="node.metadata.format === 'email'"
       type="email"
       :model-value="emailDisplayValue"
       :readonly="readonly"
@@ -20,9 +20,9 @@
       @update:model-value="handleEmailUpdate"
     />
 
-    <!-- Phone (vcard:hasTelephone) — type="tel", auto tel: -->
+    <!-- Phone (format: 'tel') — type="tel", strips/adds tel: prefix -->
     <Input
-      v-else-if="node.key === 'vcard:hasTelephone'"
+      v-else-if="node.metadata.format === 'tel'"
       type="tel"
       :model-value="telDisplayValue"
       :readonly="readonly"
@@ -30,9 +30,9 @@
       @update:model-value="handleTelUpdate"
     />
 
-    <!-- URL fields -->
+    <!-- URL fields (format: 'url') -->
     <Input
-      v-else-if="URL_FIELD_KEYS.has(node.key)"
+      v-else-if="node.metadata.format === 'url'"
       type="url"
       :model-value="displayValue"
       :readonly="readonly"
@@ -119,9 +119,6 @@ import ControlledVocabularySelect from './ControlledVocabularySelect.vue';
 import DatePickerField from './DatePickerField.vue';
 import type { JsonLdNode, ValidationError } from '../types/editor.types';
 
-const URL_FIELD_KEYS = new Set([
-  'foaf:homepage', 'dcat:landingPage', 'foaf:page', 'schema:url', 'vcard:hasURL',
-]);
 
 interface Props {
   node: JsonLdNode;

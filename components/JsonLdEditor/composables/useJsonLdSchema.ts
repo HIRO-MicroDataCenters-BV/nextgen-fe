@@ -101,6 +101,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'mandatory',
+            icon: 'lucide:type',
             description: 'The name of the dataset — be specific enough for a stranger to know what it contains',
             placeholder: 'e.g. Monthly Air Quality Measurements Amsterdam 2020–2024',
         },
@@ -113,6 +114,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'mandatory',
+            icon: 'lucide:align-left',
             description: 'Explain what the dataset contains, why it was collected, and who would find it useful',
             placeholder: 'e.g. Hourly PM2.5 readings from 12 sensor stations across Amsterdam, collected by the Municipality Environmental Service from Jan 2020 to Dec 2024.',
         },
@@ -126,6 +128,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:fingerprint',
             description: 'A unique identifier of the dataset (e.g. internal ID)',
             placeholder: 'e.g., clinical-gwas-cardiology-001',
         },
@@ -139,6 +142,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'identification',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:tag',
             description: 'Search tags that help people discover this dataset — add one per field',
             placeholder: 'e.g. air quality, PM2.5, environment, Amsterdam',
         },
@@ -151,6 +155,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'identification',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:folder',
             description: 'The main category of the dataset (from EU Data Themes vocabulary)',
             children: {
                 '@id': {
@@ -193,6 +198,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'optional',
+            icon: 'lucide:layers',
             description: 'The nature or classification of the dataset',
             children: {
                 '@id': {
@@ -234,6 +240,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'identification',
             dcatApCompliance: 'optional',
+            icon: 'lucide:external-link',
             description: 'A webpage that gives access to the dataset and additional information',
             children: {
                 '@id': {
@@ -259,6 +266,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:building-2',
             description: 'The organisation responsible for making the dataset available',
             children: {
                 '@id': {
@@ -302,6 +310,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'optional',
+            icon: 'lucide:user',
             description: 'The person or organisation that created the dataset',
             children: {
                 '@type': {
@@ -347,6 +356,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:calendar-clock',
             description: 'The date on which the dataset was most recently changed',
         },
         'dcat:version': {
@@ -359,6 +369,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'optional',
+            icon: 'lucide:git-branch',
             description: 'Version number or name of this dataset',
             placeholder: 'e.g., 1.0.0',
         },
@@ -371,6 +382,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'optional',
+            icon: 'lucide:refresh-cw',
             description: 'How often the dataset is updated',
             children: {
                 '@id': {
@@ -395,6 +407,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'provenance',
             dcatApCompliance: 'optional',
+            icon: 'lucide:list-tree',
             description: 'The dataset series this dataset belongs to',
             children: {
                 '@id': {
@@ -445,6 +458,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'coverage',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:map-pin',
             description: 'The geographic area(s) covered by the dataset',
             children: {
                 '@id': {
@@ -478,6 +492,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'coverage',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:clock',
             description: 'The time period(s) covered by the data',
             children: {
                 '@type': {
@@ -523,6 +538,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'coverage',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:languages',
             description: 'The language(s) in which the dataset is available',
             children: {
                 '@id': {
@@ -550,6 +566,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'access',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:shield',
             description: 'Who can access the dataset (Public, Restricted, Non-Public)',
             children: {
                 '@id': {
@@ -585,6 +602,7 @@ export function useJsonLdSchema() {
             repeatable: false,
             category: 'access',
             dcatApCompliance: 'optional',
+            icon: 'lucide:scale',
             description: 'The licence under which the dataset is shared',
             placeholder: 'e.g., CC-BY-4.0, EUPL-1.2',
         },
@@ -597,6 +615,7 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'access',
             dcatApCompliance: 'recommended',
+            icon: 'lucide:mail',
             description: 'Contact information for questions about the dataset',
             children: {
                 '@type': {
@@ -626,6 +645,7 @@ export function useJsonLdSchema() {
                     required: false,
                     readonly: false,
                     repeatable: false,
+                    format: 'email',
                     placeholder: 'mailto:contact@example.com',
                     description: 'Email address (must start with mailto:)',
                 },
@@ -636,6 +656,7 @@ export function useJsonLdSchema() {
                     required: false,
                     readonly: false,
                     repeatable: false,
+                    format: 'tel',
                     placeholder: 'tel:+31-20-555-0100',
                     description: 'Phone number (must start with tel:)',
                 },
@@ -646,6 +667,7 @@ export function useJsonLdSchema() {
                     required: false,
                     readonly: false,
                     repeatable: false,
+                    format: 'url',
                     placeholder: 'https://example.com/contact',
                     description: 'Contact or information page URL',
                 },
@@ -662,6 +684,8 @@ export function useJsonLdSchema() {
             repeatable: true,
             category: 'distribution',
             dcatApCompliance: 'optional',
+            icon: 'lucide:package',
+            distributionContext: true,
             description: 'Available file formats / access points for this dataset',
         },
     };
@@ -696,6 +720,7 @@ export function useJsonLdSchema() {
             readonly: false,
             repeatable: false,
             dcatApCompliance: 'mandatory',
+            icon: 'lucide:link',
             description: 'The URL that gives access to this distribution',
             children: {
                 '@id': {
@@ -705,6 +730,7 @@ export function useJsonLdSchema() {
                     required: true,
                     readonly: false,
                     repeatable: false,
+                    format: 'url',
                     placeholder: 'https://example.com/data or file://path/to/file',
                 },
             },
@@ -717,6 +743,7 @@ export function useJsonLdSchema() {
             readonly: false,
             repeatable: false,
             dcatApCompliance: 'optional',
+            icon: 'lucide:download',
             description: 'Direct download link for this distribution',
             children: {
                 '@id': {
@@ -726,6 +753,7 @@ export function useJsonLdSchema() {
                     required: true,
                     readonly: false,
                     repeatable: false,
+                    format: 'url',
                     placeholder: 'https://example.com/data.csv',
                 },
             },
@@ -924,6 +952,7 @@ export function useJsonLdSchema() {
                     label: 'Checksum Value',
                     type: 'string',
                     xsdType: 'xsd:hexBinary',
+                    format: 'hex',
                     required: false,
                     readonly: false,
                     repeatable: false,
@@ -976,6 +1005,7 @@ export function useJsonLdSchema() {
                     required: false,
                     readonly: false,
                     repeatable: false,
+                    format: 'url',
                     placeholder: 'https://example.com/sparql',
                     description: 'URL of the service endpoint',
                 },
@@ -986,6 +1016,7 @@ export function useJsonLdSchema() {
                     required: false,
                     readonly: false,
                     repeatable: false,
+                    format: 'url',
                     description: 'URI describing the endpoint (e.g., OpenAPI spec)',
                 },
             },

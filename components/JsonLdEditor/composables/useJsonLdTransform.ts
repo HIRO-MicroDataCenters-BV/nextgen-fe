@@ -52,7 +52,18 @@ export function useJsonLdTransform() {
             if (key === '@context') continue;
 
             const fieldDef = parentChildSchema?.[key] ?? getFieldDefinition(key, context);
-            const type = detectType(value);
+            const detectedType = detectType(value);
+
+            // Schema type takes priority for leaf nodes — ensures validation uses the correct
+            // type even when the actual value doesn't match (e.g. an invalid URI typed as string
+            // by detectType). Structural types (object, array, language-string) are always
+            // determined from the data shape so they parse correctly regardless of schema.
+            const STRUCTURAL_TYPES: JsonLdNodeType[] = ['object', 'array', 'language-string'];
+            const type: JsonLdNodeType = (
+                fieldDef?.type &&
+                !STRUCTURAL_TYPES.includes(detectedType) &&  // data shape wins for structures
+                fieldDef.type !== 'array' && fieldDef.type !== 'object'  // schema object/array need data shape
+            ) ? fieldDef.type as JsonLdNodeType : detectedType;
 
             const node: JsonLdNode = {
                 id: generateId(),
@@ -72,6 +83,8 @@ export function useJsonLdTransform() {
                     defaultValue: fieldDef?.defaultValue,
                     vocabulary: fieldDef?.vocabulary,
                     dcatApCompliance: fieldDef?.dcatApCompliance,
+                    format: fieldDef?.format,
+                    icon: fieldDef?.icon,
                 },
             };
 
@@ -111,8 +124,9 @@ export function useJsonLdTransform() {
                     return keys.some(k => k.includes(':') && !k.startsWith('@'));
                 };
 
-                if (key === 'dcat:distribution') {
-                    // Distribution items always rendered in distribution context
+                if (fieldDef?.distributionContext) {
+                    // Schema declares that this array's items should be parsed in distribution context
+                    // (e.g. dcat:distribution → distributionContext: true in schema)
                     node.children = arrValue
                         .filter(item => typeof item === 'object' && item !== null)
                         .map((item, index) => ({
@@ -122,22 +136,7 @@ export function useJsonLdTransform() {
                             children: parseJsonLdToTree(item as Record<string, unknown>, key, 'distribution'),
                             metadata: {
                                 required: false,
-                                readonly: false,
-                                repeatable: false,
-                            },
-                        }));
-                } else if (key === 'dspace:extraMetadata') {
-                    // ExtraMetadata is readonly
-                    node.children = arrValue
-                        .filter(item => typeof item === 'object' && item !== null)
-                        .map((item, index) => ({
-                            id: generateId(),
-                            key: `[${index}]`,
-                            type: 'object' as JsonLdNodeType,
-                            children: parseJsonLdToTree(item as Record<string, unknown>, key, context),
-                            metadata: {
-                                required: false,
-                                readonly: true,
+                                readonly: fieldDef?.readonly ?? false,
                                 repeatable: false,
                             },
                         }));

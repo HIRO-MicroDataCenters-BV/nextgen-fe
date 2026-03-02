@@ -25,8 +25,8 @@ export interface JsonLdNodeMetadata {
     required: boolean;
     readonly: boolean;
     repeatable: boolean;
-    label?: string; // Friendly display label (from schema)
-    category?: string; // DCAT-AP category for grouping
+    label?: string;
+    category?: string;
     isNew?: boolean;
     xsdType?: XsdType;
     language?: string;
@@ -37,6 +37,10 @@ export interface JsonLdNodeMetadata {
     defaultValue?: unknown;
     vocabulary?: ControlledVocabulary;
     dcatApCompliance?: DcatApCompliance;
+    /** Input format hint — drives field renderer without key-based if/else */
+    format?: 'email' | 'tel' | 'url' | 'hex';
+    /** Lucide icon name for this field */
+    icon?: string;
 }
 
 export interface JsonLdNode {
@@ -66,6 +70,12 @@ export interface FieldDefinition {
     category?: string;
     vocabulary?: ControlledVocabulary;
     dcatApCompliance?: DcatApCompliance;
+    /** Input format hint — drives field renderer and validation without key-based if/else */
+    format?: 'email' | 'tel' | 'url' | 'hex';
+    /** Lucide icon name shown in the editor */
+    icon?: string;
+    /** When true, child arrays are parsed in 'distribution' context */
+    distributionContext?: boolean;
 }
 
 export interface JsonLdEditorProps {
