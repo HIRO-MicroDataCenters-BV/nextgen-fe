@@ -198,6 +198,7 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
   initialMode: 'visual',
   title: 'Metadata Editor',
+  extraMetadata: null,
 });
 
 const { t } = useI18n();
