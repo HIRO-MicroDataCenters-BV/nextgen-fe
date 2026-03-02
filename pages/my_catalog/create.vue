@@ -7,6 +7,7 @@
   >
     <div class="px-14 py-6">
       <AppForm
+        :key="String(selectedClient)"
         ref="formRef"
         :title="t('title.create_catalog_item')"
         :description="t('subtitle.create_catalog_item_desc')"
@@ -20,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
@@ -28,7 +29,13 @@ import { createDatasetJsonLd } from "@/utils/jsonld";
 
 const { t } = useI18n();
 const { saveDataset, getDataproducts } = useApi();
+const { selectedClient } = useClientSelector();
 const router = useRouter();
+
+// Wrap getDataproducts to pass the currently selected client interface
+const getDataproductsForClient = () => {
+  return getDataproducts(selectedClient.value ?? "local");
+};
 
 const formSchema = z.object({
   name: z.string().optional(),
@@ -50,13 +57,19 @@ const initialValues = {
   metadata_content: {},
 };
 
-const fields: FormFieldDefinition[] = [
+const fields = computed<FormFieldDefinition[]>(() => [
+  {
+    name: "name",
+    label: t("label.name"),
+    type: "text",
+    placeholder: t("placeholder.data_product_name"),
+    disabled: false,
+  },
   {
     name: "item_type",
     label: t("label.item_type"),
     type: "select",
     placeholder: t("placeholder.select_data_product_directory"),
-
     options: [
       { label: t("label.dataset"), value: "dataset" },
       { label: t("label.application"), value: "application" },
@@ -64,22 +77,33 @@ const fields: FormFieldDefinition[] = [
     disabled: false,
   },
   {
-    name: "related_data_product",
-    label: t("label.related_data_product"),
-    type: "select",
-    placeholder: t("placeholder.select_data_product"),
-    dataSource: getDataproducts,
-    fieldOptions: {
-      dataPath: "dataproducts",
-    },
-    hint: null,
+    name: "client_selector",
+    label: "",
+    type: "client-selector",
     conditions: [
       {
         field: "item_type",
         value: "dataset",
       },
     ],
+  },
+  {
+    name: "related_data_product",
+    label: t("label.related_data_product"),
+    type: "select",
+    placeholder: t("placeholder.select_data_product"),
+    dataSource: getDataproductsForClient,
+    fieldOptions: {
+      dataPath: "dataproducts",
+    },
+    hint: null,
     disabled: false,
+    conditions: [
+      {
+        field: "item_type",
+        value: "dataset",
+      },
+    ],
   },
   {
     name: "file",
@@ -98,7 +122,7 @@ const fields: FormFieldDefinition[] = [
     hint: null,
     disabled: false,
   },
-];
+]);
 
 const onChangeFile = (_file: File) => {
   // File changed

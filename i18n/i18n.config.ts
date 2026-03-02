@@ -540,6 +540,22 @@ export default defineI18nConfig(() => {
               "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
           },
         },
+        client_selector: {
+          label: "Client",
+          placeholder: "Select a client",
+          interfaces: {
+            s3: "S3",
+            file: "Local File Server",
+            rest: "REST API",
+          },
+          status: {
+            checking: "Checking connection...",
+            valid: "Client is reachable",
+            error: "Client unreachable",
+          },
+          error_description:
+            "The selected client is not reachable. Please check the service configuration or try a different client.",
+        },
         zodI18n: {
           types: {
             string: "Expected string",
