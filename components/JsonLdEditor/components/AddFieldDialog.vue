@@ -62,7 +62,7 @@
               >
                 <!-- Icon circle: always has a background -->
                 <span class="card-icon-wrap" :class="`card-icon--${field.dcatApCompliance ?? 'optional'}`">
-                  <Icon :name="fieldIcon(field.key)" class="size-5" />
+                  <Icon :name="field.icon ?? 'lucide:circle-dot'" class="size-5" />
                 </span>
 
                 <span class="card-body">
@@ -141,37 +141,6 @@ const categoryMeta: Record<string, { emoji: string }> = {
   distribution:   { emoji: '📦' },
 };
 
-// Icon mapping per field key
-const fieldIconMap: Record<string, string> = {
-  'dcterms:title':               'lucide:type',
-  'dcterms:description':         'lucide:align-left',
-  'dcterms:identifier':          'lucide:fingerprint',
-  'dcat:keyword':                'lucide:tag',
-  'dcat:theme':                  'lucide:folder',
-  'dcterms:type':                'lucide:layers',
-  'dcat:landingPage':            'lucide:external-link',
-  'dcterms:publisher':           'lucide:building-2',
-  'dcterms:creator':             'lucide:user',
-  'dcterms:issued':              'lucide:calendar-plus',
-  'dcterms:modified':            'lucide:calendar-clock',
-  'dcat:version':                'lucide:git-branch',
-  'dcterms:accrualPeriodicity':  'lucide:refresh-cw',
-  'dcat:inSeries':               'lucide:list-tree',
-  'dcterms:spatial':             'lucide:map-pin',
-  'dcterms:temporal':            'lucide:clock',
-  'dcterms:language':            'lucide:languages',
-  'dcterms:accessRights':        'lucide:shield',
-  'dcterms:license':             'lucide:scale',
-  'dcat:contactPoint':           'lucide:mail',
-  'dcat:distribution':           'lucide:package',
-  'dcat:accessURL':              'lucide:link',
-  'dcat:downloadURL':            'lucide:download',
-  'dcat:mediaType':              'lucide:file',
-  'dcat:format':                 'lucide:file-type',
-  'dcat:byteSize':               'lucide:hard-drive',
-};
-
-const fieldIcon = (key: string) => fieldIconMap[key] ?? 'lucide:circle-dot';
 
 // Category order
 const categoryOrder = ['identification', 'provenance', 'coverage', 'access', 'distribution'];
@@ -308,8 +277,10 @@ const close = () => {
   position: relative;
   padding: 0.875rem 1.5rem;
   border-bottom: 1px solid hsl(var(--border, 220 13% 88%));
+  box-shadow: 0 4px 12px -4px hsl(0 0% 0% / 0.08);
   flex-shrink: 0;
   background: inherit;
+  z-index: 1;
 }
 
 .search-icon {
@@ -417,20 +388,25 @@ const close = () => {
   border-radius: 0.75rem;
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.14s, box-shadow 0.14s, transform 0.12s;
+  transition: border-color 0.18s ease-out,
+              box-shadow   0.18s ease-out,
+              transform    0.18s ease-out;
   position: relative;
 }
 
 .field-card:not(.field-card--added):hover {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  border-color: #9ca3af;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12),
+              0 2px 10px -2px hsl(var(--primary) / 0.08);
   transform: translateY(-1px);
 }
 
-.field-card:not(.field-card--added):active { transform: translateY(0); }
+.field-card:not(.field-card--added):active {
+  transform: translateY(0);
+}
 
 .field-card--added {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -443,6 +419,7 @@ const close = () => {
   height: 36px;
   border-radius: 10px;
   flex-shrink: 0;
+  transition: background 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1);
   /* Solid fallback — always visible regardless of CSS variable resolution */
   background: #f3f4f6;
   color: #6b7280;
