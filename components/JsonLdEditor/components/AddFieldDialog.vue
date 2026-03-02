@@ -277,7 +277,7 @@ const close = () => {
   position: relative;
   padding: 0.875rem 1.5rem;
   border-bottom: 1px solid hsl(var(--border, 220 13% 88%));
-  box-shadow: 0 4px 12px -4px hsl(0 0% 0% / 0.08);
+  box-shadow: var(--sticky-shadow);
   flex-shrink: 0;
   background: inherit;
   z-index: 1;

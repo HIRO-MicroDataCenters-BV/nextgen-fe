@@ -550,7 +550,6 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   flex-direction: column;
   overflow: hidden;
 }
-
 /* ── Header ─────────────────────────────────────────────────── */
 .editor-header {
   display: flex;
@@ -560,6 +559,9 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--muted) / 0.3);
+  box-shadow: var(--sticky-shadow);
+  position: relative;
+  z-index: 1;
 }
 
 .header-right {

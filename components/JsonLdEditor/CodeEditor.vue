@@ -1,12 +1,12 @@
 <template>
   <div class="code-editor">
     <!-- eslint-disable-next-line vue/no-v-html -->
-    <div v-if="searchQuery && highlightedCode" class="code-display font-mono text-sm" v-html="highlightedCode" />
+    <div v-if="searchQuery && highlightedCode" class="code-display" v-html="highlightedCode" />
     <textarea
       v-else
       v-model="code"
       :readonly="readonly"
-      class="code-textarea font-mono text-sm"
+      class="code-textarea"
       spellcheck="false"
       @input="handleInput"
     />
@@ -70,9 +70,12 @@ const handleInput = () => {
   resize: vertical;
   background: hsl(var(--muted) / 0.3);
   color: hsl(var(--foreground));
-  line-height: 1.5;
+  line-height: 1.65;
   tab-size: 2;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: 'Geist Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  font-variant-ligatures: none;
+  letter-spacing: 0.01em;
 }
 
 .code-display {
