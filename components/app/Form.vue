@@ -102,6 +102,8 @@ const { processMmioFile } = useMmioProcessor();
 const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
 const uploadingFiles = ref<Record<string, boolean>>({});
 const fileInputKeys = ref<Record<string, number>>({});
+// Extra system metadata from MMIO file — stored independently from the JsonLd editor tree
+const mmioExtraMetadata = ref<Array<Record<string, unknown>> | null>(null);
 
 const isEditMode = computed(() => Boolean(props.id));
 
@@ -249,53 +251,96 @@ const clearFileField = (fieldName: string) => {
 };
 
 const handleFileChange = async (fieldName: string, files: FileList | null) => {
-  if (!files || files.length === 0) {
-    return;
-  }
+  if (!files || files.length === 0) return;
 
   const file = files[0];
+  console.log('[Form DEBUG] handleFileChange: fieldName =', fieldName, 'file =', file.name, 'size =', file.size);
   uploadingFiles.value[fieldName] = true;
 
   try {
+    console.log('[Form DEBUG] uploading to server...');
     const location = await uploadMmioFile(file);
+    console.log('[Form DEBUG] upload location =', location);
 
     if (location) {
       const filename = location.split("/").pop() || file.name;
       uploadedFiles.value[fieldName] = { filename, file };
       setFieldValue(fieldName, file);
 
-      // Process MMIO files if this is the 'file' field
-      if (fieldName === 'file' && (file.name.endsWith('.json') || file.name.endsWith('.tar'))) {
-        try {
-          const mmioMetadata = await processMmioFile(file);
-          
-          if (mmioMetadata) {
-            // Get existing metadata_content or create new object
-            const existingMetadata = values.metadata_content || {};
-            const metadataObj = typeof existingMetadata === 'object' 
-              ? existingMetadata as Record<string, unknown>
-              : {};
-            
-            // Add MMIO extraMetadata to dspace:extraMetadata
-            const updatedMetadata = {
-              ...metadataObj,
-              'dspace:extraMetadata': mmioMetadata.extraMetadata,
-            };
-            
-            setFieldValue('metadata_content', updatedMetadata);
-            
-            console.log('MMIO file processed successfully:', {
-              modalities: mmioMetadata.mmio?.modalities.length,
-              ocaAttributes: mmioMetadata.ocaAttributes.length,
-            });
+      if (fieldName === 'file') {
+        if (file.name.endsWith('.tar')) {
+          // ── TAR file: extract dspace:extraMetadata from OCA bundles ──
+          console.log('[Form DEBUG] TAR MMIO file detected, calling processMmioFile...');
+          try {
+            const mmioMetadata = await processMmioFile(file);
+            console.log('[Form DEBUG] processMmioFile returned:', mmioMetadata ? 'OK' : 'NULL');
+            if (mmioMetadata) {
+              const extra = mmioMetadata.extraMetadata;
+              const extraArr = Array.isArray(extra) ? extra : [extra as Record<string, unknown>];
+              console.log('[Form DEBUG] setting mmioExtraMetadata from TAR, entries =', extraArr.length);
+              mmioExtraMetadata.value = extraArr;
+            }
+          } catch (error) {
+            console.error('[Form DEBUG] Error processing TAR MMIO file:', error);
           }
-        } catch (error) {
-          console.error('Error processing MMIO file:', error);
-          // Continue anyway - file is uploaded, just couldn't process MMIO
+
+        } else if (file.name.endsWith('.json')) {
+          // ── JSON file: could be a full DCAT-AP metadata object OR a MMIO JSON ──
+          console.log('[Form DEBUG] JSON file detected, reading content...');
+          try {
+            const text = await file.text();
+            const parsed = JSON.parse(text) as Record<string, unknown>;
+            console.log('[Form DEBUG] JSON parsed, top-level keys =', Object.keys(parsed));
+
+            const isDcatMetadata =
+              parsed['dcterms:title'] !== undefined ||
+              parsed['dcterms:description'] !== undefined ||
+              (parsed['@type'] as string | undefined)?.includes('Dataset');
+
+            if (isDcatMetadata) {
+              // Full DCAT-AP JSON-LD — load into the editor (overwrites all fields)
+              console.log('[Form DEBUG] Detected full DCAT-AP metadata JSON, loading into editor...');
+
+              // If the JSON has its own dspace:extraMetadata, extract it separately
+              if (parsed['dspace:extraMetadata']) {
+                const extra = parsed['dspace:extraMetadata'];
+                mmioExtraMetadata.value = Array.isArray(extra)
+                  ? extra as Array<Record<string, unknown>>
+                  : [extra as Record<string, unknown>];
+                console.log('[Form DEBUG] extracted dspace:extraMetadata from JSON, entries =', mmioExtraMetadata.value.length);
+              } else {
+                // No extraMetadata in this JSON — clear any stale data from a previous TAR upload
+                mmioExtraMetadata.value = null;
+                console.log('[Form DEBUG] no dspace:extraMetadata in JSON, cleared mmioExtraMetadata');
+              }
+
+              // Load the full JSON into metadata_content — JsonLdEditor will re-parse it
+              console.log('[Form DEBUG] setting metadata_content from JSON file:', JSON.stringify(parsed, null, 2).substring(0, 300), '...');
+              setFieldValue('metadata_content', parsed);
+
+            } else {
+              // MMIO JSON (version/id/modalities structure)
+              console.log('[Form DEBUG] Detected MMIO JSON format, calling processMmioFile...');
+              const mmioMetadata = await processMmioFile(file);
+              console.log('[Form DEBUG] processMmioFile returned:', mmioMetadata ? 'OK' : 'NULL');
+              if (mmioMetadata) {
+                const extra = mmioMetadata.extraMetadata;
+                mmioExtraMetadata.value = Array.isArray(extra)
+                  ? extra
+                  : [extra as Record<string, unknown>];
+                console.log('[Form DEBUG] setting mmioExtraMetadata from MMIO JSON, entries =', mmioExtraMetadata.value.length);
+              }
+            }
+          } catch (error) {
+            console.error('[Form DEBUG] Error processing JSON file:', error);
+          }
         }
       }
+    } else {
+      console.warn('[Form DEBUG] uploadMmioFile returned falsy location!');
     }
-  } catch {
+  } catch (err) {
+    console.error('[Form DEBUG] upload failed:', err);
     clearFileField(fieldName);
   } finally {
     uploadingFiles.value[fieldName] = false;
@@ -520,6 +565,7 @@ defineExpose({
                 :model-value="componentField.modelValue"
                 :readonly="field.disabled || props.disabled"
                 :title="field.label"
+                :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
                 @update:model-value="componentField['onUpdate:modelValue']"
               />
             </FormControl>

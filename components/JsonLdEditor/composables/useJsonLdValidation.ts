@@ -45,9 +45,14 @@ export function useJsonLdValidation() {
         ]);
 
         if (node.type === 'uri' && node.value && !DEDICATED_FORMAT_KEYS.has(node.key) && !node.metadata.vocabulary) {
-            // Accept http, https, file, mailto, tel — all valid URI schemes in DCAT-AP context
-            const uriPattern = /^(https?|file|mailto|tel):.+/;
-            if (!uriPattern.test(String(node.value))) {
+            const val = String(node.value).trim();
+            // Accept:
+            //   • Standard absolute URIs: http(s)://, file://, mailto:, tel:, urn:
+            //   • JSON-LD prefixed forms: prefix:localName  (e.g. spdx:SHA256, dcterms:title)
+            //     These are valid when a @context expands them to full URIs.
+            const isAbsoluteUri = /^(https?|file|mailto|tel|urn):.+/.test(val);
+            const isPrefixedUri = /^[a-zA-Z][a-zA-Z0-9_-]*:[a-zA-Z0-9_./-]/.test(val) && !val.startsWith('http') && !val.startsWith('urn');
+            if (!isAbsoluteUri && !isPrefixedUri) {
                 errors.push({
                     path: currentPath,
                     message: `${fieldLabel(node.key)} must be a valid URI`,

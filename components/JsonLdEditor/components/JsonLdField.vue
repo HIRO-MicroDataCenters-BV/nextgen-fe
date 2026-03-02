@@ -136,9 +136,23 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{ update: [value: unknown] }>();
 
-const displayValue = computed(() =>
-  props.node.value === null || props.node.value === undefined ? '' : String(props.node.value),
-);
+const displayValue = computed(() => {
+  const v = props.node.value;
+  if (v === null || v === undefined) return '';
+  // Array of typed literals: [{ "@type": "xsd:string", "@value": "..." }, ...]
+  // or array of plain strings → join with comma for display
+  if (Array.isArray(v)) {
+    return v.map(item => {
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, unknown>;
+        if ('@value' in obj) return String(obj['@value']);
+        if ('@id' in obj) return String(obj['@id']);
+      }
+      return String(item);
+    }).join(', ');
+  }
+  return String(v);
+});
 
 // Email: store as mailto:..., show bare address in input
 const emailDisplayValue = computed(() => {
@@ -177,7 +191,27 @@ const languageCode = computed(() => {
   return 'en';
 });
 
-const handleUpdate = (value: unknown) => emit('update', value);
+const handleUpdate = (value: unknown) => {
+  // For array-typed nodes (e.g. dcat:keyword), the user edits a comma-separated string.
+  // Convert back to the correct array format, preserving the original item structure.
+  if (props.node.type === 'array' && Array.isArray(props.node.value)) {
+    const raw = String(value);
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    // Detect original item format from the first element
+    const firstItem = props.node.value[0];
+    const xsdType = (typeof firstItem === 'object' && firstItem !== null && '@type' in (firstItem as object))
+      ? (firstItem as Record<string, unknown>)['@type']
+      : null;
+    const rebuilt = parts.map(part =>
+      xsdType
+        ? { '@type': xsdType, '@value': part }
+        : part
+    );
+    emit('update', rebuilt);
+    return;
+  }
+  emit('update', value);
+};
 
 const handleLanguageValueUpdate = (value: string) => {
   emit('update', { '@language': languageCode.value, '@value': value });

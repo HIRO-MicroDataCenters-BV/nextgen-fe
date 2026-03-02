@@ -80,7 +80,39 @@ export function useJsonLdTransform() {
                 node.children = parseJsonLdToTree(objValue, key, context, fieldDef?.children as Record<string, FieldDefinition> | undefined);
             } else if (type === 'array') {
                 const arrValue = value as unknown[];
+
+                /**
+                 * DCAT-AP 3 array parsing rules:
+                 *
+                 * "Typed literal" items  → { "@type": "xsd:...", "@value": ... }
+                 *                          or { "@language": "en", "@value": ... }
+                 *   These are leaf values — store the whole array as node.value.
+                 *
+                 * "Resource / concept" items → have @id, or namespace-prefixed keys
+                 *   beyond the literal set.  These are nested objects — expand into
+                 *   children so the editor can render them recursively.
+                 *
+                 * Hardcoded overrides:
+                 *   dcat:distribution  → always children (distribution context)
+                 *   dspace:extraMetadata → always children (readonly)
+                 */
+                const LITERAL_KEYS = new Set(['@type', '@value', '@language', '@id']);
+                const isResourceObject = (item: unknown): boolean => {
+                    if (typeof item !== 'object' || item === null) return false;
+                    const obj = item as Record<string, unknown>;
+                    // Typed literal: only @type + @value  (e.g. xsd:string)
+                    const keys = Object.keys(obj);
+                    if (keys.every(k => LITERAL_KEYS.has(k))) {
+                        // It's a typed/language literal → treat as leaf value
+                        // UNLESS it also has @id which signals a URI resource
+                        return '@id' in obj && keys.length > 1;
+                    }
+                    // Has namespace-prefixed keys → real nested resource
+                    return keys.some(k => k.includes(':') && !k.startsWith('@'));
+                };
+
                 if (key === 'dcat:distribution') {
+                    // Distribution items always rendered in distribution context
                     node.children = arrValue
                         .filter(item => typeof item === 'object' && item !== null)
                         .map((item, index) => ({
@@ -95,6 +127,7 @@ export function useJsonLdTransform() {
                             },
                         }));
                 } else if (key === 'dspace:extraMetadata') {
+                    // ExtraMetadata is readonly
                     node.children = arrValue
                         .filter(item => typeof item === 'object' && item !== null)
                         .map((item, index) => ({
@@ -108,7 +141,23 @@ export function useJsonLdTransform() {
                                 repeatable: false,
                             },
                         }));
+                } else if (arrValue.some(isResourceObject)) {
+                    // Generic DCAT-AP 3 array of resources/concepts — expand as children
+                    node.children = arrValue
+                        .filter(item => typeof item === 'object' && item !== null)
+                        .map((item, index) => ({
+                            id: generateId(),
+                            key: `[${index}]`,
+                            type: 'object' as JsonLdNodeType,
+                            children: parseJsonLdToTree(item as Record<string, unknown>, key, context, fieldDef?.children as Record<string, FieldDefinition> | undefined),
+                            metadata: {
+                                required: false,
+                                readonly: false,
+                                repeatable: false,
+                            },
+                        }));
                 } else {
+                    // Array of typed literals or plain primitives — store as value
                     node.value = arrValue;
                 }
             } else if (type === 'language-string') {
@@ -180,18 +229,26 @@ export function useJsonLdTransform() {
             if (type === 'object' && children) {
                 result[key] = serializeTreeToJsonLd(children, undefined, key === 'dcat:distribution' ? 'distribution' : parentContext);
             } else if (type === 'array' && children) {
-                if (key === 'dcat:distribution' || key === 'dspace:extraMetadata') {
+                if (key === 'dcat:distribution') {
+                    // Distribution: serialize each child's children, auto-generate @id
                     result[key] = children.map((child, index) => {
-                        const serialized = child.children ? serializeTreeToJsonLd(child.children, undefined, 'distribution') : {};
-                        // Auto-generate distribution IDs
-                        if (key === 'dcat:distribution' && !serialized['@id']) {
+                        const serialized = child.children
+                            ? serializeTreeToJsonLd(child.children, undefined, 'distribution')
+                            : {};
+                        if (!serialized['@id']) {
                             const datasetId = result['@id'] as string || generateDatasetId();
                             serialized['@id'] = generateDistributionId(datasetId, index);
                         }
                         return serialized;
                     });
                 } else {
-                    result[key] = value;
+                    // Generic DCAT-AP 3 array of resource objects (dcat:theme, dcatap:availability,
+                    // dcat:accessService, dspace:extraMetadata, etc.) — serialize recursively
+                    result[key] = children.map(child =>
+                        child.children
+                            ? serializeTreeToJsonLd(child.children, undefined, parentContext)
+                            : (child.value ?? {})
+                    );
                 }
             } else if (type === 'language-string') {
                 if (value && typeof value === 'object' && '@language' in value && '@value' in value) {

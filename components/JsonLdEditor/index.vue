@@ -187,6 +187,11 @@ interface Props {
   readonly?: boolean;
   initialMode?: EditorMode;
   title?: string;
+  /** Extra system metadata injected from outside (e.g. MMIO file upload).
+   *  Passed as array of JSON-LD objects for dspace:extraMetadata.
+   *  When this changes, the data is merged into the current tree without
+   *  triggering a full re-parse (preserving any DCAT fields already entered). */
+  extraMetadata?: Array<Record<string, unknown>> | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -214,7 +219,7 @@ const triggerSaveIndicator = () => {
 };
 onUnmounted(() => { if (saveTimer) clearTimeout(saveTimer); });
 
-const { parseJsonLd, serializeJsonLd } = useJsonLdTransform();
+const { parseJsonLd, serializeJsonLd, parseJsonLdToTree } = useJsonLdTransform();
 const { validateTree } = useJsonLdValidation();
 const { buildDefaultDatasetTree, isEmptyDataset } = useDefaultDataset();
 
@@ -225,6 +230,8 @@ const codeData = ref<string>('');
 const preservedContext = ref<Record<string, string>>();
 const editorContentRef = ref<HTMLElement | null>(null);
 const isInternalUpdate = ref(false);
+// Track last serialized value emitted internally so we can detect external vs internal updates
+let lastEmittedValue: string = '';
 const showAddFieldDialog = ref(false);
 
 // ── Keyboard shortcut: press 'A' to open Add Field dialog ──────
@@ -276,14 +283,40 @@ const progressColorClass = computed(() => {
   return 'progress--red';
 });
 
+// Standard DCAT-AP 3 namespace context — always present in new and existing datasets
+const DCAT_AP_CONTEXT: Record<string, string> = {
+  dspace:  'http://data-space.org/',
+  xsd:     'http://www.w3.org/2001/XMLSchema#',
+  dcat:    'http://www.w3.org/ns/dcat#',
+  dcatap:  'http://data.europa.eu/r5r/',
+  dcterms: 'http://purl.org/dc/terms/',
+  spdx:    'http://spdx.org/rdf/terms#',
+  foaf:    'http://xmlns.com/foaf/0.1/',
+  skos:    'http://www.w3.org/2004/02/skos/core#',
+  vcard:   'http://www.w3.org/2006/vcard/ns#',
+};
+
 const parseInitialData = () => {
   try {
     const { tree, context } = parseJsonLd(props.modelValue);
 
-    // If the dataset is empty (new dataset), pre-populate with DCAT-AP 3 defaults
-    treeData.value = isEmptyDataset(tree) ? buildDefaultDatasetTree() : tree;
-    preservedContext.value = context;
-    
+    if (isEmptyDataset(tree)) {
+      // Dataset has no visible editable fields yet — use DCAT-AP 3 defaults.
+      // BUT preserve any hidden/system nodes that may have come from external
+      // updates (e.g. dspace:extraMetadata injected after MMIO upload).
+      const hiddenNodes = tree.filter(n => n.metadata.hidden || n.metadata.readonly);
+      const defaultTree = buildDefaultDatasetTree();
+      treeData.value = [...defaultTree, ...hiddenNodes];
+    } else {
+      treeData.value = tree;
+    }
+
+    // Always ensure the standard DCAT-AP context is set.
+    // If an existing object already has a context, merge with defaults so no namespace is lost.
+    preservedContext.value = context
+      ? { ...DCAT_AP_CONTEXT, ...context }
+      : { ...DCAT_AP_CONTEXT };
+
     if (typeof props.modelValue === 'string') {
       codeData.value = props.modelValue;
     } else {
@@ -291,22 +324,80 @@ const parseInitialData = () => {
     }
   } catch (error) {
     console.error('Failed to parse JSON-LD:', error);
-    // Even on parse error for a new dataset, show the default form
     treeData.value = buildDefaultDatasetTree();
+    preservedContext.value = { ...DCAT_AP_CONTEXT };
     codeData.value = typeof props.modelValue === 'string' ? props.modelValue : '';
   }
 };
 
 parseInitialData();
 
-watch(() => props.modelValue, () => {
-  // Don't re-parse if the change came from this editor
-  if (isInternalUpdate.value) {
-    isInternalUpdate.value = false;
+watch(() => props.modelValue, (newVal) => {
+  // Skip if the incoming value matches what we last emitted internally (prevents loops)
+  const incomingStr = typeof newVal === 'string' ? newVal : JSON.stringify(newVal);
+  if (lastEmittedValue && incomingStr === lastEmittedValue) {
     return;
   }
   parseInitialData();
 }, { deep: true });
+
+// When extraMetadata is injected from outside (e.g. after MMIO file upload),
+// add/replace the dspace:extraMetadata node directly in the current tree
+// WITHOUT triggering a full re-parse (which would reset DCAT fields).
+watch(() => props.extraMetadata, (newExtra) => {
+  console.log('[JsonLdEditor DEBUG] extraMetadata watcher fired! newExtra =', newExtra ? newExtra.length + ' entries' : 'null/empty');
+  if (!newExtra || newExtra.length === 0) {
+    console.log('[JsonLdEditor DEBUG] extraMetadata is empty, skipping');
+    return;
+  }
+
+  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
+  console.log('[JsonLdEditor DEBUG] treeWithoutExtra length =', treeWithoutExtra.length);
+
+  // ──── BEFORE ────
+  const beforeJson = serializeJsonLd(treeWithoutExtra, preservedContext.value, 'object');
+  console.log('[JsonLdEditor DEBUG] ▼ metadata_content BEFORE merge:', JSON.stringify(beforeJson, null, 2));
+
+  const extraNode = {
+    id: makeId(),
+    key: 'dspace:extraMetadata',
+    type: 'array' as const,
+    children: newExtra.map((item, index) => ({
+      id: makeId(),
+      key: `[${index}]`,
+      type: 'object' as const,
+      children: parseJsonLdToTree(item as Record<string, unknown>),
+      metadata: {
+        required: false,
+        readonly: true,
+        repeatable: false,
+        hidden: false,
+        label: undefined,
+      },
+    })),
+    metadata: {
+      required: false,
+      readonly: true,
+      repeatable: false,
+      hidden: false,
+      label: 'Extra Metadata (from MMIO)',
+    },
+  };
+
+  console.log('[JsonLdEditor DEBUG] extraNode children count =', extraNode.children.length);
+  console.log('[JsonLdEditor DEBUG] extraNode children[0] children count =', extraNode.children[0]?.children?.length ?? 'none');
+
+  const mergedTree = [...treeWithoutExtra, extraNode];
+  treeData.value = mergedTree;
+
+  // ──── AFTER ────
+  const afterJson = serializeJsonLd(mergedTree, preservedContext.value, 'object');
+  console.log('[JsonLdEditor DEBUG] ▼ metadata_content AFTER merge:', JSON.stringify(afterJson, null, 2));
+  console.log('[JsonLdEditor DEBUG] treeData updated, total nodes =', treeData.value.length);
+}, { deep: true });
+
 
 const validationResult = computed(() => {
   return validateTree(treeData.value);
@@ -369,8 +460,8 @@ const handleVisualUpdate = (newTree: JsonLdNode[]) => {
   treeData.value = treeWithUpdatedIndices;
   const serialized = serializeJsonLd(treeWithUpdatedIndices, preservedContext.value, 'object') as Record<string, unknown>;
   
-  // Mark as internal update to prevent watcher from re-parsing
-  isInternalUpdate.value = true;
+  // Track what we're emitting so the watcher can skip this update
+  lastEmittedValue = JSON.stringify(serialized);
   emit('update:modelValue', serialized);
   
   // Restore scroll position after DOM update
@@ -386,8 +477,10 @@ const handleCodeUpdate = (newCode: string) => {
   codeData.value = newCode;
   try {
     const parsed = JSON.parse(newCode);
+    lastEmittedValue = newCode;
     emit('update:modelValue', parsed);
   } catch {
+    lastEmittedValue = newCode;
     emit('update:modelValue', newCode);
   }
 };

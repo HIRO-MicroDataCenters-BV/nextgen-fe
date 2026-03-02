@@ -3,11 +3,13 @@ import { computed } from 'vue';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface VocabularyOption {
-  value: string;
+  value: string;      // canonical URI emitted on selection
   label: string;
   description?: string;
   chipLabel?: string;
   icon?: string;
+  /** Lowercase local-name fragments that identify this option (for fuzzy matching) */
+  match: string[];
 }
 
 interface Props {
@@ -26,103 +28,161 @@ const emit = defineEmits<{
   'update:modelValue': [value: string];
 }>();
 
+/**
+ * Extract and normalise the local name from any URI form:
+ *   http://spdx.org/rdf/terms#SHA256              → "sha256"
+ *   http://spdx.org/rdf/terms#checksumAlgorithm_sha256 → "sha256"
+ *   spdx:SHA256                                    → "sha256"
+ *   http://data.europa.eu/r5r/AVAILABLE            → "available"
+ *   http://publications.europa.eu/resource/authority/access-right/PUBLIC → "public"
+ */
+const normalizeUri = (uri: string): string => {
+  if (!uri) return '';
+  let local = uri;
+
+  // Prefixed form  (e.g. spdx:SHA256, dcatap:AVAILABLE)
+  const prefixColon = uri.indexOf(':');
+  if (prefixColon !== -1 && !uri.startsWith('http') && !uri.startsWith('urn')) {
+    local = uri.slice(prefixColon + 1);
+  } else {
+    // Full URI — take fragment or last path segment
+    const hash = uri.lastIndexOf('#');
+    local = hash !== -1 ? uri.slice(hash + 1) : uri.split('/').pop() ?? uri;
+  }
+
+  // Strip common SPDX-style prefixes like "checksumAlgorithm_"
+  local = local.replace(/^checksumAlgorithm_/i, '');
+  // Lowercase + remove separators so sha256 = SHA256 = sha_256 = SHA-256
+  return local.toLowerCase().replace(/[-_\s]/g, '');
+};
+
 const vocabularies: Record<string, VocabularyOption[]> = {
   accessRights: [
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/PUBLIC',
-      label: 'Public',
-      chipLabel: 'Public',
-      icon: 'lucide:globe',
+      label: 'Public', chipLabel: 'Public', icon: 'lucide:globe',
       description: 'Freely accessible to everyone',
+      match: ['public'],
     },
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/RESTRICTED',
-      label: 'Restricted',
-      chipLabel: 'Restricted',
-      icon: 'lucide:lock',
+      label: 'Restricted', chipLabel: 'Restricted', icon: 'lucide:lock',
       description: 'Access limited to authorised users',
+      match: ['restricted'],
     },
     {
       value: 'http://publications.europa.eu/resource/authority/access-right/NON_PUBLIC',
-      label: 'Non-public',
-      chipLabel: 'Non-public',
-      icon: 'lucide:ban',
+      label: 'Non-public', chipLabel: 'Non-public', icon: 'lucide:ban',
       description: 'Not externally accessible',
+      match: ['nonpublic', 'nonproblic', 'non_public'],
     },
   ],
   language: [
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/ENG',
-      label: 'English (ENG)',
-      chipLabel: 'EN',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/NLD',
-      label: 'Dutch (NLD)',
-      chipLabel: 'NL',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/DEU',
-      label: 'German (DEU)',
-      chipLabel: 'DE',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/FRA',
-      label: 'French (FRA)',
-      chipLabel: 'FR',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/SPA',
-      label: 'Spanish (SPA)',
-      chipLabel: 'ES',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/ITA',
-      label: 'Italian (ITA)',
-      chipLabel: 'IT',
-    },
-    {
-      value: 'http://publications.europa.eu/resource/authority/language/RUS',
-      label: 'Russian (RUS)',
-      chipLabel: 'RU',
-    },
+    { value: 'http://publications.europa.eu/resource/authority/language/ENG', label: 'English (ENG)', chipLabel: 'EN', match: ['eng', 'english', 'en'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/NLD', label: 'Dutch (NLD)',   chipLabel: 'NL', match: ['nld', 'dutch', 'nl'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/DEU', label: 'German (DEU)',  chipLabel: 'DE', match: ['deu', 'german', 'de'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/FRA', label: 'French (FRA)',  chipLabel: 'FR', match: ['fra', 'french', 'fr'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/SPA', label: 'Spanish (SPA)', chipLabel: 'ES', match: ['spa', 'spanish', 'es'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/ITA', label: 'Italian (ITA)', chipLabel: 'IT', match: ['ita', 'italian', 'it'] },
+    { value: 'http://publications.europa.eu/resource/authority/language/RUS', label: 'Russian (RUS)', chipLabel: 'RU', match: ['rus', 'russian', 'ru'] },
   ],
   algorithm: [
     {
-      value: 'spdx:SHA256',
-      label: 'SHA-256',
-      chipLabel: 'SHA-256',
-      icon: 'lucide:shield-check',
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha256',
+      label: 'SHA-256', chipLabel: 'SHA-256', icon: 'lucide:shield-check',
       description: 'SHA-256 (recommended)',
+      match: ['sha256', 'sha2'],
     },
     {
-      value: 'spdx:SHA512',
-      label: 'SHA-512',
-      chipLabel: 'SHA-512',
-      icon: 'lucide:shield',
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha512',
+      label: 'SHA-512', chipLabel: 'SHA-512', icon: 'lucide:shield',
       description: 'SHA-512',
+      match: ['sha512'],
     },
     {
-      value: 'spdx:MD5',
-      label: 'MD5',
-      chipLabel: 'MD5',
-      icon: 'lucide:hash',
-      description: 'MD5 (legacy)',
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha1',
+      label: 'SHA-1', chipLabel: 'SHA-1', icon: 'lucide:shield',
+      description: 'SHA-1 (legacy)',
+      match: ['sha1'],
     },
+    {
+      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_md5',
+      label: 'MD5', chipLabel: 'MD5', icon: 'lucide:hash',
+      description: 'MD5 (legacy)',
+      match: ['md5'],
+    },
+  ],
+  availability: [
+    {
+      value: 'http://data.europa.eu/r5r/AVAILABLE',
+      label: 'Available', chipLabel: 'Available', icon: 'lucide:check-circle',
+      description: 'Data is available now',
+      match: ['available'],
+    },
+    {
+      value: 'http://data.europa.eu/r5r/EXPERIMENTAL',
+      label: 'Experimental', chipLabel: 'Experimental', icon: 'lucide:flask-conical',
+      description: 'Available for testing purposes',
+      match: ['experimental'],
+    },
+    {
+      value: 'http://data.europa.eu/r5r/STABLE',
+      label: 'Stable', chipLabel: 'Stable', icon: 'lucide:anchor',
+      description: 'Stable and long-term available',
+      match: ['stable'],
+    },
+    {
+      value: 'http://data.europa.eu/r5r/TEMPORARY',
+      label: 'Temporary', chipLabel: 'Temporary', icon: 'lucide:clock',
+      description: 'Only temporarily available',
+      match: ['temporary', 'temp'],
+    },
+  ],
+  frequency: [
+    { value: 'http://publications.europa.eu/resource/authority/frequency/ANNUAL',      label: 'Annual',      chipLabel: 'Annual',      match: ['annual'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/BIANNUAL',    label: 'Biannual',    chipLabel: 'Biannual',    match: ['biannual', 'semiannual'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/QUARTERLY',   label: 'Quarterly',   chipLabel: 'Quarterly',   match: ['quarterly'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/MONTHLY',     label: 'Monthly',     chipLabel: 'Monthly',     match: ['monthly'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/WEEKLY',      label: 'Weekly',      chipLabel: 'Weekly',      match: ['weekly'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/DAILY',       label: 'Daily',       chipLabel: 'Daily',       match: ['daily'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/IRREG',       label: 'Irregular',   chipLabel: 'Irregular',   match: ['irreg', 'irregular'] },
+    { value: 'http://publications.europa.eu/resource/authority/frequency/UNKNOWN',     label: 'Unknown',     chipLabel: 'Unknown',     match: ['unknown'] },
+  ],
+  fileType: [
+    { value: 'text/csv',               label: 'CSV',     chipLabel: 'CSV',     match: ['csv', 'textcsv'] },
+    { value: 'application/json',       label: 'JSON',    chipLabel: 'JSON',    match: ['json', 'applicationjson'] },
+    { value: 'application/xml',        label: 'XML',     chipLabel: 'XML',     match: ['xml', 'applicationxml'] },
+    { value: 'application/zip',        label: 'ZIP',     chipLabel: 'ZIP',     match: ['zip', 'applicationzip'] },
+    { value: 'application/x-tar',      label: 'TAR',     chipLabel: 'TAR',     match: ['tar', 'xtar'] },
+    { value: 'application/pdf',        label: 'PDF',     chipLabel: 'PDF',     match: ['pdf', 'applicationpdf'] },
+    { value: 'application/parquet',    label: 'Parquet', chipLabel: 'Parquet', match: ['parquet'] },
   ],
 };
 
 const options = computed(() => vocabularies[props.vocabulary] || []);
+
+/** Fuzzy match: normalize incoming value and check against option.match keywords */
+const matchesOption = (opt: VocabularyOption, incoming: string): boolean => {
+  if (!incoming) return false;
+  // Exact canonical URI match first
+  if (opt.value === incoming) return true;
+  // Normalize and compare against match keywords
+  const normalised = normalizeUri(incoming);
+  return opt.match.some(m => normalised === m || normalised.includes(m) || m.includes(normalised));
+};
 
 // Use chip UI when ≤ 6 options and all have chipLabel
 const useChips = computed(() =>
   options.value.length <= 6 && options.value.every(o => o.chipLabel),
 );
 
-const selectedLabel = computed(() => {
-  const option = options.value.find((opt) => opt.value === props.modelValue);
-  return option?.label || props.placeholder;
-});
+const selectedOption = computed(() =>
+  options.value.find(opt => matchesOption(opt, props.modelValue)),
+);
+
+const selectedLabel = computed(() =>
+  selectedOption.value?.label || props.placeholder,
+);
 
 const handleValueChange = (value: unknown) => {
   if (value && typeof value === 'string') {
@@ -133,7 +193,8 @@ const handleValueChange = (value: unknown) => {
 const selectChip = (value: string) => {
   if (props.readonly) return;
   // Toggle: clicking selected chip clears it
-  emit('update:modelValue', props.modelValue === value ? '' : value);
+  const alreadySelected = selectedOption.value?.value === value;
+  emit('update:modelValue', alreadySelected ? '' : value);
 };
 </script>
 
@@ -145,7 +206,7 @@ const selectChip = (value: string) => {
       :key="option.value"
       type="button"
       class="chip"
-      :class="{ 'chip--selected': modelValue === option.value }"
+      :class="{ 'chip--selected': selectedOption?.value === option.value }"
       :disabled="readonly"
       :title="option.description"
       @click="selectChip(option.value)"
@@ -156,7 +217,7 @@ const selectChip = (value: string) => {
   </div>
 
   <!-- ── Dropdown mode (> 6 options) ──────────── -->
-  <Select v-else :model-value="modelValue" :disabled="readonly" @update:model-value="handleValueChange">
+  <Select v-else :model-value="selectedOption?.value || modelValue" :disabled="readonly" @update:model-value="handleValueChange">
     <SelectTrigger class="w-full">
       <SelectValue :placeholder="placeholder">
         {{ selectedLabel }}
@@ -225,3 +286,4 @@ const selectChip = (value: string) => {
   color: #ffffff !important;
 }
 </style>
+
