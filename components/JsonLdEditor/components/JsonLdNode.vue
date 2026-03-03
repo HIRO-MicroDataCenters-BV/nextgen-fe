@@ -329,22 +329,40 @@ const handleChildRemove = (childId: string) => {
 const handleRemove = () => emit('remove', props.node.id);
 
 const handleAddArrayItem = () => {
-  if (props.node.type !== 'array' || !props.node.children?.length) return;
-  const tpl = props.node.children[0];
-  const newItem: JsonLdNodeType = {
-    id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    key: tpl.key,
-    type: tpl.type,
-    value: tpl.type === 'object' ? undefined : '',
-    children: tpl.children?.map(c => ({
-      ...c,
-      id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      value: c.type === 'object' ? undefined : '',
-    })),
-    metadata: { ...tpl.metadata, isNew: true },
-  };
-  emit('update', { ...props.node, children: [...props.node.children, newItem] });
-  emit('scrollToNew', newItem.id);
+  if (props.node.type !== 'array') return;
+
+  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Deep-clone a node tree, resetting all values to empty
+  const deepCloneEmpty = (src: JsonLdNodeType): JsonLdNodeType => ({
+    ...src,
+    id: makeId(),
+    value: src.children ? undefined : (src.metadata.defaultValue ?? ''),
+    children: src.children?.map(deepCloneEmpty),
+    metadata: { ...src.metadata, isNew: false },
+  });
+
+  let newItem: JsonLdNodeType;
+  const existingItems = props.node.children ?? [];
+  const nextIndex = existingItems.length;
+
+  if (existingItems.length > 0) {
+    // Clone structure of first item, reset values
+    newItem = deepCloneEmpty(existingItems[0]);
+    newItem.key = `[${nextIndex}]`;
+    newItem.metadata = { ...newItem.metadata, isNew: true };
+  } else {
+    // No template — create a minimal empty object item
+    newItem = {
+      id: makeId(),
+      key: `[${nextIndex}]`,
+      type: 'object',
+      children: [],
+      metadata: { required: false, readonly: false, repeatable: false, isNew: true },
+    };
+  }
+
+  emit('update', { ...props.node, children: [...existingItems, newItem] });
 };
 </script>
 

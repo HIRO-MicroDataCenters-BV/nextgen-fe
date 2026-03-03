@@ -3,12 +3,38 @@ import { useJsonLdSchema } from './useJsonLdSchema';
 import { useIdGenerator } from '@/composables/useIdGenerator';
 
 export function useJsonLdTransform() {
-    const { getFieldDefinition } = useJsonLdSchema();
+    const { getFieldDefinition, distributionSchema } = useJsonLdSchema();
     const { generateDatasetId, generateDistributionId } = useIdGenerator();
 
     const generateId = (): string => {
         return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     };
+
+    // Create an empty default node for a FieldDefinition (for hydrating missing schema fields)
+    const createDefaultNode = (def: FieldDefinition): JsonLdNode => ({
+        id: generateId(),
+        key: def.key,
+        type: def.type as JsonLdNodeType,
+        value: def.type === 'object' ? undefined : (def.defaultValue ?? ''),
+        children: def.type === 'object'
+            ? Object.values(def.children ?? {}).map(c => createDefaultNode(c))
+            : undefined,
+        metadata: {
+            required: def.required,
+            readonly: def.readonly ?? false,
+            repeatable: def.repeatable ?? false,
+            label: def.label,
+            hidden: def.hidden ?? false,
+            placeholder: def.placeholder,
+            description: def.description,
+            defaultValue: def.defaultValue,
+            vocabulary: def.vocabulary,
+            format: def.format,
+            icon: def.icon,
+            dcatApCompliance: def.dcatApCompliance,
+            xsdType: def.xsdType,
+        },
+    });
 
     const detectType = (value: unknown): JsonLdNodeType => {
         if (value === null || value === undefined) return 'string';
@@ -126,20 +152,29 @@ export function useJsonLdTransform() {
 
                 if (fieldDef?.distributionContext) {
                     // Schema declares that this array's items should be parsed in distribution context
-                    // (e.g. dcat:distribution → distributionContext: true in schema)
                     node.children = arrValue
                         .filter(item => typeof item === 'object' && item !== null)
-                        .map((item, index) => ({
-                            id: generateId(),
-                            key: `[${index}]`,
-                            type: 'object' as JsonLdNodeType,
-                            children: parseJsonLdToTree(item as Record<string, unknown>, key, 'distribution'),
-                            metadata: {
-                                required: false,
-                                readonly: fieldDef?.readonly ?? false,
-                                repeatable: false,
-                            },
-                        }));
+                        .map((item, index) => {
+                            const parsedChildren = parseJsonLdToTree(item as Record<string, unknown>, key, 'distribution');
+
+                            // Merge with distribution schema defaults so missing fields are always visible
+                            const parsedKeys = new Set(parsedChildren.map(c => c.key));
+                            const schemaDefaults = Object.values(distributionSchema)
+                                .filter(def => !parsedKeys.has(def.key))
+                                .map(def => createDefaultNode(def));
+
+                            return {
+                                id: generateId(),
+                                key: `[${index}]`,
+                                type: 'object' as JsonLdNodeType,
+                                children: [...parsedChildren, ...schemaDefaults],
+                                metadata: {
+                                    required: false,
+                                    readonly: fieldDef?.readonly ?? false,
+                                    repeatable: false,
+                                },
+                            };
+                        });
                 } else if (arrValue.some(isResourceObject)) {
                     // Generic DCAT-AP 3 array of resources/concepts — expand as children
                     node.children = arrValue
@@ -226,7 +261,23 @@ export function useJsonLdTransform() {
             }
 
             if (type === 'object' && children) {
-                result[key] = serializeTreeToJsonLd(children, undefined, key === 'dcat:distribution' ? 'distribution' : parentContext);
+                // Skip objects where there are no domain-specific values
+                const serialized = serializeTreeToJsonLd(children, undefined, parentContext);
+                const META_ONLY_KEYS = new Set(['@type', '@context', '@id']);
+                const meaningfulKeys = Object.keys(serialized).filter(k => {
+                    if (META_ONLY_KEYS.has(k)) return false; // @type alone is not meaningful
+                    const v = serialized[k];
+                    if (v === '' || v === null || v === undefined) return false;
+                    if (typeof v === 'object' && !Array.isArray(v)) {
+                        const obj = v as Record<string, unknown>;
+                        if ('@id' in obj && (obj['@id'] === '' || obj['@id'] === null)) return false;
+                        if ('@value' in obj && (obj['@value'] === '' || obj['@value'] === null)) return false;
+                    }
+                    return true;
+                });
+                if (meaningfulKeys.length > 0) {
+                    result[key] = serialized;
+                }
             } else if (type === 'array' && children) {
                 if (key === 'dcat:distribution') {
                     // Distribution: serialize each child's children, auto-generate @id
@@ -241,8 +292,7 @@ export function useJsonLdTransform() {
                         return serialized;
                     });
                 } else {
-                    // Generic DCAT-AP 3 array of resource objects (dcat:theme, dcatap:availability,
-                    // dcat:accessService, dspace:extraMetadata, etc.) — serialize recursively
+                    // Generic DCAT-AP 3 array of resource objects
                     result[key] = children.map(child =>
                         child.children
                             ? serializeTreeToJsonLd(child.children, undefined, parentContext)
@@ -251,8 +301,11 @@ export function useJsonLdTransform() {
                 }
             } else if (type === 'language-string') {
                 if (value && typeof value === 'object' && '@language' in value && '@value' in value) {
-                    result[key] = value;
-                } else if (typeof value === 'string') {
+                    const lv = value as { '@language': string; '@value': string };
+                    if (lv['@value'] !== '' && lv['@value'] != null) {
+                        result[key] = value;
+                    }
+                } else if (typeof value === 'string' && value !== '') {
                     result[key] = {
                         '@language': metadata.language || 'en',
                         '@value': value,
@@ -264,37 +317,37 @@ export function useJsonLdTransform() {
                     '@value': Boolean(value),
                 };
             } else if (type === 'number') {
+                // Skip zero-value numbers that are placeholder defaults
+                const num = Number(value);
                 result[key] = {
                     '@type': metadata.xsdType || 'xsd:integer',
-                    '@value': Number(value),
+                    '@value': num,
                 };
             } else if (type === 'date') {
-                result[key] = {
-                    '@type': metadata.xsdType || 'xsd:dateTime',
-                    '@value': value,
-                };
+                if (value !== '' && value != null) {
+                    result[key] = {
+                        '@type': metadata.xsdType || 'xsd:dateTime',
+                        '@value': value,
+                    };
+                }
             } else if (type === 'uri') {
-                // URL fields store as plain string; @id-referenced nodes wrap back in {@id}
-                const isUrlField = key.endsWith('URL') || key.endsWith('url')
-                    || key === '@id'
-                    || key === 'dcat:accessURL' || key === 'dcat:downloadURL'
-                    || key === 'dcat:landingPage' || key === 'foaf:homepage'
-                    || key === 'vcard:hasURL';
-                if (isUrlField) {
-                    result[key] = value;
-                } else {
-                    result[key] = { '@id': value };
+                // All URI-type values serialize as {"@id": value} per JSON-LD spec.
+                // Exception: @id is a JSON-LD core keyword and must be a plain string.
+                // Empty values are skipped — they produce invalid SHACL assertions.
+                if (value !== '' && value != null) {
+                    result[key] = key === '@id' ? value : { '@id': value };
                 }
             } else if (type === 'string') {
-                // Simple string value
-                result[key] = value || '';
+                if (value !== '' && value != null) {
+                    result[key] = value;
+                }
             } else {
                 if (metadata.xsdType) {
                     result[key] = {
                         '@type': metadata.xsdType,
                         '@value': value,
                     };
-                } else {
+                } else if (value !== '' && value != null) {
                     result[key] = value;
                 }
             }

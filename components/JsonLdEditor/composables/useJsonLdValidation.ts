@@ -148,55 +148,6 @@ export function useJsonLdValidation() {
             }
         }
 
-        // ── Email (format: 'email') ──────────────────────────────
-        if (node.metadata.format === 'email' && node.value) {
-            const emailVal = String(node.value).trim();
-            if (emailVal.startsWith('mailto:')) {
-                const email = emailVal.slice(7);
-                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    errors.push({ path: currentPath, message: 'Invalid email format after mailto:', severity: 'error' });
-                }
-            } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                errors.push({ path: currentPath, message: 'Email should be in the form mailto:name@example.com', severity: 'warning' });
-            } else {
-                errors.push({ path: currentPath, message: 'Email must be in the form mailto:name@example.com', severity: 'error' });
-            }
-        }
-
-        // ── Telephone (format: 'tel') ────────────────────────────
-        if (node.metadata.format === 'tel' && node.value) {
-            const telVal = String(node.value).trim();
-            if (telVal.startsWith('tel:')) {
-                const digits = telVal.slice(4);
-                if (!/^\+?[\d\s\-().]{5,20}$/.test(digits)) {
-                    errors.push({ path: currentPath, message: 'Invalid phone number format after tel:', severity: 'warning' });
-                }
-            } else if (/^\+?[\d\s\-().]{5,20}$/.test(telVal)) {
-                errors.push({ path: currentPath, message: 'Phone should use tel: prefix, e.g. tel:+31201234567', severity: 'warning' });
-            } else {
-                errors.push({ path: currentPath, message: 'Phone must be in the form tel:+31201234567', severity: 'error' });
-            }
-        }
-
-        // ── URL (format: 'url') ──────────────────────────────────
-        if (node.metadata.format === 'url' && node.value) {
-            try {
-                const u = new URL(String(node.value));
-                if (!['http:', 'https:', 'file:'].includes(u.protocol)) {
-                    errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be an http(s) URL`, severity: 'warning' });
-                }
-            } catch {
-                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid URL`, severity: 'error' });
-            }
-        }
-
-        // ── Hex (format: 'hex') ──────────────────────────────────
-        if (node.metadata.format === 'hex' && node.value) {
-            if (!/^[0-9a-fA-F]+$/.test(String(node.value).trim())) {
-                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid hexadecimal string`, severity: 'error' });
-            }
-        }
-
         if (node.children) {
             for (const child of node.children) {
                 errors.push(...validateNode(child, currentPath));

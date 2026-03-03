@@ -135,7 +135,6 @@ export function useMmioProcessor() {
             mmio: mmioData,
             ocaAttributes: [],
             extraMetadata: {
-                '@type': 'dcat:Dataset',
                 mmio_version: mmioData.version,
                 mmio_id: mmioData.id,
                 modality_count: mmioData.modalities.length,
@@ -236,7 +235,6 @@ export function useMmioProcessor() {
             console.log(`[MMIO DEBUG] processTarMmio: modality[${i}] bundleSaid =`, bundleSaid);
 
             const entry: Record<string, unknown> = {
-                '@type': 'dcat:Dataset',
                 '@id': entryId,
                 [`${baseNs}/SAID`]: bundleSaid,
             };
