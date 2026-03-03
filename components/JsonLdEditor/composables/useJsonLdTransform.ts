@@ -416,5 +416,6 @@ export function useJsonLdTransform() {
         serializeJsonLd,
         parseJsonLdToTree,
         serializeTreeToJsonLd,
+        createDefaultNode,
     };
 }

@@ -138,6 +138,8 @@ import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useJsonLdTransform } from '../composables/useJsonLdTransform';
+import { useJsonLdSchema } from '../composables/useJsonLdSchema';
 
 
 interface Props {
@@ -162,6 +164,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { createDefaultNode } = useJsonLdTransform();
+const { getFieldDefinition, distributionSchema } = useJsonLdSchema();
 
 // Direct lookup from the i18n source — avoids te() issues with colon-containing keys
 type FieldKey = keyof typeof jsonldFieldsEn;
@@ -352,12 +356,24 @@ const handleAddArrayItem = () => {
     newItem.key = `[${nextIndex}]`;
     newItem.metadata = { ...newItem.metadata, isNew: true };
   } else {
-    // No template — create a minimal empty object item
+    // No existing items — build children from the schema definition
+    const fieldDef = getFieldDefinition(props.node.key);
+
+    let schemaChildren: JsonLdNodeType[];
+    if (fieldDef?.distributionContext) {
+      // dcat:distribution uses the distributionSchema, not fieldDef.children
+      schemaChildren = Object.values(distributionSchema).map(childDef => createDefaultNode(childDef));
+    } else if (fieldDef?.children) {
+      schemaChildren = Object.values(fieldDef.children).map(childDef => createDefaultNode(childDef));
+    } else {
+      schemaChildren = [];
+    }
+
     newItem = {
       id: makeId(),
       key: `[${nextIndex}]`,
       type: 'object',
-      children: [],
+      children: schemaChildren,
       metadata: { required: false, readonly: false, repeatable: false, isNew: true },
     };
   }
@@ -423,19 +439,26 @@ const handleAddArrayItem = () => {
 
 /* ── Help tooltip content ────────────────────────────────────── */
 :global(.help-tooltip) {
-  max-width: 260px;
+  max-width: 280px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 :global(.help-tooltip__desc) {
   font-size: 0.8rem;
   line-height: 1.45;
   margin: 0;
   color: inherit;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 :global(.help-tooltip__example) {
   margin: 0.4rem 0 0;
   font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
   font-style: italic;
+  overflow-wrap: break-word;
+  word-break: break-all;
 }
 :global(.help-tooltip__eg) {
   font-weight: 600;

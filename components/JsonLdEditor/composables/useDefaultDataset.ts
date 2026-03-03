@@ -1,21 +1,51 @@
 import { useJsonLdSchema } from './useJsonLdSchema';
-import type { JsonLdNode, JsonLdNodeType } from '../types/editor.types';
+import { useJsonLdTransform } from './useJsonLdTransform';
+import type { JsonLdNode, JsonLdNodeType, FieldDefinition } from '../types/editor.types';
 
 /**
  * Builds the default DCAT-AP 3 dataset tree with mandatory and recommended
  * fields pre-populated as empty nodes so the editor never starts blank.
  */
 export function useDefaultDataset() {
-    const { datasetSchema } = useJsonLdSchema();
+    const { datasetSchema, distributionSchema } = useJsonLdSchema();
+    const { createDefaultNode } = useJsonLdTransform();
 
     const makeId = () =>
         `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    /**
+     * Build a single empty array item node, seeded with schema children.
+     * For distributionContext arrays, children come from distributionSchema.
+     */
+    const buildArrayItem = (def: FieldDefinition, index: number): JsonLdNode => {
+        const childSchema: Record<string, FieldDefinition> = def.distributionContext
+            ? distributionSchema
+            : (def.children ?? {});
+
+        const children = Object.values(childSchema).map(childDef => createDefaultNode(childDef));
+
+        return {
+            id: makeId(),
+            key: `[${index}]`,
+            type: 'object' as JsonLdNodeType,
+            children,
+            metadata: {
+                required: false,
+                readonly: def.readonly ?? false,
+                repeatable: false,
+            },
+        };
+    };
 
     const buildNode = (key: string): JsonLdNode | null => {
         const def = datasetSchema[key];
         if (!def || def.hidden) return null;
 
-        const children: JsonLdNode[] = def.children
+        const isObject = def.type === 'object';
+        const isArray = def.type === 'array';
+
+        // For object types: build children from def.children (excludes hidden)
+        const objectChildren: JsonLdNode[] = isObject && def.children
             ? Object.values(def.children)
                 .filter(c => !c.hidden)
                 .map((childDef): JsonLdNode => ({
@@ -34,19 +64,28 @@ export function useDefaultDataset() {
                         description: childDef.description,
                         defaultValue: childDef.defaultValue,
                         vocabulary: childDef.vocabulary,
+                        format: childDef.format,
+                        icon: childDef.icon,
+                        dcatApCompliance: childDef.dcatApCompliance,
+                        xsdType: childDef.xsdType,
                     },
                 }))
+            : [];
+
+        // For array types: seed one empty item with schema children
+        const arrayChildren: JsonLdNode[] = isArray
+            ? [buildArrayItem(def, 0)]
             : [];
 
         return {
             id: makeId(),
             key: def.key,
             type: def.type as JsonLdNodeType,
-            value: (def.type === 'object' || def.type === 'array') ? undefined : '',
-            children: def.type === 'object' && children.length > 0
-                ? children
-                : def.type === 'array'
-                    ? []
+            value: (isObject || isArray) ? undefined : '',
+            children: isObject && objectChildren.length > 0
+                ? objectChildren
+                : isArray
+                    ? arrayChildren
                     : undefined,
             metadata: {
                 required: def.required,
@@ -58,6 +97,7 @@ export function useDefaultDataset() {
                 placeholder: def.placeholder,
                 vocabulary: def.vocabulary,
                 dcatApCompliance: def.dcatApCompliance,
+                icon: def.icon,
             },
         };
     };

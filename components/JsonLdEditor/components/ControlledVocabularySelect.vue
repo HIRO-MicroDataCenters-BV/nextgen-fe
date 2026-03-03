@@ -157,6 +157,21 @@ const vocabularies: Record<string, VocabularyOption[]> = {
     { value: 'application/pdf',        label: 'PDF',     chipLabel: 'PDF',     match: ['pdf', 'applicationpdf'] },
     { value: 'application/parquet',    label: 'Parquet', chipLabel: 'Parquet', match: ['parquet'] },
   ],
+  theme: [
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/AGRI', label: 'Agriculture, fisheries, forestry and food', description: 'AGRI', match: ['agri', 'agriculture', 'fisheries', 'forestry', 'food'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/ECON', label: 'Economy and finance', description: 'ECON', match: ['econ', 'economy', 'finance'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/EDUC', label: 'Education, culture and sport', description: 'EDUC', match: ['educ', 'education', 'culture', 'sport'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/ENER', label: 'Energy', description: 'ENER', match: ['ener', 'energy'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/ENVI', label: 'Environment', description: 'ENVI', match: ['envi', 'environment', 'nature'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/GOVE', label: 'Government and public sector', description: 'GOVE', match: ['gove', 'government', 'public', 'sector'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/HEAL', label: 'Health', description: 'HEAL', match: ['heal', 'health', 'medical'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/INTR', label: 'International issues', description: 'INTR', match: ['intr', 'international'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/JUST', label: 'Justice, legal system and public safety', description: 'JUST', match: ['just', 'justice', 'legal', 'safety'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/REGI', label: 'Regions and cities', description: 'REGI', match: ['regi', 'regions', 'cities'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/SOCI', label: 'Population and society', description: 'SOCI', match: ['soci', 'population', 'society'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/TECH', label: 'Science and technology', description: 'TECH', match: ['tech', 'science', 'technology'] },
+    { value: 'http://publications.europa.eu/resource/authority/data-theme/TRAN', label: 'Transport', description: 'TRAN', match: ['tran', 'transport'] },
+  ],
 };
 
 const options = computed(() => vocabularies[props.vocabulary] || []);

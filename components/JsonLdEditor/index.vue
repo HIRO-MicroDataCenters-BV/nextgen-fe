@@ -236,7 +236,7 @@ const triggerSaveIndicator = () => {
 };
 onUnmounted(() => { if (saveTimer) clearTimeout(saveTimer); });
 
-const { parseJsonLd, serializeJsonLd, parseJsonLdToTree } = useJsonLdTransform();
+const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } = useJsonLdTransform();
 const { validateTree } = useJsonLdValidation();
 const { buildDefaultDatasetTree, isEmptyDataset } = useDefaultDataset();
 const { distributionSchema } = useJsonLdSchema();
@@ -532,86 +532,38 @@ const handleCodeUpdate = (newCode: string) => {
 const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Build child nodes from a FieldDefinition's children map
-  const buildChildren = (def: FieldDefinition): JsonLdNode[] => {
-    if (!def.children) return [];
-    return Object.values(def.children)
-      .map((childDef): JsonLdNode => ({
-        id: makeId(),
-        key: childDef.key,
-        type: childDef.type as JsonLdNode['type'],
-        value: childDef.type === 'object' ? undefined : (childDef.defaultValue ?? ''),
-        children: childDef.type === 'object' ? buildChildren(childDef) : undefined,
-        metadata: {
-          required: childDef.required,
-          readonly: childDef.readonly,
-          repeatable: childDef.repeatable,
-          label: childDef.label,
-          hidden: childDef.hidden ?? false,
-          placeholder: childDef.placeholder,
-          description: childDef.description,
-          defaultValue: childDef.defaultValue,
-          vocabulary: childDef.vocabulary,
-          format: childDef.format,
-          icon: childDef.icon,
-          dcatApCompliance: childDef.dcatApCompliance,
-        },
-      }));
-  };
-
-  // Build one empty array item for the first slot
-  const buildFirstArrayItem = (def: FieldDefinition, index: number): JsonLdNode => {
-    // For distributionContext arrays, children come from distributionSchema
-    const sourceSchema = def.distributionContext ? distributionSchema : null;
-    const children = sourceSchema
-      ? Object.values(sourceSchema).map((childDef): JsonLdNode => ({
-          id: makeId(),
-          key: childDef.key,
-          type: childDef.type as JsonLdNode['type'],
-          value: childDef.type === 'object' ? undefined : (childDef.defaultValue ?? ''),
-          children: childDef.type === 'object' ? buildChildren(childDef) : undefined,
-          metadata: {
-            required: childDef.required,
-            readonly: childDef.readonly ?? false,
-            repeatable: childDef.repeatable ?? false,
-            label: childDef.label,
-            hidden: childDef.hidden ?? false,
-            placeholder: childDef.placeholder,
-            description: childDef.description,
-            defaultValue: childDef.defaultValue,
-            vocabulary: childDef.vocabulary,
-            format: childDef.format,
-            icon: childDef.icon,
-            dcatApCompliance: childDef.dcatApCompliance,
-          },
-        }))
-      : buildChildren(def);
-    return {
-      id: makeId(),
-      key: `[${index}]`,
-      type: 'object',
-      children,
-      metadata: {
-        required: false,
-        readonly: false,
-        repeatable: false,
-        isNew: true,
-      },
-    };
-  };
-
   const isObject = fieldDef.type === 'object';
   const isArray  = fieldDef.type === 'array';
+
+  // Build the children for an object node using createDefaultNode
+  const objectChildren: JsonLdNode[] = isObject && fieldDef.children
+    ? Object.values(fieldDef.children).map(childDef => createDefaultNode(childDef))
+    : [];
+
+  // Build first array item — seeded with schema children or distributionSchema children
+  const buildFirstArrayItem = (): JsonLdNode => {
+    const childSchema: Record<string, FieldDefinition> = fieldDef.distributionContext
+      ? distributionSchema
+      : (fieldDef.children ?? {});
+    const children = Object.values(childSchema).map(childDef => createDefaultNode(childDef));
+    return {
+      id: makeId(),
+      key: '[0]',
+      type: 'object',
+      children,
+      metadata: { required: false, readonly: false, repeatable: false, isNew: true },
+    };
+  };
 
   const newNode: JsonLdNode = {
     id: makeId(),
     key: fieldDef.key,
     type: fieldDef.type,
     value: (isObject || isArray) ? undefined : '',
-    children: isObject
-      ? buildChildren(fieldDef)
+    children: isObject && objectChildren.length > 0
+      ? objectChildren
       : isArray
-        ? [buildFirstArrayItem(fieldDef, 0)]
+        ? [buildFirstArrayItem()]
         : undefined,
     metadata: {
       required: fieldDef.required,
