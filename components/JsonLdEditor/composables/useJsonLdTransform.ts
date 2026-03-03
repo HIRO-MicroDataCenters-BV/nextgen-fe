@@ -292,12 +292,29 @@ export function useJsonLdTransform() {
                         return serialized;
                     });
                 } else {
-                    // Generic DCAT-AP 3 array of resource objects
-                    result[key] = children.map(child =>
-                        child.children
-                            ? serializeTreeToJsonLd(child.children, undefined, parentContext)
-                            : (child.value ?? {})
-                    );
+                    // Generic DCAT-AP 3 array — serialize items and filter out empty ones
+                    const META_KEYS = new Set(['@type', '@context', '@id']);
+                    const items = children
+                        .map(child =>
+                            child.children
+                                ? serializeTreeToJsonLd(child.children, undefined, parentContext)
+                                : (child.value !== '' && child.value != null
+                                    ? (child.metadata.xsdType
+                                        ? { '@type': child.metadata.xsdType, '@value': child.value }
+                                        : child.value)
+                                    : null)
+                        )
+                        .filter(item => {
+                            if (item === null || item === undefined || item === '') return false;
+                            if (typeof item === 'object' && !Array.isArray(item)) {
+                                const domainKeys = Object.keys(item as object).filter(k => !META_KEYS.has(k));
+                                return domainKeys.length > 0 || ('@id' in (item as object) && (item as Record<string, unknown>)['@id'] !== '');
+                            }
+                            return true;
+                        });
+                    if (items.length > 0) {
+                        result[key] = items;
+                    }
                 }
             } else if (type === 'language-string') {
                 if (value && typeof value === 'object' && '@language' in value && '@value' in value) {
@@ -317,12 +334,16 @@ export function useJsonLdTransform() {
                     '@value': Boolean(value),
                 };
             } else if (type === 'number') {
-                // Skip zero-value numbers that are placeholder defaults
                 const num = Number(value);
-                result[key] = {
-                    '@type': metadata.xsdType || 'xsd:integer',
-                    '@value': num,
-                };
+                // Skip zero byteSize — it's a UI placeholder, not meaningful data
+                if (num === 0 && metadata.xsdType === 'xsd:nonNegativeInteger') {
+                    // omit
+                } else if (!isNaN(num)) {
+                    result[key] = {
+                        '@type': metadata.xsdType || 'xsd:integer',
+                        '@value': num,
+                    };
+                }
             } else if (type === 'date') {
                 if (value !== '' && value != null) {
                     result[key] = {
@@ -331,15 +352,17 @@ export function useJsonLdTransform() {
                     };
                 }
             } else if (type === 'uri') {
-                // All URI-type values serialize as {"@id": value} per JSON-LD spec.
-                // Exception: @id is a JSON-LD core keyword and must be a plain string.
-                // Empty values are skipped — they produce invalid SHACL assertions.
                 if (value !== '' && value != null) {
                     result[key] = key === '@id' ? value : { '@id': value };
                 }
             } else if (type === 'string') {
                 if (value !== '' && value != null) {
-                    result[key] = value;
+                    // Strings with an explicit xsd type serialize as typed literals
+                    if (metadata.xsdType) {
+                        result[key] = { '@type': metadata.xsdType, '@value': value };
+                    } else {
+                        result[key] = value;
+                    }
                 }
             } else {
                 if (metadata.xsdType) {

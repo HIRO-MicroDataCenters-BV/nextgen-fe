@@ -149,7 +149,7 @@ export function useJsonLdSchema() {
         'dcat:theme': {
             key: 'dcat:theme',
             label: 'Theme / Category',
-            type: 'object',
+            type: 'array',
             required: false,
             readonly: false,
             repeatable: true,
@@ -798,14 +798,14 @@ export function useJsonLdSchema() {
         'dcterms:license': {
             key: 'dcterms:license',
             label: 'Licence',
-            type: 'uri',
+            type: 'string',
+            xsdType: 'xsd:string',
             required: false,
             readonly: false,
             repeatable: false,
             dcatApCompliance: 'recommended',
-            format: 'url',
             description: 'The licence for this specific distribution',
-            placeholder: 'http://creativecommons.org/licenses/by/4.0/',
+            placeholder: 'e.g., CC-BY-4.0, EUPL-1.2',
         },
         'dcatap:availability': {
             key: 'dcatap:availability',
