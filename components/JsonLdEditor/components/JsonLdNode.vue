@@ -31,6 +31,14 @@
           >
             {{ t(`jsonld.editor.compliance.${node.metadata.dcatApCompliance}`) }}
           </span>
+          <span
+            v-if="isFromMmio || isFromFile"
+            class="readonly-pill"
+            :title="t('jsonld.editor.fromMmioReadonly', 'Loaded from MMIO file — read-only')"
+          >
+            <Icon name="lucide:lock" class="size-3" />
+            {{ t('jsonld.editor.readonly', 'Read-only') }}
+          </span>
           <!-- ── Contextual help tooltip ── -->
           <TooltipProvider v-if="fieldDescription" :delay-duration="300">
             <Tooltip>
@@ -72,7 +80,7 @@
 
       <!-- Remove button -->
       <button
-        v-if="!readonly && !node.metadata.readonly && canRemoveNode"
+        v-if="!effectiveReadonly && canRemoveNode"
         type="button"
         class="remove-btn"
         :title="t('common.remove', 'Remove')"
@@ -86,7 +94,7 @@
     <div v-if="!hasChildren" class="field-input">
       <JsonLdField
         :node="node"
-        :readonly="readonly || node.metadata.readonly"
+        :readonly="effectiveReadonly"
         :validation-errors="fieldErrors"
         @update="handleFieldUpdate"
       />
@@ -102,7 +110,7 @@
             :key="child.id"
             :node="child"
             :node-path="currentPath"
-            :readonly="readonly || node.metadata.readonly"
+            :readonly="readonly"
             :depth="depth + 1"
             :validation-errors="validationErrors"
             @update="handleChildUpdate"
@@ -111,7 +119,7 @@
           />
           <!-- Array: add another item -->
           <button
-            v-if="!readonly && node.type === 'array' && node.metadata.repeatable"
+            v-if="!effectiveReadonly && node.type === 'array' && node.metadata.repeatable"
             type="button"
             class="add-item-btn"
             @click="handleAddArrayItem"
@@ -217,6 +225,14 @@ const toggleExpand = () => { isExpanded.value = !isExpanded.value; };
 const currentPath = computed(() =>
   props.nodePath ? `${props.nodePath}.${props.node.key}` : props.node.key,
 );
+// Fields from MMIO extraMetadata section are always readonly
+const isFromMmio = computed(() =>
+  currentPath.value === 'dspace:extraMetadata' || currentPath.value.startsWith('dspace:extraMetadata.')
+);
+// Fields marked as loaded from a file (readonly until file is removed)
+const isFromFile = computed(() => (props.node.metadata as Record<string, unknown>).fromFile === true);
+// Effective readonly: either from MMIO section, or from file load, or prop
+const effectiveReadonly = computed(() => props.readonly || isFromMmio.value || isFromFile.value);
 const fieldErrors = computed(() =>
   props.validationErrors.filter(e => e.path === currentPath.value),
 );
@@ -567,6 +583,21 @@ const handleAddArrayItem = () => {
 :root.dark .compliance-mandatory   { background: rgba(185,28,28,0.25);  color: #fca5a5; }
 :root.dark .compliance-recommended { background: rgba(29,78,216,0.25);  color: #93c5fd; }
 :root.dark .compliance-optional    { background: rgba(107,114,128,0.2); color: #d1d5db; }
+
+/* ── Read-only pill (MMIO fields) ───────────────────────────── */
+.readonly-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+:root.dark .readonly-pill { background: rgba(107,114,128,0.2); color: #9ca3af; }
 
 /* ── Expand/collapse button ─────────────────────────────────── */
 .expand-btn {

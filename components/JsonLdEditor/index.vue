@@ -208,6 +208,10 @@ interface Props {
    *  When this changes, the data is merged into the current tree without
    *  triggering a full re-parse (preserving any DCAT fields already entered). */
   extraMetadata?: Array<Record<string, unknown>> | null;
+  /** When true, all nodes parsed from the current modelValue are readonly.
+   *  The user can still ADD new fields via the Add Field button.
+   *  Used when content was loaded from an uploaded MMIO/metadata file. */
+  contentFromFile?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -215,6 +219,7 @@ const props = withDefaults(defineProps<Props>(), {
   initialMode: 'visual',
   title: 'Metadata Editor',
   extraMetadata: null,
+  contentFromFile: false,
 });
 
 const { t } = useI18n();
@@ -341,6 +346,23 @@ const DCAT_AP_CONTEXT: Record<string, string> = {
   vcard:   'http://www.w3.org/2006/vcard/ns#',
 };
 
+const nodeHasValue = (n: JsonLdNode): boolean => {
+  if (n.value !== undefined && n.value !== null && n.value !== '') return true;
+  if (n.children?.length) return n.children.some(nodeHasValue);
+  return false;
+};
+
+const markFileNodesRecursive = (nodes: JsonLdNode[]): void => {
+  for (const n of nodes) {
+    if (nodeHasValue(n)) {
+      // Use a dedicated 'fromFile' flag — do NOT set readonly: true to avoid
+      // triggering the existing "hide readonly/system nodes" logic in the template
+      (n.metadata as Record<string, unknown>).fromFile = true;
+    }
+    if (n.children?.length) markFileNodesRecursive(n.children);
+  }
+};
+
 const parseInitialData = () => {
   try {
     const { tree, context } = parseJsonLd(props.modelValue);
@@ -353,6 +375,10 @@ const parseInitialData = () => {
       const defaultTree = buildDefaultDatasetTree();
       treeData.value = [...defaultTree, ...hiddenNodes];
     } else {
+      if (props.contentFromFile) {
+        // Mark all nodes from the file as readonly AFTER emptiness check — user can only ADD new fields
+        markFileNodesRecursive(tree);
+      }
       treeData.value = tree;
     }
 
@@ -386,48 +412,68 @@ watch(() => props.modelValue, (newVal) => {
   parseInitialData();
 }, { deep: true });
 
+// When file is removed (contentFromFile goes false→true or true→false), re-parse
+watch(() => props.contentFromFile, () => {
+  parseInitialData();
+});
+
 // When extraMetadata is injected from outside (e.g. after MMIO file upload),
 // add/replace the dspace:extraMetadata node directly in the current tree
 // WITHOUT triggering a full re-parse (which would reset DCAT fields).
 watch(() => props.extraMetadata, (newExtra) => {
-  console.log('[JsonLdEditor DEBUG] extraMetadata watcher fired! newExtra =', newExtra ? newExtra.length + ' entries' : 'null/empty');
+  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
+
   if (!newExtra || newExtra.length === 0) {
-    console.log('[JsonLdEditor DEBUG] extraMetadata is empty, skipping');
+    // New file / cleared — remove dspace:extraMetadata, all fields editable again
+    if (treeData.value.length !== treeWithoutExtra.length) {
+      treeData.value = treeWithoutExtra;
+    }
     return;
   }
-
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
   console.log('[JsonLdEditor DEBUG] treeWithoutExtra length =', treeWithoutExtra.length);
 
   // ──── BEFORE ────
   const beforeJson = serializeJsonLd(treeWithoutExtra, preservedContext.value, 'object');
   console.log('[JsonLdEditor DEBUG] ▼ metadata_content BEFORE merge:', JSON.stringify(beforeJson, null, 2));
 
-  const extraNode = {
-    id: makeId(),
-    key: 'dspace:extraMetadata',
-    type: 'array' as const,
-    children: newExtra.map((item, index) => ({
+  const setReadonlyFromMmioRecursive = (nodes: JsonLdNode[]): void => {
+    for (const n of nodes) {
+      n.metadata.readonly = true;
+      (n.metadata as Record<string, unknown>).fromMmio = true;
+      if (n.children?.length) setReadonlyFromMmioRecursive(n.children);
+    }
+  };
+  const extraChildren = newExtra.map((item, index) => {
+    const parsed = parseJsonLdToTree(item as Record<string, unknown>);
+    setReadonlyFromMmioRecursive(parsed);
+    return {
       id: makeId(),
       key: `[${index}]`,
       type: 'object' as const,
-      children: parseJsonLdToTree(item as Record<string, unknown>),
+      children: parsed,
       metadata: {
         required: false,
         readonly: true,
         repeatable: false,
         hidden: false,
         label: undefined,
+        fromMmio: true,
       },
-    })),
+    };
+  });
+  const extraNode = {
+    id: makeId(),
+    key: 'dspace:extraMetadata',
+    type: 'array' as const,
+    children: extraChildren,
     metadata: {
       required: false,
       readonly: true,
       repeatable: false,
       hidden: false,
       label: 'Extra Metadata (from MMIO)',
+      fromMmio: true,
     },
   };
 
@@ -519,12 +565,18 @@ const handleVisualUpdate = (newTree: JsonLdNode[]) => {
 
 const handleCodeUpdate = (newCode: string) => {
   triggerSaveIndicator();
-  codeData.value = newCode;
   try {
-    const parsed = JSON.parse(newCode);
-    lastEmittedValue = newCode;
-    emit('update:modelValue', parsed);
+    const parsed = JSON.parse(newCode) as Record<string, unknown>;
+    // Preserve MMIO extraMetadata: user cannot edit it in code mode — re-inject from props
+    const out = props.extraMetadata?.length
+      ? { ...parsed, 'dspace:extraMetadata': props.extraMetadata }
+      : parsed;
+    const outStr = JSON.stringify(out, null, 2);
+    codeData.value = outStr;
+    lastEmittedValue = outStr;
+    emit('update:modelValue', out);
   } catch {
+    codeData.value = newCode;
     lastEmittedValue = newCode;
     emit('update:modelValue', newCode);
   }
@@ -582,6 +634,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   };
   treeData.value = [...treeData.value, newNode];
   const serialized = serializeJsonLd(treeData.value, preservedContext.value, 'object') as Record<string, unknown>;
+  lastEmittedValue = JSON.stringify(serialized);
   isInternalUpdate.value = true;
   emit('update:modelValue', serialized);
 };

@@ -7,29 +7,15 @@ export const useClientSelector = () => {
     const clientError = useState<string | null>("client_selector_error", () => null);
     const availableClients = useState<string[]>("client_selector_available", () => []);
 
-    const { connectorHealthCheck, getConnectorMetadata } = useApi();
-    const { t } = useI18n();
+    const { getConnectorMetadata } = useApi();
 
     const selectClient = async (type: ClientType) => {
         selectedClient.value = type;
-        clientStatus.value = "checking";
+        clientStatus.value = "valid";
         clientError.value = null;
 
         if (import.meta.client) {
             localStorage.setItem("selected_client", type);
-        }
-
-        try {
-            const result = await connectorHealthCheck(type);
-            if (result !== null && result !== undefined) {
-                clientStatus.value = "valid";
-            } else {
-                clientStatus.value = "error";
-                clientError.value = t("client_selector.status.error");
-            }
-        } catch {
-            clientStatus.value = "error";
-            clientError.value = t("client_selector.status.error");
         }
     };
 

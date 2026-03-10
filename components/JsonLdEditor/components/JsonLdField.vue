@@ -157,6 +157,7 @@ const emailDisplayValue = computed(() => {
   return raw.startsWith('mailto:') ? raw.slice(7) : raw;
 });
 const handleEmailUpdate = (v: string | number) => {
+  if (props.readonly) return;
   const bare = String(v).trim();
   emit('update', bare ? `mailto:${bare}` : '');
 };
@@ -167,6 +168,7 @@ const telDisplayValue = computed(() => {
   return raw.startsWith('tel:') ? raw.slice(4) : raw;
 });
 const handleTelUpdate = (v: string | number) => {
+  if (props.readonly) return;
   const bare = String(v).trim();
   emit('update', bare ? `tel:${bare}` : '');
 };
@@ -189,6 +191,7 @@ const languageCode = computed(() => {
 });
 
 const handleUpdate = (value: unknown) => {
+  if (props.readonly) return;
   // For array-typed nodes (e.g. dcat:keyword), the user edits a comma-separated string.
   // Convert back to the correct array format, preserving the original item structure.
   if (props.node.type === 'array' && Array.isArray(props.node.value)) {
@@ -211,10 +214,12 @@ const handleUpdate = (value: unknown) => {
 };
 
 const handleLanguageValueUpdate = (value: string) => {
+  if (props.readonly) return;
   emit('update', { '@language': languageCode.value, '@value': value });
 };
 
 const handleLanguageCodeUpdate = (lang: string) => {
+  if (props.readonly) return;
   emit('update', { '@language': lang, '@value': languageValue.value });
 };
 </script>

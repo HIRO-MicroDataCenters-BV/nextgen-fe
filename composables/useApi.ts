@@ -6,11 +6,22 @@ import type {
   CatalogDataset,
   CatalogResponse,
   ApiError,
+  ApiErrorDetail,
 } from "~/types/api.types";
 
 export const useApi = () => {
   const config = useRuntimeConfig();
   const { t } = useI18n();
+
+  const formatApiErrorMessage = (error: ApiError): string => {
+    const d = error.detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d) && d.length > 0) {
+      const first = d[0] as ApiErrorDetail;
+      return first.message ?? first.code ?? t("app.error.occurred");
+    }
+    return t("app.error.occurred");
+  };
 
   const serviceUrls = {
     search: config.public.apiSearchServiceUrl,
@@ -48,6 +59,7 @@ export const useApi = () => {
       timeout?: number;
       hasRawData?: boolean;
       returnResponse?: boolean;
+      returnErrorDetails?: boolean;
     }
   ) => {
     const baseUrl = serviceUrls[service];
@@ -85,19 +97,19 @@ export const useApi = () => {
 
       if (!res.ok) {
         const error = data as ApiError;
-        const errorMessage = error.detail || t("app.error.occurred");
+        const errorMessage = formatApiErrorMessage(error);
         switch (res.status) {
           case 401:
             token.value = null;
             if (showToast) {
               toaster.show("error", t("app.error.unauthorized"));
             }
-            return null;
+            return options?.returnErrorDetails ? ({ error: true, data }) : null;
           default:
             if (showToast) {
               toaster.show("error", errorMessage);
             }
-            return null;
+            return options?.returnErrorDetails ? ({ error: true, data }) : null;
         }
       }
 
@@ -176,13 +188,6 @@ export const useApi = () => {
   return {
     healthCheck: async () => {
       return request<{ status: string }>("search", `/health-check`);
-    },
-
-    connectorHealthCheck: async (interfaceId: string) => {
-      return request<{ status: string }>("connector", `/interface-health/${interfaceId}`, "GET", undefined, {
-        showToast: false,
-        timeout: 10000,
-      });
     },
 
     getConnectorMetadata: async () => {
@@ -272,7 +277,7 @@ export const useApi = () => {
         relatedDataProduct?: string | null;
         isApplication?: boolean;
       }
-    ): Promise<CatalogDataset | null> => {
+    ): Promise<CatalogDataset | { error: true; data: unknown } | null> => {
       let url = `/datasets/${filename}/`;
 
       // Only add related_data_product if it has a value (for datasets only)
@@ -290,9 +295,9 @@ export const useApi = () => {
         url,
         "POST",
         dataset,
-        { showToast: true, hasRawData: true }
+        { showToast: true, hasRawData: true, returnErrorDetails: true }
       );
-      return response || null;
+      return response ?? null;
     },
 
     deleteDataset: async (id: string): Promise<boolean> => {

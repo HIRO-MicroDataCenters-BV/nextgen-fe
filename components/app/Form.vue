@@ -45,6 +45,8 @@ import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
 import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
+import ServerErrorsBlock from "@/components/app/ServerErrorsBlock.vue";
+import MmioUploadZone from "@/components/app/MmioUploadZone.vue";
 import { useApi } from "@/composables/useApi";
 import { useMmioProcessor } from "@/composables/useMmioProcessor";
 
@@ -84,12 +86,14 @@ export interface AppFormProps {
   description?: string;
   disabled?: boolean;
   id?: string | null;
+  serverErrors?: Array<{ code?: string; message?: string; details?: unknown[] }> | null;
 }
 
 const props = defineProps<AppFormProps>();
 const emit = defineEmits<{
   (e: "submit", values: Record<string, unknown>): void;
   (e: "cancel"): void;
+  (e: "clear-server-errors"): void;
 }>();
 
 const router = useRouter();
@@ -104,12 +108,18 @@ const uploadingFiles = ref<Record<string, boolean>>({});
 const fileInputKeys = ref<Record<string, number>>({});
 // Extra system metadata from MMIO file — stored independently from the JsonLd editor tree
 const mmioExtraMetadata = ref<Array<Record<string, unknown>> | null>(null);
+// When a full DCAT-AP JSON file is loaded, all fields in editor become readonly (user can still ADD new fields)
+const metadataFromFile = ref(false);
+// Separately uploaded OCA bundle file (when user uploads MMIO JSON + bundle separately)
+const uploadedBundleFile = ref<File | null>(null);
+// Tracks the displayed MMIO file name even if it wasn't uploaded to the server (e.g. DCAT JSON)
+const displayedMmioFileName = ref<string | null>(null);
 
 const isEditMode = computed(() => Boolean(props.id));
 
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
-const { handleSubmit, values, meta, resetForm, setFieldValue } = useForm({
+const { handleSubmit, values, meta, resetForm, setFieldValue, validateField } = useForm({
   validationSchema: typedSchema,
   initialValues: props.initialValues || {},
 });
@@ -201,6 +211,10 @@ onMounted(() => {
           filename: initialValue,
           file: null as unknown as File, // No actual File object for existing files
         };
+        // Also set the display name so MmioUploadZone shows the file
+        if (field.name === 'file') {
+          displayedMmioFileName.value = initialValue;
+        }
       }
     }
   });
@@ -248,6 +262,12 @@ const clearFileField = (fieldName: string) => {
   uploadedFiles.value = newUploadedFiles;
   setFieldValue(fieldName, undefined);
   fileInputKeys.value[fieldName] = (fileInputKeys.value[fieldName] || 0) + 1;
+  if (fieldName === 'file') {
+    metadataFromFile.value = false;
+    mmioExtraMetadata.value = null;
+    uploadedBundleFile.value = null;
+    displayedMmioFileName.value = null;
+  }
 };
 
 const handleFileChange = async (fieldName: string, files: FileList | null) => {
@@ -258,6 +278,41 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
   uploadingFiles.value[fieldName] = true;
 
   try {
+    // Peek at JSON files before uploading: DCAT-AP JSONs are for client-side pre-population only
+    // and must NOT be uploaded to /mmio/ (backend expects only MMIO TAR files there)
+    if (fieldName === 'file' && file.name.endsWith('.json')) {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as Record<string, unknown>;
+      const isDcatMetadata =
+        parsed['dcterms:title'] !== undefined ||
+        parsed['dcterms:description'] !== undefined ||
+        (parsed['@type'] as string | undefined)?.includes('Dataset');
+
+      if (isDcatMetadata) {
+        console.log('[Form DEBUG] DCAT-AP JSON detected — loading into editor client-side only (not uploading to /mmio/)');
+        mmioExtraMetadata.value = null;
+        metadataFromFile.value = false;
+
+        if (parsed['dspace:extraMetadata']) {
+          const extra = parsed['dspace:extraMetadata'];
+          mmioExtraMetadata.value = Array.isArray(extra)
+            ? extra as Array<Record<string, unknown>>
+            : [extra as Record<string, unknown>];
+        }
+
+        metadataFromFile.value = true;
+        setFieldValue('metadata_content', parsed);
+        // Mark the file field as filled so form validation passes
+        setFieldValue(fieldName, file);
+        validateField(fieldName);
+        emit('clear-server-errors');
+        // Show the file in the upload zone (not uploaded to server, just metadata)
+        displayedMmioFileName.value = file.name;
+        uploadingFiles.value[fieldName] = false;
+        return;
+      }
+    }
+
     console.log('[Form DEBUG] uploading to server...');
     const location = await uploadMmioFile(file);
     console.log('[Form DEBUG] upload location =', location);
@@ -265,9 +320,15 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
     if (location) {
       const filename = location.split("/").pop() || file.name;
       uploadedFiles.value[fieldName] = { filename, file };
+      displayedMmioFileName.value = filename;
       setFieldValue(fieldName, file);
+      validateField(fieldName);
+      emit('clear-server-errors');
 
       if (fieldName === 'file') {
+        // New file = reset MMIO state, then load from new file
+        mmioExtraMetadata.value = null;
+        metadataFromFile.value = false;
         if (file.name.endsWith('.tar')) {
           // ── TAR file: extract dspace:extraMetadata from OCA bundles ──
           console.log('[Form DEBUG] TAR MMIO file detected, calling processMmioFile...');
@@ -285,54 +346,20 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
           }
 
         } else if (file.name.endsWith('.json')) {
-          // ── JSON file: could be a full DCAT-AP metadata object OR a MMIO JSON ──
-          console.log('[Form DEBUG] JSON file detected, reading content...');
+          // MMIO JSON (version/id/modalities) — DCAT JSONs are handled before the upload (early return above)
+          console.log('[Form DEBUG] MMIO JSON file uploaded, processing...');
           try {
-            const text = await file.text();
-            const parsed = JSON.parse(text) as Record<string, unknown>;
-            console.log('[Form DEBUG] JSON parsed, top-level keys =', Object.keys(parsed));
-
-            const isDcatMetadata =
-              parsed['dcterms:title'] !== undefined ||
-              parsed['dcterms:description'] !== undefined ||
-              (parsed['@type'] as string | undefined)?.includes('Dataset');
-
-            if (isDcatMetadata) {
-              // Full DCAT-AP JSON-LD — load into the editor (overwrites all fields)
-              console.log('[Form DEBUG] Detected full DCAT-AP metadata JSON, loading into editor...');
-
-              // If the JSON has its own dspace:extraMetadata, extract it separately
-              if (parsed['dspace:extraMetadata']) {
-                const extra = parsed['dspace:extraMetadata'];
-                mmioExtraMetadata.value = Array.isArray(extra)
-                  ? extra as Array<Record<string, unknown>>
-                  : [extra as Record<string, unknown>];
-                console.log('[Form DEBUG] extracted dspace:extraMetadata from JSON, entries =', mmioExtraMetadata.value.length);
-              } else {
-                // No extraMetadata in this JSON — clear any stale data from a previous TAR upload
-                mmioExtraMetadata.value = null;
-                console.log('[Form DEBUG] no dspace:extraMetadata in JSON, cleared mmioExtraMetadata');
-              }
-
-              // Load the full JSON into metadata_content — JsonLdEditor will re-parse it
-              console.log('[Form DEBUG] setting metadata_content from JSON file:', JSON.stringify(parsed, null, 2).substring(0, 300), '...');
-              setFieldValue('metadata_content', parsed);
-
-            } else {
-              // MMIO JSON (version/id/modalities structure)
-              console.log('[Form DEBUG] Detected MMIO JSON format, calling processMmioFile...');
-              const mmioMetadata = await processMmioFile(file);
-              console.log('[Form DEBUG] processMmioFile returned:', mmioMetadata ? 'OK' : 'NULL');
-              if (mmioMetadata) {
-                const extra = mmioMetadata.extraMetadata;
-                mmioExtraMetadata.value = Array.isArray(extra)
-                  ? extra
-                  : [extra as Record<string, unknown>];
-                console.log('[Form DEBUG] setting mmioExtraMetadata from MMIO JSON, entries =', mmioExtraMetadata.value.length);
-              }
+            const mmioMetadata = await processMmioFile(file);
+            console.log('[Form DEBUG] processMmioFile returned:', mmioMetadata ? 'OK' : 'NULL');
+            if (mmioMetadata) {
+              const extra = mmioMetadata.extraMetadata;
+              mmioExtraMetadata.value = Array.isArray(extra)
+                ? extra
+                : [extra as Record<string, unknown>];
+              console.log('[Form DEBUG] setting mmioExtraMetadata from MMIO JSON, entries =', mmioExtraMetadata.value.length);
             }
           } catch (error) {
-            console.error('[Form DEBUG] Error processing JSON file:', error);
+            console.error('[Form DEBUG] Error processing MMIO JSON file:', error);
           }
         }
       }
@@ -347,7 +374,58 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
   }
 };
 
+// Convert a single File to a FileList-like object for handleFileChange compatibility
+const fileToFileList = (file: File): FileList => {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
+};
+
+// Handle separately uploaded OCA bundle file (for MMIO JSON + bundle two-file flow)
+const handleBundleFileChange = async (file: File) => {
+  uploadedBundleFile.value = file;
+  console.log('[Form DEBUG] OCA bundle file selected:', file.name);
+
+  // If there's already an MMIO JSON uploaded, re-process both together
+  const mmioFile = uploadedFiles.value['file']?.file;
+  if (mmioFile && mmioFile.name.endsWith('.json')) {
+    try {
+      const { processTarFromFiles } = useMmioProcessor();
+      const mmioMetadata = await processTarFromFiles(mmioFile, file);
+      if (mmioMetadata) {
+        const extra = mmioMetadata.extraMetadata;
+        mmioExtraMetadata.value = Array.isArray(extra) ? extra : [extra as Record<string, unknown>];
+        console.log('[Form DEBUG] re-processed with bundle, extraMetadata entries =', mmioExtraMetadata.value.length);
+      }
+    } catch (e) {
+      console.error('[Form DEBUG] Error processing MMIO + bundle:', e);
+    }
+  }
+};
+
+const handleBundleFileRemove = () => {
+  uploadedBundleFile.value = null;
+  // Re-process MMIO JSON alone (without bundle)
+  const mmioFile = uploadedFiles.value['file']?.file;
+  if (mmioFile) {
+    const { processMmioFile } = useMmioProcessor();
+    processMmioFile(mmioFile).then(meta => {
+      if (meta) {
+        const extra = meta.extraMetadata;
+        mmioExtraMetadata.value = Array.isArray(extra) ? extra : [extra as Record<string, unknown>];
+      }
+    });
+  }
+};
+
 const handleFileDelete = async (fieldName: string) => {
+  // If it's a DCAT JSON (only in displayedMmioFileName, not in uploadedFiles), just clear locally
+  if (fieldName === 'file' && displayedMmioFileName.value && !uploadedFiles.value[fieldName]) {
+    clearFileField(fieldName);
+    setFieldValue('metadata_content', {});
+    return;
+  }
+
   const uploaded = uploadedFiles.value[fieldName];
   if (!uploaded) return;
 
@@ -564,6 +642,7 @@ defineExpose({
                 :id="field.name"
                 :model-value="componentField.modelValue"
                 :readonly="field.disabled || props.disabled"
+                :content-from-file="field.name === 'metadata_content' ? metadataFromFile : false"
                 :title="field.label"
                 :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
                 @update:model-value="componentField['onUpdate:modelValue']"
@@ -572,63 +651,33 @@ defineExpose({
           </template>
           <template v-else-if="field.type === 'file'">
             <FormControl>
-              <div class="space-y-2">
-                <Input
-                  :id="field.name"
-                  :key="`file-input-${field.name}-${
-                    fileInputKeys[field.name] || 0
-                  }`"
-                  type="file"
-                  :placeholder="field.placeholder"
-                  :multiple="Boolean(field.props?.multiple)"
-                  :accept="field.accept || String(field.props?.accept || '')"
-                  :disabled="
-                    field.disabled ||
-                    props.disabled ||
-                    uploadingFiles[field.name]
-                  "
-                  @change="(e: Event) => {
-                    const input = e.target as HTMLInputElement;
-                    if (input?.files) {
-                      handleFileChange(field.name, input.files);
-                    }
-                  }"
-                />
-                <div
-                  v-if="uploadingFiles[field.name]"
-                  class="text-sm text-muted-foreground"
-                >
-                  {{ t("hint.uploading") }}
-                </div>
-                <div
-                  v-if="
-                    uploadedFiles[field.name] && !uploadingFiles[field.name]
-                  "
-                  class="flex items-center gap-2"
-                >
-                  <span class="text-sm text-muted-foreground">
-                    {{ uploadedFiles[field.name].file?.name || uploadedFiles[field.name].filename }}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="field.disabled || props.disabled"
-                    @click="handleFileDelete(field.name)"
-                  >
-                    {{ t("action.delete") }}
-                  </Button>
-                </div>
-              </div>
+              <MmioUploadZone
+                :mmio-file="displayedMmioFileName"
+                :bundle-file="uploadedBundleFile?.name || null"
+                :uploading="uploadingFiles[field.name]"
+                :disabled="field.disabled || props.disabled"
+                :readonly="field.disabled || props.disabled"
+                :input-key="fileInputKeys[field.name] || 0"
+                @change-mmio="(file) => handleFileChange(field.name, fileToFileList(file))"
+                @change-bundle="handleBundleFileChange"
+                @remove-mmio="handleFileDelete(field.name)"
+                @remove-bundle="handleBundleFileRemove"
+              />
             </FormControl>
           </template>
           <FormMessage />
-          <p v-if="field.hint" class="text-sm text-muted-foreground mt-1">
+          <p v-if="field.hint && !(field.disabled || props.disabled)" class="text-sm text-muted-foreground mt-1">
             {{ field.hint }}
           </p>
         </FormItem>
       </FormField>
     </template>
+
+    <ServerErrorsBlock
+      v-if="props.serverErrors && props.serverErrors.length > 0"
+      :errors="props.serverErrors"
+      class="mt-4"
+    />
 
     <div class="actions flex justify-start gap-2 pt-4">
       <Button

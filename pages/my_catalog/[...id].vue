@@ -23,14 +23,16 @@
         :fields="fields"
         :form-schema="formSchema"
         :initial-values="initialValues!"
+        :server-errors="serverErrors"
         @submit="onSubmit"
+        @clear-server-errors="serverErrors = null"
       />
     </div>
   </AppContent>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
@@ -45,6 +47,8 @@ import { Spinner } from "@/components/ui/spinner";
 const { t } = useI18n();
 const { saveDataset, getDataset, getDataproducts } = useApi();
 const { selectedClient } = useClientSelector();
+const serverErrors = ref<Array<{ code?: string; message?: string; details?: unknown[] }> | null>(null);
+const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
 
 const route = useRoute();
@@ -118,6 +122,7 @@ const fields = computed<FormFieldDefinition[]>(() => [
     placeholder: t("placeholder.select_file"),
     hint: t("hint.accepted_file_types_json_jar"),
     accept: "application/json, application/x-tar",
+    disabled: true,
   },
   {
     name: "metadata_content",
@@ -307,10 +312,34 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
         ? formValues.related_data_product.trim() || null
         : null;
 
+    serverErrors.value = null;
     const result = await saveDataset(targetFilename, datasetJsonLd, {
       relatedDataProduct,
       isApplication,
     });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resultAny = result as any;
+    if (resultAny && resultAny.error === true) {
+      const data = resultAny.data as Record<string, unknown> | undefined;
+      const detail = data?.detail;
+      let errors: Array<{ code?: string; message?: string; details?: unknown[] }> = [];
+      if (Array.isArray(detail) && detail.length > 0) {
+        errors = detail as Array<{ code?: string; message?: string; details?: unknown[] }>;
+      } else if (typeof detail === "string" && detail) {
+        errors = [{ message: detail }];
+      } else if (data?.message) {
+        errors = [{ message: String(data.message) }];
+      } else {
+        errors = [{ message: "Server error occurred" }];
+      }
+      serverErrors.value = errors;
+      nextTick(() => {
+        serverErrorsRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
     if (result) {
       goBackToCatalog();
     }

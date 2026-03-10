@@ -107,5 +107,17 @@ export interface CatalogResponse extends JsonLdObject {
 }
 
 export interface ApiError {
-  detail: string;
+  detail: string | ApiErrorDetail[];
+}
+
+export interface ApiErrorDetail {
+  code?: string;
+  message?: string;
+  details?: Array<{
+    type?: string;
+    resultMessage?: string;
+    resultPath?: string;
+    focusNode?: string;
+    value?: string;
+  }>;
 }

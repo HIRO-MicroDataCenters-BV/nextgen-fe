@@ -131,14 +131,15 @@ export function useMmioProcessor() {
         const mmioData = JSON.parse(text) as MmioData;
         console.log('[MMIO DEBUG] processJsonMmio: parsed mmioData =', mmioData);
 
+        // Single-entry extraMetadata matching the 123-namespace format
         return {
             mmio: mmioData,
             ocaAttributes: [],
-            extraMetadata: {
-                mmio_version: mmioData.version,
-                mmio_id: mmioData.id,
-                modality_count: mmioData.modalities.length,
-            },
+            extraMetadata: [{
+                '@type': 'dcat:Dataset',
+                '@id': `http://oca.example.org/123/${mmioData.id}/0/0`,
+                'http://oca.example.org/123/SAID': mmioData.id,
+            }],
         };
     };
 
@@ -224,17 +225,20 @@ export function useMmioProcessor() {
         console.log('[MMIO DEBUG] processTarMmio: mmio modalities =', mmioData.modalities.map(m => ({ id: m.id, oca_bundle_said: m.oca_bundle.value })));
 
         // Build extraMetadata array - one entry per modality
+        // Namespace is always the fixed "123" base (matching existing dataset format)
         const extraMetadata: Array<Record<string, unknown>> = [];
-        const baseNs = `http://oca.example.org/${mmioData.id}`;
+        const baseNs = `http://oca.example.org/123`;
 
         for (let i = 0; i < mmioData.modalities.length; i++) {
             const modality = mmioData.modalities[i];
             const bundleSaid = modality.oca_bundle.value;
+            // @id format: http://oca.example.org/123/{mmio_id}/{modality_index}/0
             const entryId = `${baseNs}/${mmioData.id}/${i}/0`;
 
             console.log(`[MMIO DEBUG] processTarMmio: modality[${i}] bundleSaid =`, bundleSaid);
 
             const entry: Record<string, unknown> = {
+                '@type': 'dcat:Dataset',
                 '@id': entryId,
                 [`${baseNs}/SAID`]: bundleSaid,
             };
@@ -286,9 +290,91 @@ export function useMmioProcessor() {
         };
     };
 
+    /**
+     * Process MMIO JSON file + separate OCA bundle file (two-file upload flow).
+     * Combines them into the same extraMetadata as a TAR would produce.
+     */
+    const processTarFromFiles = async (mmioJsonFile: File, bundleFile: File): Promise<MmioMetadata> => {
+        console.log('[MMIO DEBUG] processTarFromFiles:', mmioJsonFile.name, '+', bundleFile.name);
+
+        const mmioText = await mmioJsonFile.text();
+        const mmioData = JSON.parse(mmioText) as MmioData;
+
+        const bundleBuffer = await bundleFile.arrayBuffer();
+        let bundleContent: string;
+        try {
+            // Try to parse as TAR first (it might be a .tar with bundles inside)
+            const files = parseTar(bundleBuffer);
+            if (files.length > 0) {
+                // Use the parseTar result to build bundlesBySaid map
+                const tempFile = new File([bundleBuffer], bundleFile.name);
+                // Reuse processTarMmio logic but inject mmioData
+                return await _processWithMmioDataAndBundles(mmioData, files);
+            }
+        } catch {
+            // Not a TAR, try as direct JSON bundle
+        }
+
+        // Fallback: treat as a single JSON bundle file
+        bundleContent = new TextDecoder().decode(bundleBuffer);
+        const singleBundleFile = [{ name: bundleFile.name, content: bundleContent, buffer: bundleBuffer }];
+        return await _processWithMmioDataAndBundles(mmioData, singleBundleFile);
+    };
+
+    const _processWithMmioDataAndBundles = async (
+        mmioData: MmioData,
+        bundleFiles: Array<{ name: string; content: string; buffer: ArrayBuffer }>
+    ): Promise<MmioMetadata> => {
+        const baseNs = `http://oca.example.org/123`;
+        const bundlesBySaid = new Map<string, OcaBundleContent>();
+
+        for (const bf of bundleFiles) {
+            try {
+                const data = JSON.parse(bf.content);
+                const bundle: OcaBundleContent = data.bundle || data;
+                const said = bundle.capture_base?.digest;
+                if (said) bundlesBySaid.set(said, bundle);
+            } catch { /* skip */ }
+        }
+
+        const extraMetadata: Array<Record<string, unknown>> = [];
+        for (let i = 0; i < mmioData.modalities.length; i++) {
+            const modality = mmioData.modalities[i];
+            const bundleSaid = modality.oca_bundle.value;
+            const entryId = `${baseNs}/${mmioData.id}/${i}/0`;
+            const entry: Record<string, unknown> = {
+                '@type': 'dcat:Dataset',
+                '@id': entryId,
+                [`${baseNs}/SAID`]: bundleSaid,
+            };
+
+            const bundle = bundlesBySaid.get(bundleSaid);
+            if (bundle) {
+                const attributes = bundle.capture_base?.attributes || {};
+                for (const attrName of Object.keys(attributes)) {
+                    entry[`${baseNs}/${attrName}`] = { '@type': 'xsd:boolean', '@value': true };
+                }
+            }
+            extraMetadata.push(entry);
+        }
+
+        const ocaAttributes: OcaAttribute[] = [];
+        bundlesBySaid.forEach((bundle) => {
+            const attributes = bundle.capture_base?.attributes || {};
+            const conformance = bundle.overlays?.conformance?.attribute_conformance || {};
+            const engLabels = (bundle.overlays?.label || []).find(l => l.language === 'eng' || l.language === 'en')?.attribute_labels || {};
+            for (const [attrName, attrType] of Object.entries(attributes)) {
+                ocaAttributes.push({ name: attrName, type: String(attrType), conformance: conformance[attrName] as 'M' | 'O' | undefined, label: engLabels[attrName] });
+            }
+        });
+
+        return { mmio: mmioData, ocaAttributes, extraMetadata };
+    };
+
     return {
         processMmioFile,
         processJsonMmio,
         processTarMmio,
+        processTarFromFiles,
     };
 }

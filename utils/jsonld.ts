@@ -1295,56 +1295,6 @@ export function createDatasetJsonLd(
   // For datasets, dcterms:type is optional (defaults to Dataset)
   // If it exists in metadata_content and item_type is dataset, keep it as is (don't overwrite)
 
-  // Helper function to build accessURL from related_data_product and filename
-  // Combines data product path with uploaded filename in file:// URL format
-  const buildAccessURL = (
-    dataProductPath: string,
-    uploadedFilename: string
-  ): string => {
-    const trimmedPath = dataProductPath.trim();
-    const trimmedFilename = uploadedFilename.trim();
-
-    // Normalize path separators
-    const normalizePath = (path: string): string => {
-      return path.replace(/\\/g, "/").replace(/\/+/g, "/");
-    };
-
-    // Combine data product path with filename
-    let combinedPath: string;
-    if (trimmedPath.endsWith("/")) {
-      combinedPath = `${trimmedPath}${trimmedFilename}`;
-    } else {
-      combinedPath = `${trimmedPath}/${trimmedFilename}`;
-    }
-
-    combinedPath = normalizePath(combinedPath);
-
-    // If already a file:// URL, extract path and combine with filename
-    if (trimmedPath.startsWith("file://")) {
-      const pathWithoutProtocol = trimmedPath.replace(/^file:\/\//, "");
-      combinedPath = normalizePath(`${pathWithoutProtocol}/${trimmedFilename}`);
-      return `file://${combinedPath}`;
-    }
-
-    // If it's an absolute Windows path (C:/, D:/, etc.)
-    if (/^[A-Za-z]:/.test(trimmedPath)) {
-      return `file:///${combinedPath}`;
-    }
-
-    // If it's an absolute Unix path (starts with /)
-    if (trimmedPath.startsWith("/")) {
-      return `file://${combinedPath}`;
-    }
-
-    // If it's a relative path (starts with ./ or just a path)
-    if (trimmedPath.startsWith("./")) {
-      return `file://${combinedPath}`;
-    }
-
-    // Default: treat as relative path (no leading slash in file://)
-    return `file://${combinedPath}`;
-  };
-
   // Determine if this is a dataset type
   const isDataset = formData.item_type === "dataset";
 
@@ -1401,35 +1351,44 @@ export function createDatasetJsonLd(
     }
   }
 
-  // Handle dcat:distribution with special logic:
+  // Handle dcat:distribution:
   // - If it exists in metadata_content, keep it as is
-  // - Otherwise, create new one for dataset with related_data_product
-  const hasDistributionInMetadata =
-    baseDataset["dcat:distribution"] !== undefined &&
-    baseDataset["dcat:distribution"] !== null;
+  // - Do NOT auto-generate from the MMIO filename — the MMIO file is metadata packaging,
+  //   not a data file. The dcat:accessURL must point to a real file in the Data Product
+  //   (as registered in the connector). The user must specify it via the JSON-LD editor.
 
-  if (
-    !hasDistributionInMetadata &&
-    filename &&
-    isDataset &&
-    relatedDataProductPath
-  ) {
-    // Create new distribution for dataset with related_data_product
-    const distributionId = `${baseDataset["@id"]}/distribution`;
 
-    // Build accessURL by combining related_data_product path with uploaded filename
-    const accessURL = buildAccessURL(relatedDataProductPath, filename);
-
-    // Minimal distribution format matching ok_request.json
-    baseDataset["dcat:distribution"] = {
-      "@id": distributionId,
-      "@type": "dcat:Distribution",
-      "dcat:accessURL": {
-        "@id": accessURL,
-      },
-    };
+  // Normalize spdx:algorithm for DCAT-AP SHACL:
+  // 1. Fix wrong URIs (SHA256 -> checksumAlgorithm_sha256)
+  // 2. Always add @type: "spdx:ChecksumAlgorithm" — validator requires explicit type
+  const SPDX_ALGORITHM_FIXES: Record<string, string> = {
+    "http://spdx.org/rdf/terms#SHA256": "http://spdx.org/rdf/terms#checksumAlgorithm_sha256",
+    "http://spdx.org/rdf/terms#SHA512": "http://spdx.org/rdf/terms#checksumAlgorithm_sha512",
+    "http://spdx.org/rdf/terms#SHA1": "http://spdx.org/rdf/terms#checksumAlgorithm_sha1",
+    "http://spdx.org/rdf/terms#MD5": "http://spdx.org/rdf/terms#checksumAlgorithm_md5",
+  };
+  const distributions = baseDataset["dcat:distribution"];
+  if (distributions) {
+    const dists = Array.isArray(distributions) ? distributions : [distributions];
+    dists.forEach((dist: unknown) => {
+      const d = dist as Record<string, unknown>;
+      const checksum = d?.["spdx:checksum"] as Record<string, unknown> | undefined;
+      if (checksum?.["spdx:algorithm"]) {
+        const algo = checksum["spdx:algorithm"] as Record<string, unknown> | string;
+        const id = typeof algo === "string" ? algo : (algo?.["@id"] as string);
+        const fixed = id ? SPDX_ALGORITHM_FIXES[id] : undefined;
+        const finalId = fixed ?? id;
+        if (finalId) {
+          const base = typeof algo === "object" && algo !== null ? { ...algo } : {};
+          checksum["spdx:algorithm"] = {
+            ...base,
+            "@id": finalId,
+            "@type": "spdx:ChecksumAlgorithm",
+          };
+        }
+      }
+    });
   }
-  // If distribution exists in metadata, it's already in baseDataset, so we keep it
 
   return JSON.stringify(baseDataset, null, 2);
 }

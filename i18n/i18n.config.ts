@@ -14,6 +14,9 @@ export default defineI18nConfig(() => {
             noMetadata: 'No metadata to display',
             addField: 'Add Field',
             validationErrors: 'Validation Errors:',
+            serverErrors: 'Server Errors',
+            readonly: 'Read-only',
+            fromMmioReadonly: 'Loaded from MMIO file — read-only',
             categories: {
               identification: 'Identification',
               provenance: 'Provenance',
@@ -336,6 +339,12 @@ export default defineI18nConfig(() => {
           has_sex: "Has Sex",
           has_height: "Has Height",
           has_medical_conditions: "Has (Medical Conditions)",
+          mmio_json_desc: "MMIO schema only",
+          mmio_tar_desc: "MMIO + OCA bundle",
+          or: "or",
+          or_drag_drop: "or drop",
+          uploaded: "Uploaded",
+          optional: "optional",
         },
         action: {
           processed: "Procesed",
@@ -358,6 +367,7 @@ export default defineI18nConfig(() => {
           update: "Update",
           save_changes: "Save Changes",
           discard: "Discard",
+          click_to_browse: "Click to browse",
           create_new: "Create New",
           login: "Login",
           filter: "Filter",
@@ -391,6 +401,8 @@ export default defineI18nConfig(() => {
         },
         hint: {
           uploading: "Uploading...",
+          upload_mmio_first: "Upload MMIO file first",
+          tar_contains_bundle: ".tar already contains both MMIO and OCA bundle",
           accepted_file_types_json_jar:
             "MMIO (.json) or MMIO + OCA bundle (.tar)",
           your: "Your",

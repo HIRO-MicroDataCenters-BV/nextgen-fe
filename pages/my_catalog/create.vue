@@ -14,7 +14,9 @@
         :fields="fields"
         :form-schema="formSchema"
         :initial-values="initialValues"
+        :server-errors="serverErrors"
         @submit="onSubmit"
+        @clear-server-errors="serverErrors = null"
       />
     </div>
   </AppContent>
@@ -31,6 +33,7 @@ const { t } = useI18n();
 const { saveDataset, getDataproducts } = useApi();
 const { selectedClient } = useClientSelector();
 const router = useRouter();
+const serverErrors = ref<Array<{ code?: string; message?: string; details?: unknown[] }> | null>(null);
 
 // Wrap getDataproducts to pass the currently selected client interface
 const getDataproductsForClient = () => {
@@ -148,10 +151,32 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
       ? formValues.related_data_product.trim() || null
       : null;
 
+  serverErrors.value = null;
   const result = await saveDataset(uploadedFilename, datasetJsonLd, {
     relatedDataProduct,
     isApplication,
   });
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resultAny = result as any;
+  console.log('[create] saveDataset result:', JSON.stringify(resultAny));
+  if (resultAny && resultAny.error === true) {
+    const data = resultAny.data as Record<string, unknown> | undefined;
+    const detail = data?.detail;
+    console.log('[create] server error detail:', detail);
+    let errors: Array<{ code?: string; message?: string; details?: unknown[] }> = [];
+    if (Array.isArray(detail) && detail.length > 0) {
+      errors = detail as Array<{ code?: string; message?: string; details?: unknown[] }>;
+    } else if (typeof detail === "string" && detail) {
+      errors = [{ message: detail }];
+    } else if (data?.message) {
+      errors = [{ message: String(data.message) }];
+    } else {
+      errors = [{ message: "Server error occurred" }];
+    }
+    serverErrors.value = errors;
+    return;
+  }
 
   if (result) {
     router.push("/my_catalog");
