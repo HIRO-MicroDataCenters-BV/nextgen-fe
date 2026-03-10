@@ -92,8 +92,7 @@ export interface AppFormProps {
 const props = defineProps<AppFormProps>();
 const emit = defineEmits<{
   (e: "submit", values: Record<string, unknown>): void;
-  (e: "cancel"): void;
-  (e: "clear-server-errors"): void;
+  (e: "cancel" | "clear-server-errors"): void;
 }>();
 
 const router = useRouter();

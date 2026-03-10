@@ -301,13 +301,10 @@ export function useMmioProcessor() {
         const mmioData = JSON.parse(mmioText) as MmioData;
 
         const bundleBuffer = await bundleFile.arrayBuffer();
-        let bundleContent: string;
         try {
             // Try to parse as TAR first (it might be a .tar with bundles inside)
             const files = parseTar(bundleBuffer);
             if (files.length > 0) {
-                // Use the parseTar result to build bundlesBySaid map
-                const tempFile = new File([bundleBuffer], bundleFile.name);
                 // Reuse processTarMmio logic but inject mmioData
                 return await _processWithMmioDataAndBundles(mmioData, files);
             }
@@ -316,7 +313,7 @@ export function useMmioProcessor() {
         }
 
         // Fallback: treat as a single JSON bundle file
-        bundleContent = new TextDecoder().decode(bundleBuffer);
+        const bundleContent = new TextDecoder().decode(bundleBuffer);
         const singleBundleFile = [{ name: bundleFile.name, content: bundleContent, buffer: bundleBuffer }];
         return await _processWithMmioDataAndBundles(mmioData, singleBundleFile);
     };

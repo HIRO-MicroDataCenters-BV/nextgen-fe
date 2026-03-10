@@ -80,7 +80,7 @@
             class="sr-only"
             :disabled="disabled || uploading"
             @change="handleInputMmio"
-          />
+          >
           <template v-if="uploading">
             <div class="mmio-drop-zone__spinner" />
             <span class="mmio-drop-zone__hint">{{ t('hint.uploading') }}</span>
@@ -153,7 +153,7 @@
             class="sr-only"
             :disabled="disabled || !mmioFile"
             @change="handleInputBundle"
-          />
+          >
           <Icon
             :name="draggingBundle ? 'lucide:download' : 'lucide:layers'"
             class="size-5"
