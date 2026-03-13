@@ -163,12 +163,17 @@ const updateURLQuery = (force = false) => {
   router.replace({ query });
 };
 
+const resetUpdatingFlag = () => {
+  isUpdatingFromState.value = false;
+};
+
 const handleFilterChange = (
   key: string,
   value: boolean | string | number,
   multiple: boolean
 ) => {
   isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   if (!multiple) {
     selectedFilters.value = {};
     // Reset all filter values in UI when switching to single selection mode
@@ -209,12 +214,14 @@ const handleFilterChange = (
   applyClientSearch(); // Reset to show all filtered data
   updateURLQuery(true);
   fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
     isUpdatingFromState.value = false;
   });
 };
 
 const handleRemoveFilter = (key: string) => {
   isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   const { [key]: _, ...rest } = selectedFilters.value;
   selectedFilters.value = rest;
   currentPage.value = 0;
@@ -231,12 +238,14 @@ const handleRemoveFilter = (key: string) => {
 
   updateURLQuery(true);
   fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
     isUpdatingFromState.value = false;
   });
 };
 
 const handleClearAllFilters = () => {
   isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   selectedFilters.value = {};
   searchValue.value = "";
   clientSearchTerm.value = ""; // Clear client search
@@ -254,13 +263,18 @@ const handleClearAllFilters = () => {
   applyClientSearch(); // Apply empty search (shows all data)
   updateURLQuery(true);
   fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
     isUpdatingFromState.value = false;
   });
 };
 
 const fetchData = async () => {
-  if (isFetching) return;
+  if (isFetching) {
+    pendingFetch = true;
+    return;
+  }
   isFetching = true;
+  pendingFetch = false;
   rowSelection.value = {};
   isLoading.value = true;
   try {
@@ -319,9 +333,16 @@ const fetchData = async () => {
     // Store server data and apply client search
     serverData.value = filteredData;
     applyClientSearch();
+  } catch (err) {
+    serverData.value = [];
+    data.value = [];
   } finally {
     isFetching = false;
     isLoading.value = false;
+    if (pendingFetch) {
+      pendingFetch = false;
+      nextTick(() => fetchData());
+    }
   }
 };
 
@@ -450,6 +471,7 @@ const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
 let isFetching = false;
+let pendingFetch = false;
 
 const applySearchFilter = () => {
   // Update client search term and apply filter
