@@ -333,7 +333,7 @@ const fetchData = async () => {
     // Store server data and apply client search
     serverData.value = filteredData;
     applyClientSearch();
-  } catch (err) {
+  } catch {
     serverData.value = [];
     data.value = [];
   } finally {
