@@ -121,8 +121,8 @@ const selectedFilters = ref<Record<string, boolean | string | number>>(
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 
 // Update URL query parameters from component state
-const updateURLQuery = () => {
-  if (isUpdatingFromState.value) return;
+const updateURLQuery = (force = false) => {
+  if (!force && isUpdatingFromState.value) return;
 
   const query: Record<string, string> = {};
 
@@ -168,6 +168,7 @@ const handleFilterChange = (
   value: boolean | string | number,
   multiple: boolean
 ) => {
+  isUpdatingFromState.value = true;
   if (!multiple) {
     selectedFilters.value = {};
     // Reset all filter values in UI when switching to single selection mode
@@ -206,11 +207,14 @@ const handleFilterChange = (
   searchValue.value = "";
   clientSearchTerm.value = ""; // Clear client search
   applyClientSearch(); // Reset to show all filtered data
-  updateURLQuery();
-  fetchData();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    isUpdatingFromState.value = false;
+  });
 };
 
 const handleRemoveFilter = (key: string) => {
+  isUpdatingFromState.value = true;
   const { [key]: _, ...rest } = selectedFilters.value;
   selectedFilters.value = rest;
   currentPage.value = 0;
@@ -225,11 +229,14 @@ const handleRemoveFilter = (key: string) => {
   });
   filterGroups.value = [...filterGroups.value];
 
-  updateURLQuery();
-  fetchData();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    isUpdatingFromState.value = false;
+  });
 };
 
 const handleClearAllFilters = () => {
+  isUpdatingFromState.value = true;
   selectedFilters.value = {};
   searchValue.value = "";
   clientSearchTerm.value = ""; // Clear client search
@@ -245,70 +252,77 @@ const handleClearAllFilters = () => {
   filterGroups.value = [...filterGroups.value];
 
   applyClientSearch(); // Apply empty search (shows all data)
-  updateURLQuery();
-  fetchData();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    isUpdatingFromState.value = false;
+  });
 };
 
 const fetchData = async () => {
+  if (isFetching) return;
+  isFetching = true;
   rowSelection.value = {};
   isLoading.value = true;
-  
-  // Fetch data WITHOUT client search term (only server filters)
-  const resp = await dataSource({
-    page: table.getState().pagination.pageIndex + 1,
-    limit: table.getState().pagination.pageSize,
-    type: selectedType.value,
-    // Remove client search from server request
-    filters: {
-      ...selectedFilters.value,
-      ...getActiveFilters(),
-    },
-  });
-  isLoading.value = false;
+  try {
+    // Fetch data WITHOUT client search term (only server filters)
+    const resp = await dataSource({
+      page: table.getState().pagination.pageIndex + 1,
+      limit: table.getState().pagination.pageSize,
+      type: selectedType.value,
+      // Remove client search from server request
+      filters: {
+        ...selectedFilters.value,
+        ...getActiveFilters(),
+      },
+    });
 
-  // map originals by id if provided
-  rawById.value = {};
-  const respObj = resp as { originals?: unknown[]; data?: TableRowData[] };
-  if (respObj && Array.isArray(respObj.originals)) {
-    const originals = respObj.originals as unknown[];
-    const prepared = (respObj.data || []) as Array<TableRowData>;
-    prepared.forEach((row, idx) => {
+    // map originals by id if provided
+    rawById.value = {};
+    const respObj = resp as { originals?: unknown[]; data?: TableRowData[] };
+    if (respObj && Array.isArray(respObj.originals)) {
+      const originals = respObj.originals as unknown[];
+      const prepared = (respObj.data || []) as Array<TableRowData>;
+      prepared.forEach((row, idx) => {
+        const id = String(row.id);
+        rawById.value[id] = originals[idx];
+      });
+    }
+
+    let filteredData: TableRowData[] = respObj?.data ?? [];
+
+    // Filter by type using dcterms:type (not @type, which is always "dcat:Dataset")
+    if (selectedType.value === "datasets") {
+      filteredData = filteredData.filter((row: TableRowData) => {
+        const datasetType = row.datasetType as string | undefined;
+        return (
+          !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
+        );
+      });
+    } else if (selectedType.value === "applications") {
+      filteredData = filteredData.filter((row: TableRowData) => {
+        const datasetType = row.datasetType as string | undefined;
+        return datasetType === "http://purl.org/dc/dcmitype/Software";
+      });
+    }
+
+    // Attach original JSON-LD to each row for downstream converters
+    filteredData = filteredData.map((row: TableRowData) => {
       const id = String(row.id);
-      rawById.value[id] = originals[idx];
+      const original = rawById.value[id];
+      return {
+        ...row,
+        _raw: original,
+        _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
+      } as unknown as TableRowData;
     });
+
+    // Store server data and apply client search
+    serverData.value = filteredData;
+    applyClientSearch();
+  } finally {
+    isFetching = false;
+    isLoading.value = false;
   }
-
-  let filteredData: TableRowData[] = respObj?.data ?? [];
-
-  // Filter by type using dcterms:type (not @type, which is always "dcat:Dataset")
-  if (selectedType.value === "datasets") {
-    filteredData = filteredData.filter((row: TableRowData) => {
-      const datasetType = row.datasetType as string | undefined;
-      return (
-        !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
-      );
-    });
-  } else if (selectedType.value === "applications") {
-    filteredData = filteredData.filter((row: TableRowData) => {
-      const datasetType = row.datasetType as string | undefined;
-      return datasetType === "http://purl.org/dc/dcmitype/Software";
-    });
-  }
-
-  // Attach original JSON-LD to each row for downstream converters
-  filteredData = filteredData.map((row: TableRowData) => {
-    const id = String(row.id);
-    const original = rawById.value[id];
-    return {
-      ...row,
-      _raw: original,
-      _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
-    } as unknown as TableRowData;
-  });
-  
-  // Store server data and apply client search
-  serverData.value = filteredData;
-  applyClientSearch();
 };
 
 // Client-side search filter
@@ -434,6 +448,8 @@ const table = useVueTable({
 
 const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
+let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
+let isFetching = false;
 
 const applySearchFilter = () => {
   // Update client search term and apply filter
@@ -523,10 +539,12 @@ watch(
         table.setPageIndex(0);
       }
     } finally {
-      setTimeout(() => {
+      if (fetchDataTimeout) clearTimeout(fetchDataTimeout);
+      fetchDataTimeout = setTimeout(() => {
+        fetchDataTimeout = null;
         isUpdatingFromState.value = false;
         fetchData();
-      }, 100);
+      }, 50);
     }
   },
   { deep: true, immediate: true }
@@ -580,9 +598,8 @@ watch([selectedFilterColumn, selectedType], () => {
 watch(
   selectedFilters,
   () => {
-    if (!isUpdatingFromState.value) {
-      updateURLQuery();
-    }
+    if (isUpdatingFromState.value) return;
+    updateURLQuery();
   },
   { deep: true }
 );
@@ -612,9 +629,8 @@ onMounted(() => {
   });
 
   if (!route.query.type && !route.query.search && !route.query.filters) {
-    updateURLQuery();
+    updateURLQuery(true);
   }
-  fetchData();
 });
 
 watch(
