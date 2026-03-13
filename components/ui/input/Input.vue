@@ -11,7 +11,13 @@ const props = withDefaults(
     readonly?: boolean
     disabled?: boolean
   }>(),
-  { readonly: false, disabled: false }
+  {
+    defaultValue: undefined,
+    modelValue: undefined,
+    class: undefined,
+    readonly: false,
+    disabled: false,
+  }
 )
 
 const emits = defineEmits<{
