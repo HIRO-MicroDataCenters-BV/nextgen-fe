@@ -388,6 +388,7 @@ export default defineI18nConfig(() => {
           select_data_product: "Select a data product",
           select_file: "Select a file",
           search: "Search {type}...",
+          search_filters: "Search filters...",
           select_filter: "Select filter",
           select_license: "Select license",
           pick_date: "Pick a date",
