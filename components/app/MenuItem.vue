@@ -23,7 +23,7 @@ const isSelected = computed(() => {
   <template v-if="item.children">
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
-        {{ t(`filter.${item.key}`) }}
+        {{ item.label ?? t(`filter.${item.key}`) }}
       </DropdownMenuSubTrigger>
       <DropdownMenuPortal>
         <DropdownMenuSubContent>
@@ -46,7 +46,7 @@ const isSelected = computed(() => {
         class="font-normal flex items-start gap-2 w-full capitalize"
         @click.prevent="() => emit('update:selected', item.key)"
       >
-        <span class="flex-1">{{ t(`filter.${item.key}`) }}</span>
+        <span class="flex-1">{{ item.label ?? t(`filter.${item.key}`) }}</span>
         <div
           v-if="isSelected"
           :class="cn(' flex h-4 w-4 items-center justify-center')"

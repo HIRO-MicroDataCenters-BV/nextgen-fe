@@ -307,88 +307,106 @@ export function transformSearchResponseToTableData(
 }
 
 /**
- * Create filters object for API requests
+ * Filter conversion aligns with DCAT-AP 3.0 notation (dcat, dcterms, med, xsd).
+ * @see https://semiceu.github.io/DCAT-AP/releases/3.0.0/
+ */
+const LEGACY_DISTRIBUTION_KEYS = [
+  "distribution_csv", "distribution_dicom", "distribution_mmio", "distribution_nifti",
+  "distribution_xml", "distribution_vcf", "distribution_plink",
+  "distribution_jpg/png", "distribution_jpg_png",
+];
+
+/**
+ * Map API filter ID to backend property key per DCAT-AP 3.0 and domain context.
+ * - distribution.*, distribution_xxx → dcat:Distribution with dcterms:format (DCAT-AP 3.0)
+ * - identifiers.*, identifier → dcterms:identifier
+ * - sociodemographics.*, comorbidities.*, etc. → med:xxx in extraMetadata (domain extension)
+ */
+function mapApiFilterIdToBackendKey(apiId: string): { key: string; type: "distribution" | "identifier" | "extraMetadata" | "isShared" } {
+  if (apiId.startsWith("distribution.") || LEGACY_DISTRIBUTION_KEYS.includes(apiId)) {
+    return { key: apiId, type: "distribution" };
+  }
+  if (apiId === "identifier" || apiId.startsWith("identifiers.")) {
+    return { key: apiId, type: "identifier" };
+  }
+  if (apiId === "isShared") {
+    return { key: apiId, type: "isShared" };
+  }
+  return { key: apiId, type: "extraMetadata" };
+}
+
+/**
+ * Create filters object for API requests.
+ * Converts UI/API filter keys to DCAT-AP 3.0 compliant structure with proper notation.
  */
 export function createFiltersObject(
   filters: Record<string, unknown>
 ): Array<Record<string, unknown>> {
-  // If no filters provided, return empty array
   if (!filters || Object.keys(filters).length === 0) {
     return [];
   }
 
-  // Initialize the dcat:dataset object WITHOUT @type initially
   const dcatDataset: Record<string, unknown> = {};
-
-  // Separate filters by type
   const extraMetadataFields: Record<string, unknown> = {};
   let distributionFilter: Record<string, unknown> | null = null;
   let identifierFilter: string | null = null;
   let isSharedFilter: Record<string, unknown> | null = null;
 
+  const getFormatValue = (key: string): string => {
+    if (key.startsWith("distribution.")) {
+      return key.replace("distribution.", "").replace("_", "/").toLowerCase();
+    }
+    if (key === "distribution_jpg/png" || key === "distribution_jpg_png") return "jpg/png";
+    return key.replace("distribution_", "").replace("_", "/").toLowerCase();
+  };
+
   Object.keys(filters).forEach((key) => {
-    switch (key) {
-      case "distribution_csv":
-      case "distribution_dicom":
-      case "distribution_mmio":
+    const value = filters[key] === true || filters[key] === "true";
+    const { type } = mapApiFilterIdToBackendKey(key);
+
+    switch (type) {
+      case "distribution": {
+        const format = getFormatValue(key);
         distributionFilter = {
           "@type": "dcat:Distribution",
-          "dcat:format": key.replace("distribution_", "").toLowerCase(),
+          "dcat:format": format,
         };
         break;
-      case "isShared":
-        isSharedFilter = {
-          "@value": true,
-          "@type": "xsd:boolean",
-        };
-        break;
+      }
       case "identifier":
         identifierFilter = String(filters[key]);
         break;
-      default:
-        // All other keys are treated as extraMetadata fields
-        // Use boolean shorthand instead of RDF typed literals
-        extraMetadataFields[key] = filters[key] === true || filters[key] === "true";
+      case "isShared":
+        isSharedFilter = { "@value": true, "@type": "xsd:boolean" };
         break;
+      case "extraMetadata": {
+        const itemId = key.includes(".") ? key.split(".").slice(1).join(".") : key;
+        extraMetadataFields[`med:${itemId}`] = value;
+        break;
+      }
     }
   });
 
-  // Build extraMetadata object if we have any fields
   if (Object.keys(extraMetadataFields).length > 0) {
     dcatDataset["extraMetadata"] = {
       "@type": "med:Record",
       ...extraMetadataFields,
     };
   }
-
-  // Add distribution filter if present
   if (distributionFilter) {
     dcatDataset["dcat:distribution"] = distributionFilter;
   }
-
-  // Add identifier filter if present
   if (identifierFilter) {
     dcatDataset["dcterms:identifier"] = identifierFilter;
   }
-
-  // Add isShared filter if present
   if (isSharedFilter) {
     dcatDataset["isShared"] = isSharedFilter;
   }
-
-  // Only add @type if we have distribution or isShared filters
-  // When using only identifier or extraMetadata, @type should NOT be present
-  // This matches the working curl example from requestfix.md
   if (distributionFilter || isSharedFilter) {
     dcatDataset["@type"] = "dcat:Dataset";
   }
 
-  // Return array with single filter object
-  return [
-    {
-      "dcat:dataset": dcatDataset,
-    },
-  ];
+  return [{ "dcat:dataset": dcatDataset }];
 }
 
 /**

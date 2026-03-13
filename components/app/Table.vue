@@ -67,6 +67,7 @@ const { t } = useI18n();
 const { page } = useApp();
 const {
   filterGroups,
+  isLoading: _filtersLoading,
   getActiveFilters,
   resetFilters: _resetFilters,
 } = useFilters();
@@ -532,6 +533,16 @@ watch(
 );
 
 watch(
+  filterGroups,
+  (groups) => {
+    if (groups.length > 0 && Object.keys(selectedFilters.value).length > 0) {
+      syncFiltersToUI(selectedFilters.value);
+    }
+  },
+  { deep: true }
+);
+
+watch(
   () => pageSize,
   (newPageSize) => {
     table.setPageSize(newPageSize);
@@ -621,15 +632,25 @@ watch(
 const filterItems = computed<DropdownMenuItem[]>(() =>
   filterGroups.value.map((group) => ({
     key: group.key,
-    label: t(`filters.${group.key}`),
+    label: group.label,
     children: group.items.map((item) => ({
       key: item.key,
       type: item.type,
       value: item.key,
-      label: t(`filters.${item.key}`),
+      label: item.label,
     })),
   }))
 );
+
+const filterLabelByKey = computed(() => {
+  const map: Record<string, string> = {};
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      map[item.key] = item.label;
+    });
+  });
+  return map;
+});
 
 // Compute selected filter keys (UI state takes priority over URL state)
 const selectedFilterKeys = computed(() => {
@@ -815,7 +836,7 @@ defineExpose({ fetchData, getSelectedRaw });
           variant="secondary"
           class="rounded-sm px-2 text-sm capitalize h-6"
         >
-          {{ t(`filter.${key}`) }}
+          {{ filterLabelByKey[key] ?? key }}
           <Button
             variant="ghost"
             size="icon"

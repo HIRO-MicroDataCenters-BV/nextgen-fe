@@ -7,6 +7,7 @@ import type {
   CatalogResponse,
   ApiError,
   ApiErrorDetail,
+  ApiFilterGroup,
 } from "~/types/api.types";
 
 export const useApi = () => {
@@ -246,6 +247,17 @@ export const useApi = () => {
         "@type": "Filters",
         filters,
       };
+    },
+
+    getFilters: async () => {
+      const response = await request<{ groups: ApiFilterGroup[] }>(
+        "catalog",
+        "/catalog/filters/",
+        "GET",
+        undefined,
+        { showToast: false }
+      );
+      return response?.groups ?? [];
     },
 
     getLocalCatalog: async (
