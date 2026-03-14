@@ -76,6 +76,7 @@ const {
 const syncFiltersToUI = (
   filters: Record<string, boolean | string | number>
 ) => {
+  console.debug("[Table] syncFiltersToUI", { filters: { ...filters } });
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
       const filterValue = filters[item.key];
@@ -172,16 +173,13 @@ const handleFilterChange = (
   value: boolean | string | number,
   multiple: boolean
 ) => {
+  console.debug("[Table] handleFilterChange", { key, value, multiple });
   isUpdatingFromState.value = true;
-  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   if (!multiple) {
     selectedFilters.value = {};
-    // Reset all filter values in UI when switching to single selection mode
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key !== key) {
-          item.value = null;
-        }
+        if (item.key !== key) item.value = null;
       });
     });
   }
@@ -190,9 +188,7 @@ const handleFilterChange = (
     selectedFilters.value[key] = value;
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key === key) {
-          item.value = value;
-        }
+        if (item.key === key) item.value = value;
       });
     });
   } else {
@@ -200,23 +196,16 @@ const handleFilterChange = (
     selectedFilters.value = rest;
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key === key) {
-          item.value = null;
-        }
+        if (item.key === key) item.value = null;
       });
     });
   }
 
   filterGroups.value = [...filterGroups.value];
-
-  searchValue.value = "";
-  clientSearchTerm.value = ""; // Clear client search
-  applyClientSearch(); // Reset to show all filtered data
-  updateURLQuery(true);
-  fetchData().finally(() => {
-    clearTimeout(safetyTimeout);
-    isUpdatingFromState.value = false;
+  console.debug("[Table] handleFilterChange done", {
+    selectedFilters: { ...selectedFilters.value },
   });
+  nextTick(() => { isUpdatingFromState.value = false; });
 };
 
 const handleRemoveFilter = (key: string) => {
@@ -575,6 +564,12 @@ watch(
 watch(
   filterGroups,
   (groups) => {
+    console.debug("[Table] filterGroups watcher", {
+      isUpdatingFromState: isUpdatingFromState.value,
+      groupsLength: groups.length,
+      selectedFiltersKeys: Object.keys(selectedFilters.value),
+    });
+    if (isUpdatingFromState.value) return;
     if (groups.length > 0 && Object.keys(selectedFilters.value).length > 0) {
       syncFiltersToUI(selectedFilters.value);
     }
