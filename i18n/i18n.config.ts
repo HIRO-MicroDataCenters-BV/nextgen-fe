@@ -74,6 +74,17 @@ export default defineI18nConfig(() => {
             bannerGettingStarted: 'Getting started?',
             bannerGettingStartedDesc: 'Fill in Title and Description first — they’re required for DCAT-AP compliance.',
             bannerDismiss: 'Dismiss',
+            validation: {
+              url_http_only: '{field} must be an http(s) URL',
+              url_valid: '{field} must be a valid URL',
+              url_s3_invalid: '{field} must be a valid S3 URL (e.g. s3://bucket/path)',
+              url_file_invalid: '{field} must be a valid file URL (e.g. file://path/to/file)',
+              url_rest_requires_http: '{field} must be an http(s) URL for REST API client',
+              url_s3_requires_s3: '{field} must be an S3 URL (s3://bucket/path) for S3 client',
+              url_file_requires_file: '{field} must be a file URL (file://path) for Local File Server',
+              item_type_mismatch:
+                'Dataset Type (dcterms:type) must match Item Type: use dcmitype:Dataset for Dataset, dcmitype:Software for Application',
+            },
           },
         },
         app: {
@@ -423,6 +434,10 @@ export default defineI18nConfig(() => {
           try_changing_search_query_or_filters:
             "Try changing search query or filters, filters is required",
           open_menu: "Open menu",
+          related_data_product_required:
+            "Related Data Product is required to submit this request.",
+          related_data_product_no_options:
+            "No related data products available. Please create one before proceeding.",
         },
         common: {
           remove: "Remove",
@@ -437,6 +452,8 @@ export default defineI18nConfig(() => {
           required_max_length:
             "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
+          related_data_product_required:
+            "Related Data Product is required to submit this request.",
         },
         training: {
           success_title: "Continue with training",

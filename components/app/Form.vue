@@ -453,6 +453,14 @@ const isFieldVisible = (field: FormFieldDefinition): boolean => {
   });
 };
 
+const refreshFieldOptions = (fieldName: string) => {
+  const field = props.fields.find((f) => f.name === fieldName);
+  if (field?.dataSource && field?.type === "select") {
+    setFieldValue(fieldName, null);
+    loadFieldOptions(field);
+  }
+};
+
 defineExpose({
   submit: onSubmit,
   resetForm,
@@ -461,6 +469,7 @@ defineExpose({
   getUploadedFile: (fieldName: string) =>
     uploadedFiles.value[fieldName]?.filename,
   isEditMode,
+  refreshFieldOptions,
 });
 </script>
 
@@ -644,6 +653,7 @@ defineExpose({
                 :content-from-file="field.name === 'metadata_content' ? metadataFromFile : false"
                 :title="field.label"
                 :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
+                :item-type="field.name === 'metadata_content' ? values.item_type : undefined"
                 @update:model-value="componentField['onUpdate:modelValue']"
               />
             </FormControl>

@@ -133,18 +133,12 @@ export function transformDatasetToTableRow(
     | JsonLdDistribution[]
     | undefined
   );
-  // Extract dcterms:type to distinguish datasets vs applications
-  // Note: @type is always "dcat:Dataset" for both (per DF-207 fix)
-  // Applications have dcterms:type with @id = "http://purl.org/dc/dcmitype/Software"
-  // Datasets have dcterms:type with @id = "http://purl.org/dc/dcmitype/Dataset" or no dcterms:type (defaults to Dataset)
-  // dcterms:type can be object with @id, array of objects, or string @id
   let datasetType: string | undefined;
   if (dataset["dcterms:type"]) {
     const typeValue = dataset["dcterms:type"];
     if (typeof typeValue === "string") {
       datasetType = typeValue;
     } else if (Array.isArray(typeValue)) {
-      // If it's an array, get the first one
       const firstType = typeValue[0];
       if (firstType && typeof firstType === "object" && "@id" in firstType) {
         datasetType = firstType["@id"] as string;
@@ -153,13 +147,7 @@ export function transformDatasetToTableRow(
       datasetType = (typeValue as JsonLdObject)["@id"] as string;
     }
   }
-  // If dcterms:type is not present, datasetType remains undefined, which defaults to Dataset
 
-  // Extract identifier with fallback logic
-  // The identifier should match what the backend API expects for /datasets/{identifier}/
-  // Priority: dcterms:identifier > metadataFilename (full filename) > metadataFilename (without extension) > @id
-  // Note: When saving via saveDataset(), the backend uses the full filename in the URL: /datasets/{filename}/
-  // So we should prioritize metadataFilename to match what was used during save
   const identifier = getJsonLdValue(
     dataset["dcterms:identifier"] as JsonLdStringValue
   );
@@ -173,9 +161,6 @@ export function transformDatasetToTableRow(
     ? String(dataset["@id"]).split("/").pop() || String(dataset["@id"])
     : "";
 
-  // Use dcterms:identifier if available and non-empty, otherwise fallback to metadataFilename (full),
-  // then metadataFilename (without extension), then @id (last part of URL)
-  // This ensures we use the same identifier format that was used when saving
   const finalId =
     (identifier && identifier.trim() !== "" ? identifier : null) ||
     metadataFilename ||
@@ -439,32 +424,26 @@ export function createTableSearchFilter(params: {
 
   const filtersArray: Array<Record<string, unknown>> = [];
 
-  // If custom filters are provided, use minimal context matching CURL example
   const hasCustomFilters =
     params.filters && Array.isArray(params.filters) && params.filters.length > 0;
 
   if (hasCustomFilters) {
-    // Build minimal context based on what filters are actually used
-    // Start with base namespaces
     const minimalContext: Record<string, string> = {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
     };
 
-    // Check if any filter uses extraMetadata (needs 'med' namespace)
     const hasExtraMetadata = params.filters?.some((f: Record<string, unknown>) => {
       const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
       return dataset && "extraMetadata" in dataset;
     });
 
-    // Check if any filter uses dcterms properties (needs 'dcterms' namespace)
     const hasDcterms = params.filters?.some((f: Record<string, unknown>) => {
       const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
       if (!dataset) return false;
       return Object.keys(dataset).some(key => key.startsWith("dcterms:"));
     });
 
-    // Add namespaces based on filter content
     if (hasExtraMetadata) {
       minimalContext.med = "http://oca.example.org/123/";
     }
@@ -474,7 +453,6 @@ export function createTableSearchFilter(params: {
 
     filter["@context"] = minimalContext as typeof filter["@context"];
   } else {
-    // Add type filter (datasets vs applications) only when no custom filters
     if (params.type === "applications") {
       filtersArray.push({
         "dcat:dataset": {
@@ -498,7 +476,6 @@ export function createTableSearchFilter(params: {
     }
   }
 
-  // Add search filters - format according to API docs: dcat:dataset with nested filters
   if (params.all) {
     filtersArray.push({
       "dcat:dataset": {
@@ -541,21 +518,18 @@ export function createTableSearchFilter(params: {
     });
   }
 
-  // Add custom filters first (before other filters) if provided
   if (
     params.filters &&
     Array.isArray(params.filters) &&
     params.filters.length > 0
   ) {
     filtersArray.push(...params.filters);
-    // If custom filters are provided, skip other filters
     filter.filters = filtersArray;
     return filter;
   }
 
   filter.filters = filtersArray;
 
-  // TEMPORARY: Disable pagination
   const DISABLE_PAGINATION = true;
 
   if (!DISABLE_PAGINATION) {
@@ -877,7 +851,6 @@ function processJsonLdValue(
 export function convertJsonLdForTraining(input: unknown): {
   dataset: Array<Record<string, unknown>>;
 } {
-  // If input already looks normalized (ts-json.json shape), return as-is
   const asObj = (input || {}) as Record<string, unknown>;
   if (Array.isArray(asObj.dataset)) {
     return { dataset: asObj.dataset as Array<Record<string, unknown>> };
@@ -886,11 +859,9 @@ export function convertJsonLdForTraining(input: unknown): {
   const result: Array<Record<string, unknown>> = [];
 
   const datasets: unknown[] = (() => {
-    // tb-jsonld shape: top-level has "dcat:dataset": []
     if (Array.isArray((asObj as Record<string, unknown>)["dcat:dataset"])) {
       return (asObj as Record<string, unknown>)["dcat:dataset"] as unknown[];
     }
-    // Fallback: if it's a single dataset object
     if ((asObj as Record<string, unknown>)["@type"] === "dcat:Dataset") {
       return [asObj];
     }
@@ -937,7 +908,6 @@ export function convertJsonLdForTraining(input: unknown): {
           obj["skos:prefLabel"] as unknown as JsonLdLanguageValue
         );
       if ("prefLabel" in obj) return extractScalar(obj["prefLabel"]);
-      // Fallback: try common fields
       for (const key of ["value", "name", "title"]) {
         if (key in obj) {
           const s = extractScalar(obj[key]);
@@ -958,7 +928,6 @@ export function convertJsonLdForTraining(input: unknown): {
     const out: Record<string, boolean> = {};
     if (!extra || typeof extra !== "object") return out;
     const obj = extra as Record<string, unknown>;
-    // JSON-LD style: IRIs as keys → { "@type": ..., "@value": true }
     Object.entries(obj).forEach(([k, v]) => {
       if (k.startsWith("@")) return;
       const key = keyFromIri(k);
@@ -1131,26 +1100,22 @@ export function createDatasetJsonLd(
     "-"
   )}`;
 
-  // Parse metadata_content if provided
   let parsedMetadataContent: Record<string, unknown> | null = null;
   if (formData.metadata_content) {
     if (typeof formData.metadata_content === "object") {
-      // Already an object from JsonLdEditor
       parsedMetadataContent = formData.metadata_content as Record<string, unknown>;
     } else if (typeof formData.metadata_content === "string") {
-      // String - try to parse as JSON
       try {
         const parsed = JSON.parse(formData.metadata_content);
         if (parsed && typeof parsed === "object") {
           parsedMetadataContent = parsed;
         }
       } catch {
-        // Failed to parse metadata_content
+        void 0;
       }
     }
   }
 
-  // Start with metadata_content as base if available, otherwise create new structure
   const baseDataset: Record<string, unknown> = parsedMetadataContent
     ? { ...parsedMetadataContent }
     : {
@@ -1159,14 +1124,12 @@ export function createDatasetJsonLd(
       "@type": "dcat:Dataset",
     };
 
-  // Ensure context is set (use from metadata or default)
   if (!baseDataset["@context"]) {
     baseDataset["@context"] = context;
   } else if (parsedMetadataContent && parsedMetadataContent["@context"]) {
     baseDataset["@context"] = parsedMetadataContent["@context"];
   }
 
-  // Ensure @id is set
   if (!baseDataset["@id"]) {
     baseDataset["@id"] = datasetId;
   }
@@ -1216,7 +1179,6 @@ export function createDatasetJsonLd(
     };
   };
 
-  // Update or set title from form data (form data takes precedence)
   if (
     formData.name &&
     typeof formData.name === "string" &&
@@ -1227,13 +1189,11 @@ export function createDatasetJsonLd(
       "@value": formData.name.trim(),
     };
   } else if (!baseDataset["dcterms:title"]) {
-    // If no title in form and no title in metadata, use filename
     baseDataset["dcterms:title"] = {
       "@language": "en",
       "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
     };
   } else if (baseDataset["dcterms:title"]) {
-    // Normalize existing title from metadata
     const normalizedTitle = normalizeLanguageValue(
       baseDataset["dcterms:title"]
     );
@@ -1245,20 +1205,17 @@ export function createDatasetJsonLd(
     }
   }
 
-  // Update or set description (form data takes precedence, but if metadata_content is just a string, use it)
   if (
     formData.metadata_content &&
     typeof formData.metadata_content === "string" &&
     formData.metadata_content.trim() &&
     !parsedMetadataContent
   ) {
-    // If metadata_content is a plain string (not JSON), use it as description
     baseDataset["dcterms:description"] = {
       "@language": "en",
       "@value": formData.metadata_content.trim(),
     };
   } else if (baseDataset["dcterms:description"]) {
-    // Normalize existing description from metadata
     const normalizedDesc = normalizeLanguageValue(
       baseDataset["dcterms:description"]
     );
@@ -1287,19 +1244,14 @@ export function createDatasetJsonLd(
       }
     }
   } else {
-    // No description in metadata, set default
     baseDataset["dcterms:description"] = {
       "@language": "en",
       "@value": "No description provided",
     };
   }
 
-  // Update @type - always use "dcat:Dataset" for both datasets and applications
-  // Applications are distinguished by dcterms:type instead
-  // Backend expects all items to have @type: "dcat:Dataset" (not an array)
   baseDataset["@type"] = "dcat:Dataset";
 
-  // Set dcterms:type for applications (form data takes precedence over metadata_content)
   if (formData.item_type && formData.item_type === "application") {
     baseDataset["dcterms:type"] = {
       "@id": "http://purl.org/dc/dcmitype/Software",
@@ -1310,13 +1262,8 @@ export function createDatasetJsonLd(
       },
     };
   }
-  // For datasets, dcterms:type is optional (defaults to Dataset)
-  // If it exists in metadata_content and item_type is dataset, keep it as is (don't overwrite)
 
-  // Determine if this is a dataset type
   const isDataset = formData.item_type === "dataset";
-
-  // Process related_data_product for dataset type
   let relatedDataProductPath: string | null = null;
   if (
     isDataset &&
@@ -1345,7 +1292,6 @@ export function createDatasetJsonLd(
     };
   }
 
-  // Set metadataFilename if file is uploaded
   if (filename) {
     baseDataset["dspace:metadataFilename"] = {
       "@type": "xsd:string",
@@ -1353,8 +1299,6 @@ export function createDatasetJsonLd(
     };
   }
 
-  // Preserve existing dcterms:identifier from metadata_content
-  // Only set identifier if it doesn't exist in metadata
   if (!baseDataset["dcterms:identifier"]) {
     if (filename) {
       baseDataset["dcterms:identifier"] = {
@@ -1369,16 +1313,6 @@ export function createDatasetJsonLd(
     }
   }
 
-  // Handle dcat:distribution:
-  // - If it exists in metadata_content, keep it as is
-  // - Do NOT auto-generate from the MMIO filename — the MMIO file is metadata packaging,
-  //   not a data file. The dcat:accessURL must point to a real file in the Data Product
-  //   (as registered in the connector). The user must specify it via the JSON-LD editor.
-
-
-  // Normalize spdx:algorithm for DCAT-AP SHACL:
-  // 1. Fix wrong URIs (SHA256 -> checksumAlgorithm_sha256)
-  // 2. Always add @type: "spdx:ChecksumAlgorithm" — validator requires explicit type
   const SPDX_ALGORITHM_FIXES: Record<string, string> = {
     "http://spdx.org/rdf/terms#SHA256": "http://spdx.org/rdf/terms#checksumAlgorithm_sha256",
     "http://spdx.org/rdf/terms#SHA512": "http://spdx.org/rdf/terms#checksumAlgorithm_sha512",
@@ -1408,5 +1342,9 @@ export function createDatasetJsonLd(
     });
   }
 
-  return JSON.stringify(baseDataset, null, 2);
+  const { "dspace:extraMetadata": _, ...payloadWithoutExtra } =
+    baseDataset as Record<string, unknown> & { "dspace:extraMetadata"?: unknown };
+  const finalPayload = payloadWithoutExtra as Record<string, unknown>;
+
+  return JSON.stringify(finalPayload, null, 2);
 }

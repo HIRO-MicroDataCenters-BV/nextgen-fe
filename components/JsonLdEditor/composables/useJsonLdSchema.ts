@@ -723,7 +723,7 @@ export function useJsonLdSchema() {
             icon: 'lucide:link',
             format: 'url',
             description: 'The URL that gives access to this distribution',
-            placeholder: 'https://example.com/data or file://path/to/file',
+            placeholder: 'https://example.com/data, file://path/to/file, or s3://bucket/path',
         },
         'dcat:downloadURL': {
             key: 'dcat:downloadURL',

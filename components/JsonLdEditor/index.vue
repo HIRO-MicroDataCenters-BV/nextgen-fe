@@ -212,6 +212,8 @@ interface Props {
    *  The user can still ADD new fields via the Add Field button.
    *  Used when content was loaded from an uploaded MMIO/metadata file. */
   contentFromFile?: boolean;
+  /** Item type from form (dataset | application). When set, validates dcterms:type matches. */
+  itemType?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -220,6 +222,7 @@ const props = withDefaults(defineProps<Props>(), {
   title: 'Metadata Editor',
   extraMetadata: null,
   contentFromFile: false,
+  itemType: undefined,
 });
 
 const { t } = useI18n();
@@ -491,7 +494,7 @@ watch(() => props.extraMetadata, (newExtra) => {
 
 
 const validationResult = computed(() => {
-  return validateTree(treeData.value);
+  return validateTree(treeData.value, props.itemType);
 });
 
 const toggleMode = (checked: boolean) => {

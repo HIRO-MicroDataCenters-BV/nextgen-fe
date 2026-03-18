@@ -7,7 +7,6 @@
   >
     <div class="px-14 py-6">
       <AppForm
-        :key="String(selectedClient)"
         ref="formRef"
         :title="t('title.create_catalog_item')"
         :description="t('subtitle.create_catalog_item_desc')"
@@ -23,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
@@ -40,17 +39,34 @@ const getDataproductsForClient = () => {
   return getDataproducts(selectedClient.value ?? "local");
 };
 
-const formSchema = z.object({
-  name: z.string().optional(),
-  item_type: z.string().min(1),
-  related_data_product: z.string().optional(),
-  file: z
-    .any()
-    .refine((val) => val !== null && val !== undefined && val !== ""),
-  metadata_content: z.union([z.record(z.unknown()), z.string()]).optional(),
-});
+const formSchema = computed(() =>
+  z
+    .object({
+      name: z.string().optional(),
+      item_type: z.string().min(1),
+      related_data_product: z.string().optional().nullable(),
+      file: z
+        .any()
+        .refine((val) => val !== null && val !== undefined && val !== ""),
+      metadata_content: z.union([z.record(z.unknown()), z.string()]).optional(),
+    })
+    .refine(
+      (data) =>
+        data.item_type !== "dataset" ||
+        (data.related_data_product &&
+          String(data.related_data_product).trim()),
+      {
+        message: t("validation.related_data_product_required"),
+        path: ["related_data_product"],
+      }
+    )
+);
 
 const formRef = ref();
+
+watch(selectedClient, () => {
+  formRef.value?.refreshFieldOptions?.("related_data_product");
+});
 
 const initialValues = {
   name: "",
@@ -99,7 +115,7 @@ const fields = computed<FormFieldDefinition[]>(() => [
     fieldOptions: {
       dataPath: "dataproducts",
     },
-    hint: null,
+    hint: t("hint.related_data_product_required"),
     disabled: false,
     conditions: [
       {

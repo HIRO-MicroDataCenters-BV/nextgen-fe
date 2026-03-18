@@ -1,6 +1,7 @@
 import type { JsonLdNode, ValidationResult, ValidationError } from '../types/editor.types';
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
+import { CLIENT_URL_CONFIG } from '@/constants';
 
 type FieldKey = keyof typeof jsonldFieldsEn;
 const fieldLabel = (key: string) =>
@@ -8,6 +9,8 @@ const fieldLabel = (key: string) =>
     || key.split(':').pop()?.replace(/([A-Z])/g, ' $1') || key;
 
 export function useJsonLdValidation() {
+    const { t } = useI18n();
+    const { selectedClient } = useClientSelector();
     const { getRequiredFields, getFieldDefinition: _getFieldDefinition } = useJsonLdSchema();
 
     /** Returns true when a node has no meaningful value (handles language-string objects). */
@@ -102,13 +105,88 @@ export function useJsonLdValidation() {
 
         // ── URL (format: 'url') ──────────────────────────────────
         if (node.metadata.format === 'url' && node.value) {
-            try {
-                const u = new URL(String(node.value));
-                if (!['http:', 'https:', 'file:'].includes(u.protocol)) {
-                    errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be an http(s) URL`, severity: 'warning' });
+            const val = String(node.value).trim();
+            const isAccessOrDownloadUrl = node.key === 'dcat:accessURL' || node.key === 'dcat:downloadURL';
+            const client = selectedClient.value;
+            const config = client ? CLIENT_URL_CONFIG[client] : null;
+
+            if (isAccessOrDownloadUrl && config) {
+                const hasExpectedPrefix = config.protocolPrefix ? val.startsWith(config.protocolPrefix) : false;
+                const hasWrongProtocol = Object.values(CLIENT_URL_CONFIG).some(
+                    (c) => c !== config && c.protocolPrefix && val.startsWith(c.protocolPrefix)
+                ) || (val.startsWith('http') && !config.allowedProtocols.includes('http:') && !config.allowedProtocols.includes('https:'));
+
+                if (hasExpectedPrefix && config.urlPattern) {
+                    if (!config.urlPattern.test(val)) {
+                        errors.push({
+                            path: currentPath,
+                            message: t(`jsonld.editor.validation.${config.invalidFormatKey}`, { field: fieldLabel(node.key) }),
+                            severity: 'error',
+                        });
+                    }
+                } else if (config.allowedProtocols.length > 0 && !config.urlPattern) {
+                    try {
+                        const u = new URL(val);
+                        if (!config.allowedProtocols.includes(u.protocol)) {
+                            errors.push({
+                                path: currentPath,
+                                message: t(`jsonld.editor.validation.${config.invalidFormatKey}`, { field: fieldLabel(node.key) }),
+                                severity: 'error',
+                            });
+                        }
+                    } catch {
+                        errors.push({
+                            path: currentPath,
+                            message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
+                            severity: 'error',
+                        });
+                    }
+                } else if (hasWrongProtocol) {
+                    errors.push({
+                        path: currentPath,
+                        message: t(`jsonld.editor.validation.${config.wrongProtocolKey}`, { field: fieldLabel(node.key) }),
+                        severity: 'warning',
+                    });
+                } else {
+                    try {
+                        const u = new URL(val);
+                        const genericProtocols = ['http:', 'https:', 'file:', 's3:'];
+                        if (!genericProtocols.includes(u.protocol)) {
+                            errors.push({
+                                path: currentPath,
+                                message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
+                                severity: 'error',
+                            });
+                        }
+                    } catch {
+                        errors.push({
+                            path: currentPath,
+                            message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
+                            severity: 'error',
+                        });
+                    }
                 }
-            } catch {
-                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid URL`, severity: 'error' });
+            } else {
+                try {
+                    const u = new URL(val);
+                    const allowedProtocols = ['http:', 'https:', 'file:'];
+                    if (isAccessOrDownloadUrl && config?.allowedProtocols.includes('s3:')) {
+                        allowedProtocols.push('s3:');
+                    }
+                    if (!allowedProtocols.includes(u.protocol)) {
+                        errors.push({
+                            path: currentPath,
+                            message: t('jsonld.editor.validation.url_http_only', { field: fieldLabel(node.key) }),
+                            severity: 'warning',
+                        });
+                    }
+                } catch {
+                    errors.push({
+                        path: currentPath,
+                        message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
+                        severity: 'error',
+                    });
+                }
             }
         }
 
@@ -158,15 +236,19 @@ export function useJsonLdValidation() {
     };
 
 
-    const validateTree = (tree: JsonLdNode[]): ValidationResult => {
+    const extractDctermsTypeId = (nodes: JsonLdNode[]): string | null => {
+        const typeNode = nodes.find(n => n.key === 'dcterms:type');
+        if (!typeNode?.children) return null;
+        const idNode = typeNode.children.find(n => n.key === '@id');
+        if (!idNode?.value) return null;
+        return String(idNode.value).trim();
+    };
+
+    const validateTree = (tree: JsonLdNode[], itemType?: string): ValidationResult => {
         const errors: ValidationError[] = [];
 
-        // Skip validation if tree is empty (no data loaded yet)
         if (!tree || tree.length === 0) {
-            return {
-                valid: true,
-                errors: [],
-            };
+            return { valid: true, errors: [] };
         }
 
         for (const node of tree) {
@@ -174,22 +256,41 @@ export function useJsonLdValidation() {
         }
 
         const requiredDatasetFields = getRequiredFields('dataset');
-
-        // Only check for missing required fields if we have some data
-        // (at least one non-empty node)
-        const hasData = tree.some(node =>
-            !isEffectivelyEmpty(node)
-        );
+        const hasData = tree.some(node => !isEffectivelyEmpty(node));
 
         if (hasData) {
             const presentKeys = new Set(tree.map(n => n.key));
             for (const requiredField of requiredDatasetFields) {
-                // Only fire here if the field is completely absent from the tree.
-                // If it IS present (even empty), validateNode above already generated the error.
                 if (!presentKeys.has(requiredField)) {
                     errors.push({
                         path: requiredField,
                         message: `${fieldLabel(requiredField)} is required`,
+                        severity: 'error',
+                    });
+                }
+            }
+        }
+
+        if (itemType && hasData) {
+            const dctermsTypeId = extractDctermsTypeId(tree);
+            const datasetUri = 'http://purl.org/dc/dcmitype/Dataset';
+            const softwareUri = 'http://purl.org/dc/dcmitype/Software';
+
+            if (dctermsTypeId) {
+                const expectDataset = itemType === 'dataset';
+                const isDataset = dctermsTypeId === datasetUri || dctermsTypeId.endsWith('#Dataset') || dctermsTypeId.endsWith('/Dataset');
+                const isSoftware = dctermsTypeId === softwareUri || dctermsTypeId.endsWith('#Software') || dctermsTypeId.endsWith('/Software');
+
+                if (expectDataset && isSoftware) {
+                    errors.push({
+                        path: 'dcterms:type',
+                        message: t('jsonld.editor.validation.item_type_mismatch'),
+                        severity: 'error',
+                    });
+                } else if (!expectDataset && isDataset) {
+                    errors.push({
+                        path: 'dcterms:type',
+                        message: t('jsonld.editor.validation.item_type_mismatch'),
                         severity: 'error',
                     });
                 }
