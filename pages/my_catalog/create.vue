@@ -8,6 +8,7 @@
     <div class="px-14 py-6">
       <AppForm
         ref="formRef"
+        sync-name-from-metadata
         :title="t('title.create_catalog_item')"
         :description="t('subtitle.create_catalog_item_desc')"
         :fields="fields"
@@ -82,7 +83,7 @@ const fields = computed<FormFieldDefinition[]>(() => [
     label: t("label.name"),
     type: "text",
     placeholder: t("placeholder.data_product_name"),
-    disabled: false,
+    disabled: true,
   },
   {
     name: "item_type",

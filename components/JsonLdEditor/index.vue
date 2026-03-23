@@ -366,30 +366,34 @@ const markFileNodesRecursive = (nodes: JsonLdNode[]): void => {
   }
 };
 
+/**
+ * After parseJsonLd: if the payload has no visible fields (e.g. only @context because
+ * serializeTreeToJsonLd omits empty values), restore the DCAT default form — same as
+ * initial load. Used from parseInitialData and when switching code → visual.
+ */
+const applyParsedTree = (
+  tree: JsonLdNode[],
+  context: Record<string, string> | undefined,
+) => {
+  if (isEmptyDataset(tree)) {
+    const hiddenNodes = tree.filter(n => n.metadata.hidden || n.metadata.readonly);
+    const defaultTree = buildDefaultDatasetTree();
+    treeData.value = [...defaultTree, ...hiddenNodes];
+  } else {
+    if (props.contentFromFile) {
+      markFileNodesRecursive(tree);
+    }
+    treeData.value = tree;
+  }
+  preservedContext.value = context
+    ? { ...DCAT_AP_CONTEXT, ...context }
+    : { ...DCAT_AP_CONTEXT };
+};
+
 const parseInitialData = () => {
   try {
     const { tree, context } = parseJsonLd(props.modelValue);
-
-    if (isEmptyDataset(tree)) {
-      // Dataset has no visible editable fields yet — use DCAT-AP 3 defaults.
-      // BUT preserve any hidden/system nodes that may have come from external
-      // updates (e.g. dspace:extraMetadata injected after MMIO upload).
-      const hiddenNodes = tree.filter(n => n.metadata.hidden || n.metadata.readonly);
-      const defaultTree = buildDefaultDatasetTree();
-      treeData.value = [...defaultTree, ...hiddenNodes];
-    } else {
-      if (props.contentFromFile) {
-        // Mark all nodes from the file as readonly AFTER emptiness check — user can only ADD new fields
-        markFileNodesRecursive(tree);
-      }
-      treeData.value = tree;
-    }
-
-    // Always ensure the standard DCAT-AP context is set.
-    // If an existing object already has a context, merge with defaults so no namespace is lost.
-    preservedContext.value = context
-      ? { ...DCAT_AP_CONTEXT, ...context }
-      : { ...DCAT_AP_CONTEXT };
+    applyParsedTree(tree, context);
 
     if (typeof props.modelValue === 'string') {
       codeData.value = props.modelValue;
@@ -509,8 +513,7 @@ const toggleMode = (checked: boolean) => {
   } else if (newMode === 'visual' && currentMode.value === 'code') {
     try {
       const { tree, context } = parseJsonLd(codeData.value);
-      treeData.value = tree;
-      preservedContext.value = context;
+      applyParsedTree(tree, context);
     } catch (error) {
       console.error('Failed to parse code:', error);
     }

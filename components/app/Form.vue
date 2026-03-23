@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import type { z } from "zod";
@@ -49,6 +50,7 @@ import ServerErrorsBlock from "@/components/app/ServerErrorsBlock.vue";
 import MmioUploadZone from "@/components/app/MmioUploadZone.vue";
 import { useApi } from "@/composables/useApi";
 import { useMmioProcessor } from "@/composables/useMmioProcessor";
+import { extractDctermsTitlePlainText } from "~/utils/jsonld";
 
 export interface FormFieldOption {
   value: string;
@@ -87,9 +89,13 @@ export interface AppFormProps {
   disabled?: boolean;
   id?: string | null;
   serverErrors?: Array<{ code?: string; message?: string; details?: unknown[] }> | null;
+  /** Create flow: keep `name` in sync with `dcterms:title` in metadata (name field should be disabled). */
+  syncNameFromMetadata?: boolean;
 }
 
-const props = defineProps<AppFormProps>();
+const props = withDefaults(defineProps<AppFormProps>(), {
+  syncNameFromMetadata: false,
+});
 const emit = defineEmits<{
   (e: "submit", values: Record<string, unknown>): void;
   (e: "cancel" | "clear-server-errors"): void;
@@ -122,6 +128,15 @@ const { handleSubmit, values, meta, resetForm, setFieldValue, validateField } = 
   validationSchema: typedSchema,
   initialValues: props.initialValues || {},
 });
+
+watch(
+  () => values.metadata_content,
+  (meta) => {
+    if (!props.syncNameFromMetadata || isEditMode.value) return;
+    setFieldValue("name", extractDctermsTitlePlainText(meta));
+  },
+  { deep: true, immediate: true },
+);
 
 const fieldOptions = ref<Record<string, FormFieldOption[]>>({});
 const loadingOptions = ref<Record<string, boolean>>({});
@@ -189,6 +204,27 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
         label: String(item),
       };
     });
+
+    // Edit mode: Radix Select shows nothing if the form value is not in `SelectItem` list.
+    // Dataproducts are fetched per client interface — wrong interface or slow initClient
+    // can omit the value that still exists in metadata (dcat:inSeries title).
+    const rawCurrent = (values as Record<string, unknown>)[field.name];
+    const currentStr =
+      typeof rawCurrent === "string" ? rawCurrent.trim() : "";
+    const rawInitial = props.initialValues?.[field.name];
+    const initialStr =
+      typeof rawInitial === "string" ? rawInitial.trim() : "";
+    const valToEnsure = currentStr || initialStr;
+    if (
+      isEditMode.value &&
+      valToEnsure &&
+      !fieldOptions.value[field.name].some((o) => o.value === valToEnsure)
+    ) {
+      fieldOptions.value[field.name] = [
+        { value: valToEnsure, label: valToEnsure },
+        ...fieldOptions.value[field.name],
+      ];
+    }
   } catch {
     // Error loading options
   } finally {
@@ -453,10 +489,15 @@ const isFieldVisible = (field: FormFieldDefinition): boolean => {
   });
 };
 
-const refreshFieldOptions = (fieldName: string) => {
+const refreshFieldOptions = (
+  fieldName: string,
+  opts?: { preserveValue?: boolean },
+) => {
   const field = props.fields.find((f) => f.name === fieldName);
   if (field?.dataSource && field?.type === "select") {
-    setFieldValue(fieldName, null);
+    if (!opts?.preserveValue) {
+      setFieldValue(fieldName, null);
+    }
     loadFieldOptions(field);
   }
 };

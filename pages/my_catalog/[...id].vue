@@ -16,7 +16,7 @@
     <div v-else class="px-14 py-6">
       <AppForm
         :id="datasetId"
-        :key="String(selectedClient)"
+        :key="datasetId"
         ref="formRef"
         :title="t('title.edit_catalog_item')"
         :description="t('subtitle.edit_catalog_item_desc')"
@@ -45,8 +45,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
-const { saveDataset, getDataset, getDataproducts } = useApi();
-const { selectedClient } = useClientSelector();
+const { saveDataset, getDataset } = useApi();
 const serverErrors = ref<Array<{ code?: string; message?: string; details?: unknown[] }> | null>(null);
 const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
@@ -88,26 +87,17 @@ const fields = computed<FormFieldDefinition[]>(() => [
     disabled: true,
   },
   {
-    name: "client_selector",
-    label: "",
-    type: "client-selector",
-    conditions: [
-      {
-        field: "item_type",
-        value: "dataset",
-      },
-    ],
-  },
-  {
     name: "related_data_product",
     label: t("label.related_data_product"),
     type: "select",
     placeholder: t("placeholder.select_data_product"),
-    dataSource: () => getDataproducts(selectedClient.value ?? "local"),
+    // No connector list on edit — value comes from metadata; Form adds a synthetic option.
+    dataSource: async () => ({ dataproducts: [] as string[] }),
     fieldOptions: {
       dataPath: "dataproducts",
     },
     hint: null,
+    disabled: true,
     conditions: [
       {
         field: "item_type",
@@ -139,6 +129,40 @@ const formReady = computed(
 const goBackToCatalog = () => {
   router.push("/my_catalog");
 };
+
+/** Resolve related data product directory from dcat:inSeries (title or file:// @id). */
+function relatedProductFromInSeries(inSeries: unknown): string | null {
+  if (!inSeries || typeof inSeries !== "object") return null;
+  const o = inSeries as Record<string, unknown>;
+
+  const literalTitle = (title: unknown): string | null => {
+    if (typeof title === "string" && title.trim()) return title.trim();
+    if (Array.isArray(title)) {
+      for (const item of title) {
+        const s = literalTitle(item);
+        if (s) return s;
+      }
+      return null;
+    }
+    if (title && typeof title === "object" && "@value" in title) {
+      const v = (title as { "@value": unknown })["@value"];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (v != null && String(v).trim()) return String(v).trim();
+    }
+    return null;
+  };
+
+  const fromTitle = literalTitle(o["dcterms:title"]);
+  if (fromTitle) return fromTitle;
+
+  const id = o["@id"];
+  if (typeof id === "string" && id.startsWith("file://")) {
+    const path = id.replace(/^file:\/\//, "").replace(/^\/*/, "");
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length) return parts[parts.length - 1] ?? null;
+  }
+  return null;
+}
 
 onMounted(async () => {
   if (!datasetId.value) {
@@ -208,23 +232,15 @@ onMounted(async () => {
     }
 
     // Extract related_data_product from dcat:inSeries or dcat:distribution
-    // Priority: dcat:inSeries > dcat:distribution[0].dcat:accessURL
+    // Priority: dcat:inSeries (title or file:// @id) > dcat:distribution[0].dcat:accessURL
     let relatedDataProductValue: string | null = null;
     const inSeries = dataset["dcat:inSeries"];
 
     if (inSeries && typeof inSeries === "object" && inSeries !== null) {
-      const inSeriesObj = inSeries as Record<string, unknown>;
-      const dctermsTitle = inSeriesObj["dcterms:title"] as
-        | { "@value": string }
-        | undefined;
-      if (
-        dctermsTitle &&
-        typeof dctermsTitle === "object" &&
-        "@value" in dctermsTitle
-      ) {
-        relatedDataProductValue = dctermsTitle["@value"];
-      }
-    } else {
+      relatedDataProductValue = relatedProductFromInSeries(inSeries);
+    }
+
+    if (!relatedDataProductValue) {
       // Fallback: extract from dcat:distribution[0].dcat:accessURL
       // Format: file://disease_xyz/filename.ext -> extract "disease_xyz"
       const distributions = dataset["dcat:distribution"];

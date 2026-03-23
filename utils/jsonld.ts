@@ -64,6 +64,72 @@ function getLanguageValue(
   return value["@value"] || "";
 }
 
+function extractTitleNodePlain(
+  node: unknown,
+  preferredLanguage: string
+): string {
+  if (typeof node === "string") return node.trim();
+  if (!node) return "";
+  if (Array.isArray(node)) {
+    const preferred = node.find(
+      (x) =>
+        x &&
+        typeof x === "object" &&
+        (x as Record<string, unknown>)["@language"] === preferredLanguage
+    );
+    if (
+      preferred &&
+      typeof preferred === "object" &&
+      "@value" in preferred
+    ) {
+      const v = (preferred as { "@value": unknown })["@value"];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (v != null && String(v).trim()) return String(v).trim();
+    }
+    for (const item of node) {
+      const s = extractTitleNodePlain(item, preferredLanguage);
+      if (s) return s;
+    }
+    return "";
+  }
+  if (typeof node === "object" && node !== null && "@value" in node) {
+    const v = (node as { "@value": unknown })["@value"];
+    if (typeof v === "string") return v.trim();
+    if (v != null) return String(v).trim();
+  }
+  return "";
+}
+
+/**
+ * Human-readable string from dataset metadata `dcterms:title` (for UI display / name field).
+ * Accepts a metadata object or a JSON string of it.
+ */
+export function extractDctermsTitlePlainText(
+  metadata: unknown,
+  preferredLanguage: string = "en"
+): string {
+  let obj: Record<string, unknown> | null = null;
+  if (!metadata) return "";
+  if (typeof metadata === "string") {
+    try {
+      const p = JSON.parse(metadata) as unknown;
+      if (p && typeof p === "object" && !Array.isArray(p)) {
+        obj = p as Record<string, unknown>;
+      }
+    } catch {
+      return "";
+    }
+  } else if (
+    typeof metadata === "object" &&
+    metadata !== null &&
+    !Array.isArray(metadata)
+  ) {
+    obj = metadata as Record<string, unknown>;
+  }
+  if (!obj) return "";
+  return extractTitleNodePlain(obj["dcterms:title"], preferredLanguage);
+}
+
 /**
  * Transform JSON-LD dataset to table row format
  */
