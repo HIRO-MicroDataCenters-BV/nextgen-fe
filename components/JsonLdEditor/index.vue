@@ -194,6 +194,7 @@ import { useJsonLdTransform } from './composables/useJsonLdTransform';
 import { useJsonLdValidation } from './composables/useJsonLdValidation';
 import { useJsonLdSchema } from './composables/useJsonLdSchema';
 import { useDefaultDataset } from './composables/useDefaultDataset';
+import { DCAT_AP_CONTEXT } from './dcatApContext';
 import VisualEditor from './VisualEditor.vue';
 import CodeEditor from './CodeEditor.vue';
 import AddFieldDialog from './components/AddFieldDialog.vue';
@@ -246,7 +247,7 @@ onUnmounted(() => { if (saveTimer) clearTimeout(saveTimer); });
 
 const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } = useJsonLdTransform();
 const { validateTree } = useJsonLdValidation();
-const { buildDefaultDatasetTree, isEmptyDataset } = useDefaultDataset();
+const { buildDefaultDatasetTree, isEmptyDataset, mergeDatasetTreeWithDefaults } = useDefaultDataset();
 const { distributionSchema } = useJsonLdSchema();
 
 const currentMode = ref<EditorMode>(props.initialMode);
@@ -336,19 +337,6 @@ const progressColorClass = computed(() => {
   return 'progress--red';
 });
 
-// Standard DCAT-AP 3 namespace context — always present in new and existing datasets
-const DCAT_AP_CONTEXT: Record<string, string> = {
-  dspace:  'http://data-space.org/',
-  xsd:     'http://www.w3.org/2001/XMLSchema#',
-  dcat:    'http://www.w3.org/ns/dcat#',
-  dcatap:  'http://data.europa.eu/r5r/',
-  dcterms: 'http://purl.org/dc/terms/',
-  spdx:    'http://spdx.org/rdf/terms#',
-  foaf:    'http://xmlns.com/foaf/0.1/',
-  skos:    'http://www.w3.org/2004/02/skos/core#',
-  vcard:   'http://www.w3.org/2006/vcard/ns#',
-};
-
 const nodeHasValue = (n: JsonLdNode): boolean => {
   if (n.value !== undefined && n.value !== null && n.value !== '') return true;
   if (n.children?.length) return n.children.some(nodeHasValue);
@@ -380,10 +368,14 @@ const applyParsedTree = (
     const defaultTree = buildDefaultDatasetTree();
     treeData.value = [...defaultTree, ...hiddenNodes];
   } else {
-    if (props.contentFromFile) {
-      markFileNodesRecursive(tree);
+    let next = tree;
+    if (!props.contentFromFile) {
+      next = mergeDatasetTreeWithDefaults(tree);
     }
-    treeData.value = tree;
+    if (props.contentFromFile) {
+      markFileNodesRecursive(next);
+    }
+    treeData.value = next;
   }
   preservedContext.value = context
     ? { ...DCAT_AP_CONTEXT, ...context }

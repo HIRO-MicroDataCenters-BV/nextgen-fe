@@ -2,6 +2,8 @@ import type { JsonLdNode, JsonLdNodeType, FieldDefinition } from '../types/edito
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { useIdGenerator } from '@/composables/useIdGenerator';
 
+export type SerializeTreeOptions = { omitEmpty?: boolean };
+
 export function useJsonLdTransform() {
     const { getFieldDefinition, distributionSchema } = useJsonLdSchema();
     const { generateDatasetId, generateDistributionId } = useIdGenerator();
@@ -224,8 +226,10 @@ export function useJsonLdTransform() {
     const serializeTreeToJsonLd = (
         nodes: JsonLdNode[],
         context?: Record<string, string>,
-        parentContext?: 'dataset' | 'distribution'
+        parentContext?: 'dataset' | 'distribution',
+        options?: SerializeTreeOptions,
     ): Record<string, unknown> => {
+        const omitEmpty = options?.omitEmpty !== false;
         const result: Record<string, unknown> = {};
 
         if (context) {
@@ -261,29 +265,32 @@ export function useJsonLdTransform() {
             }
 
             if (type === 'object' && children) {
-                // Skip objects where there are no domain-specific values
-                const serialized = serializeTreeToJsonLd(children, undefined, parentContext);
-                const META_ONLY_KEYS = new Set(['@type', '@context', '@id']);
-                const meaningfulKeys = Object.keys(serialized).filter(k => {
-                    if (META_ONLY_KEYS.has(k)) return false; // @type alone is not meaningful
-                    const v = serialized[k];
-                    if (v === '' || v === null || v === undefined) return false;
-                    if (typeof v === 'object' && !Array.isArray(v)) {
-                        const obj = v as Record<string, unknown>;
-                        if ('@id' in obj && (obj['@id'] === '' || obj['@id'] === null)) return false;
-                        if ('@value' in obj && (obj['@value'] === '' || obj['@value'] === null)) return false;
-                    }
-                    return true;
-                });
-                if (meaningfulKeys.length > 0) {
+                const serialized = serializeTreeToJsonLd(children, undefined, parentContext, options);
+                if (!omitEmpty) {
                     result[key] = serialized;
+                } else {
+                    const META_ONLY_KEYS = new Set(['@type', '@context', '@id']);
+                    const meaningfulKeys = Object.keys(serialized).filter(k => {
+                        if (META_ONLY_KEYS.has(k)) return false;
+                        const v = serialized[k];
+                        if (v === '' || v === null || v === undefined) return false;
+                        if (typeof v === 'object' && !Array.isArray(v)) {
+                            const obj = v as Record<string, unknown>;
+                            if ('@id' in obj && (obj['@id'] === '' || obj['@id'] === null)) return false;
+                            if ('@value' in obj && (obj['@value'] === '' || obj['@value'] === null)) return false;
+                        }
+                        return true;
+                    });
+                    if (meaningfulKeys.length > 0) {
+                        result[key] = serialized;
+                    }
                 }
             } else if (type === 'array' && children) {
                 if (key === 'dcat:distribution') {
                     // Distribution: serialize each child's children, auto-generate @id
                     result[key] = children.map((child, index) => {
                         const serialized = child.children
-                            ? serializeTreeToJsonLd(child.children, undefined, 'distribution')
+                            ? serializeTreeToJsonLd(child.children, undefined, 'distribution', options)
                             : {};
                         if (!serialized['@id']) {
                             const datasetId = result['@id'] as string || generateDatasetId();
@@ -292,40 +299,54 @@ export function useJsonLdTransform() {
                         return serialized;
                     });
                 } else {
-                    // Generic DCAT-AP 3 array — serialize items and filter out empty ones
                     const META_KEYS = new Set(['@type', '@context', '@id']);
-                    const items = children
-                        .map(child =>
-                            child.children
-                                ? serializeTreeToJsonLd(child.children, undefined, parentContext)
-                                : (child.value !== '' && child.value != null
-                                    ? (child.metadata.xsdType
-                                        ? { '@type': child.metadata.xsdType, '@value': child.value }
-                                        : child.value)
-                                    : null)
-                        )
-                        .filter(item => {
+                    const items = children.map(child => {
+                        if (child.children) {
+                            return serializeTreeToJsonLd(child.children, undefined, parentContext, options);
+                        }
+                        if (child.value !== '' && child.value != null) {
+                            return child.metadata.xsdType
+                                ? { '@type': child.metadata.xsdType, '@value': child.value }
+                                : child.value;
+                        }
+                        if (!omitEmpty) {
+                            return child.metadata.xsdType
+                                ? { '@type': child.metadata.xsdType, '@value': '' }
+                                : '';
+                        }
+                        return null;
+                    });
+                    const filtered = omitEmpty
+                        ? items.filter(item => {
                             if (item === null || item === undefined || item === '') return false;
                             if (typeof item === 'object' && !Array.isArray(item)) {
                                 const domainKeys = Object.keys(item as object).filter(k => !META_KEYS.has(k));
                                 return domainKeys.length > 0 || ('@id' in (item as object) && (item as Record<string, unknown>)['@id'] !== '');
                             }
                             return true;
-                        });
-                    if (items.length > 0) {
-                        result[key] = items;
+                        })
+                        : items;
+                    if (omitEmpty ? filtered.length > 0 : children.length > 0) {
+                        result[key] = filtered;
                     }
                 }
             } else if (type === 'language-string') {
                 if (value && typeof value === 'object' && '@language' in value && '@value' in value) {
                     const lv = value as { '@language': string; '@value': string };
-                    if (lv['@value'] !== '' && lv['@value'] != null) {
+                    if (!omitEmpty || (lv['@value'] !== '' && lv['@value'] != null)) {
                         result[key] = value;
                     }
-                } else if (typeof value === 'string' && value !== '') {
+                } else if (typeof value === 'string') {
+                    if (!omitEmpty || value !== '') {
+                        result[key] = {
+                            '@language': metadata.language || 'en',
+                            '@value': value,
+                        };
+                    }
+                } else if (!omitEmpty) {
                     result[key] = {
                         '@language': metadata.language || 'en',
-                        '@value': value,
+                        '@value': '',
                     };
                 }
             } else if (type === 'boolean') {
@@ -335,13 +356,17 @@ export function useJsonLdTransform() {
                 };
             } else if (type === 'number') {
                 const num = Number(value);
-                // Skip zero byteSize — it's a UI placeholder, not meaningful data
                 if (num === 0 && metadata.xsdType === 'xsd:nonNegativeInteger') {
-                    // omit
+                    // Skip zero byteSize — UI placeholder, not meaningful data
                 } else if (!isNaN(num)) {
                     result[key] = {
                         '@type': metadata.xsdType || 'xsd:integer',
                         '@value': num,
+                    };
+                } else if (!omitEmpty && metadata.xsdType) {
+                    result[key] = {
+                        '@type': metadata.xsdType,
+                        '@value': '',
                     };
                 }
             } else if (type === 'date') {
@@ -350,28 +375,42 @@ export function useJsonLdTransform() {
                         '@type': metadata.xsdType || 'xsd:dateTime',
                         '@value': value,
                     };
+                } else if (!omitEmpty) {
+                    result[key] = {
+                        '@type': metadata.xsdType || 'xsd:dateTime',
+                        '@value': '',
+                    };
                 }
             } else if (type === 'uri') {
                 if (value !== '' && value != null) {
                     result[key] = key === '@id' ? value : { '@id': value };
+                } else if (!omitEmpty && key !== '@id') {
+                    result[key] = { '@id': '' };
                 }
             } else if (type === 'string') {
                 if (value !== '' && value != null) {
-                    // Strings with an explicit xsd type serialize as typed literals
                     if (metadata.xsdType) {
                         result[key] = { '@type': metadata.xsdType, '@value': value };
                     } else {
                         result[key] = value;
                     }
+                } else if (!omitEmpty) {
+                    result[key] = metadata.xsdType
+                        ? { '@type': metadata.xsdType, '@value': '' }
+                        : '';
                 }
             } else {
                 if (metadata.xsdType) {
-                    result[key] = {
-                        '@type': metadata.xsdType,
-                        '@value': value,
-                    };
+                    if (!omitEmpty || (value !== '' && value != null)) {
+                        result[key] = {
+                            '@type': metadata.xsdType,
+                            '@value': value ?? '',
+                        };
+                    }
                 } else if (value !== '' && value != null) {
                     result[key] = value;
+                } else if (!omitEmpty) {
+                    result[key] = '';
                 }
             }
         }
@@ -400,9 +439,10 @@ export function useJsonLdTransform() {
     const serializeJsonLd = (
         tree: JsonLdNode[],
         context?: Record<string, string>,
-        format: 'string' | 'object' = 'string'
+        format: 'string' | 'object' = 'string',
+        serializeOptions?: SerializeTreeOptions,
     ): string | Record<string, unknown> => {
-        const data = serializeTreeToJsonLd(tree, context);
+        const data = serializeTreeToJsonLd(tree, context, undefined, serializeOptions);
 
         if (format === 'string') {
             return JSON.stringify(data, null, 2);

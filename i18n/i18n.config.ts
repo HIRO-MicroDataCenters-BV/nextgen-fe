@@ -404,6 +404,8 @@ export default defineI18nConfig(() => {
           select_license: "Select license",
           pick_date: "Pick a date",
           data_product_name: "Enter a data product name",
+          name_from_metadata:
+            "Same as Title in Metadata Content (dcterms:title)",
           creator: "Enter a creator name",
           email: "Enter your email",
           password: "Enter your password",

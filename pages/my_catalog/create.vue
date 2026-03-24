@@ -28,6 +28,7 @@ import { useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
 import { createDatasetJsonLd } from "@/utils/jsonld";
+import { useDefaultDataset } from "@/components/JsonLdEditor/composables/useDefaultDataset";
 
 const { t } = useI18n();
 const { saveDataset, getDataproducts } = useApi();
@@ -64,6 +65,7 @@ const formSchema = computed(() =>
 );
 
 const formRef = ref();
+const { buildDefaultMetadataContentObject } = useDefaultDataset();
 
 watch(selectedClient, () => {
   formRef.value?.refreshFieldOptions?.("related_data_product");
@@ -74,7 +76,7 @@ const initialValues = {
   item_type: "dataset",
   related_data_product: null,
   file: null,
-  metadata_content: {},
+  metadata_content: buildDefaultMetadataContentObject(),
 };
 
 const fields = computed<FormFieldDefinition[]>(() => [
@@ -82,7 +84,7 @@ const fields = computed<FormFieldDefinition[]>(() => [
     name: "name",
     label: t("label.name"),
     type: "text",
-    placeholder: t("placeholder.data_product_name"),
+    placeholder: t("placeholder.name_from_metadata"),
     disabled: true,
   },
   {

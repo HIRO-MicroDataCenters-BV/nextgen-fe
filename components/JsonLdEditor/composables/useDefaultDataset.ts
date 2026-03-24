@@ -1,14 +1,70 @@
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { useJsonLdTransform } from './useJsonLdTransform';
 import type { JsonLdNode, JsonLdNodeType, FieldDefinition } from '../types/editor.types';
+import { DCAT_AP_CONTEXT } from '../dcatApContext';
 
 /**
  * Builds the default DCAT-AP 3 dataset tree with mandatory and recommended
  * fields pre-populated as empty nodes so the editor never starts blank.
  */
+function mergeJsonLdNodes(template: JsonLdNode, parsed: JsonLdNode | undefined): JsonLdNode {
+    if (!parsed) {
+        return structuredClone(template);
+    }
+    if (template.type === 'object' && parsed.type === 'object') {
+        return {
+            ...parsed,
+            metadata: { ...template.metadata, ...parsed.metadata },
+            children: mergeObjectChildrenByTemplate(template.children, parsed.children),
+        };
+    }
+    if (template.type === 'array' && parsed.type === 'array') {
+        const tc = template.children ?? [];
+        const pc = parsed.children ?? [];
+        const len = Math.max(tc.length, pc.length);
+        const mergedChildren: JsonLdNode[] = [];
+        for (let i = 0; i < len; i++) {
+            const t = tc[i];
+            const p = pc[i];
+            if (t && p) mergedChildren.push(mergeJsonLdNodes(t, p));
+            else if (t) mergedChildren.push(structuredClone(t));
+            else if (p) mergedChildren.push(p);
+        }
+        return {
+            ...parsed,
+            metadata: { ...template.metadata, ...parsed.metadata },
+            children: mergedChildren.map((c, i) => ({ ...c, key: `[${i}]` })),
+        };
+    }
+    return {
+        ...parsed,
+        metadata: { ...template.metadata, ...parsed.metadata },
+    };
+}
+
+function mergeObjectChildrenByTemplate(
+    templateChildren: JsonLdNode[] | undefined,
+    parsedChildren: JsonLdNode[] | undefined,
+): JsonLdNode[] {
+    if (!templateChildren?.length) {
+        return parsedChildren ? [...parsedChildren] : [];
+    }
+    const parsedMap = new Map((parsedChildren ?? []).map(c => [c.key, c] as const));
+    const merged: JsonLdNode[] = [];
+    for (const tChild of templateChildren) {
+        merged.push(mergeJsonLdNodes(tChild, parsedMap.get(tChild.key)));
+    }
+    for (const pChild of parsedChildren ?? []) {
+        if (!templateChildren.some(t => t.key === pChild.key)) {
+            merged.push(pChild);
+        }
+    }
+    return merged;
+}
+
 export function useDefaultDataset() {
     const { datasetSchema, distributionSchema } = useJsonLdSchema();
-    const { createDefaultNode } = useJsonLdTransform();
+    const { createDefaultNode, serializeJsonLd } = useJsonLdTransform();
 
     const makeId = () =>
         `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -127,5 +183,40 @@ export function useDefaultDataset() {
     const isEmptyDataset = (tree: JsonLdNode[]): boolean =>
         tree.filter(n => !n.metadata.hidden && !n.metadata.readonly).length === 0;
 
-    return { buildDefaultDatasetTree, isEmptyDataset };
+    /**
+     * Merges a sparse parse result (e.g. after JSON mode) with the default DCAT field tree
+     * so optional empty fields stay visible. Skipped when metadata came from an uploaded file.
+     */
+    const mergeDatasetTreeWithDefaults = (parsedTree: JsonLdNode[]): JsonLdNode[] => {
+        const defaultTree = buildDefaultDatasetTree();
+        const defaultKeys = new Set(defaultTree.map(n => n.key));
+        const parsedByKey = new Map(parsedTree.map(n => [n.key, n] as const));
+        const merged: JsonLdNode[] = [];
+        for (const templateNode of defaultTree) {
+            merged.push(mergeJsonLdNodes(templateNode, parsedByKey.get(templateNode.key)));
+        }
+        for (const n of parsedTree) {
+            if (!defaultKeys.has(n.key)) {
+                merged.push(n);
+            }
+        }
+        return merged;
+    };
+
+    /** Full default metadata object for create forms (all template keys + @context, @type). */
+    const buildDefaultMetadataContentObject = (): Record<string, unknown> => {
+        const tree = buildDefaultDatasetTree();
+        const data = serializeJsonLd(tree, DCAT_AP_CONTEXT, 'object', { omitEmpty: false }) as Record<string, unknown>;
+        if (typeof data['@type'] !== 'string') {
+            data['@type'] = 'dcat:Dataset';
+        }
+        return data;
+    };
+
+    return {
+        buildDefaultDatasetTree,
+        isEmptyDataset,
+        mergeDatasetTreeWithDefaults,
+        buildDefaultMetadataContentObject,
+    };
 }
