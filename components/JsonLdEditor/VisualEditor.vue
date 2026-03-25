@@ -117,9 +117,12 @@ const emit = defineEmits<{
 }>();
 
 
+const isMandatoryNode = (n: JsonLdNodeType) =>
+  n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden;
+
 const allRequiredFilled = computed(() =>
   props.modelValue
-    .filter(n => n.metadata.required && !n.metadata.hidden)
+    .filter(isMandatoryNode)
     .every(n => !!(n.value && n.value !== '') || !!(n.children?.some(c => c.value))),
 );
 
@@ -135,7 +138,7 @@ onMounted(() => {
   if (sessionStorage.getItem(ONBOARDING_KEY)) return;
   // Only show when mandatory fields are all empty (fresh dataset)
   const mandatoryEmpty = props.modelValue
-    .filter(n => n.metadata.required && !n.metadata.hidden)
+    .filter(isMandatoryNode)
     .every(n => !n.value && !n.children?.some(c => c.value));
   if (mandatoryEmpty) showOnboarding.value = true;
 });
@@ -173,12 +176,12 @@ const groupedNodes = computed(() => {
     const cat = node.metadata.category || 'other';
     (groups[cat] ?? groups.other).push(node);
   }
-  // Sort within each group: required → recommended → optional
+  // Sort within each group: mandatory → recommended → optional
   const complianceRank: Record<string, number> = { mandatory: 0, recommended: 1, optional: 2 };
   for (const nodes of Object.values(groups)) {
     nodes.sort((a, b) => {
-      const reqA = a.metadata.required ? 0 : 1;
-      const reqB = b.metadata.required ? 0 : 1;
+      const reqA = a.metadata.dcatApCompliance === 'mandatory' ? 0 : 1;
+      const reqB = b.metadata.dcatApCompliance === 'mandatory' ? 0 : 1;
       if (reqA !== reqB) return reqA - reqB;
       const rankA = complianceRank[a.metadata.dcatApCompliance ?? 'optional'] ?? 2;
       const rankB = complianceRank[b.metadata.dcatApCompliance ?? 'optional'] ?? 2;

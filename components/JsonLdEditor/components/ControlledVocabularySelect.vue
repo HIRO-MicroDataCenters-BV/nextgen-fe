@@ -88,25 +88,25 @@ const vocabularies: Record<string, VocabularyOption[]> = {
   ],
   algorithm: [
     {
-      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha256',
+      value: 'http://spdx.org/rdf/terms#SHA256',
       label: 'SHA-256', chipLabel: 'SHA-256', icon: 'lucide:shield-check',
       description: 'SHA-256 (recommended)',
       match: ['sha256', 'sha2'],
     },
     {
-      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha512',
+      value: 'http://spdx.org/rdf/terms#SHA512',
       label: 'SHA-512', chipLabel: 'SHA-512', icon: 'lucide:shield',
       description: 'SHA-512',
       match: ['sha512'],
     },
     {
-      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha1',
+      value: 'http://spdx.org/rdf/terms#SHA1',
       label: 'SHA-1', chipLabel: 'SHA-1', icon: 'lucide:shield',
       description: 'SHA-1 (legacy)',
       match: ['sha1'],
     },
     {
-      value: 'http://spdx.org/rdf/terms#checksumAlgorithm_md5',
+      value: 'http://spdx.org/rdf/terms#MD5',
       label: 'MD5', chipLabel: 'MD5', icon: 'lucide:hash',
       description: 'MD5 (legacy)',
       match: ['md5'],

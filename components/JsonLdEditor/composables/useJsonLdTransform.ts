@@ -35,6 +35,7 @@ export function useJsonLdTransform() {
             icon: def.icon,
             dcatApCompliance: def.dcatApCompliance,
             xsdType: def.xsdType,
+            category: def.category,
         },
     });
 
@@ -68,6 +69,24 @@ export function useJsonLdTransform() {
         return 'string';
     };
 
+    /**
+     * Resolve schema for a key. When inside a parent object, never fall back to top-level
+     * technical @id/@type — getFieldDefinition('@id') would always match the dataset root @id.
+     */
+    const resolveFieldDefinition = (
+        key: string,
+        parentChildSchema: Record<string, FieldDefinition> | undefined,
+        ctx: 'dataset' | 'distribution',
+    ): FieldDefinition | undefined => {
+        if (parentChildSchema && key in parentChildSchema) {
+            return parentChildSchema[key];
+        }
+        if (parentChildSchema && (key === '@id' || key === '@type')) {
+            return undefined;
+        }
+        return getFieldDefinition(key, ctx);
+    };
+
     const parseJsonLdToTree = (
         data: Record<string, unknown>,
         _parentKey: string = '',
@@ -79,7 +98,7 @@ export function useJsonLdTransform() {
         for (const [key, value] of Object.entries(data)) {
             if (key === '@context') continue;
 
-            const fieldDef = parentChildSchema?.[key] ?? getFieldDefinition(key, context);
+            const fieldDef = resolveFieldDefinition(key, parentChildSchema, context);
             const detectedType = detectType(value);
 
             // Schema type takes priority for leaf nodes — ensures validation uses the correct
@@ -285,6 +304,24 @@ export function useJsonLdTransform() {
                         result[key] = serialized;
                     }
                 }
+            } else if (type === 'array' && !children && Array.isArray(value) && key !== 'dcat:distribution') {
+                const xsd = metadata.xsdType || 'xsd:string';
+                const items = (value as unknown[]).map(v => {
+                    if (v !== null && typeof v === 'object' && '@type' in v && '@value' in v) return v;
+                    return { '@type': xsd, '@value': v };
+                });
+                const filtered = omitEmpty
+                    ? items.filter(it => {
+                        if (typeof it === 'object' && it !== null && '@value' in it) {
+                            const vv = (it as Record<string, unknown>)['@value'];
+                            return vv !== '' && vv != null;
+                        }
+                        return false;
+                    })
+                    : items;
+                if (omitEmpty ? filtered.length > 0 : items.length > 0) {
+                    result[key] = filtered;
+                }
             } else if (type === 'array' && children) {
                 if (key === 'dcat:distribution') {
                     // Distribution: serialize each child's children, auto-generate @id
@@ -388,7 +425,27 @@ export function useJsonLdTransform() {
                     result[key] = { '@id': '' };
                 }
             } else if (type === 'string') {
-                if (value !== '' && value != null) {
+                if (metadata.repeatable && Array.isArray(value)) {
+                    const raw = value as unknown[];
+                    const items = raw.map(v => {
+                        if (v !== null && typeof v === 'object' && '@type' in v && '@value' in v) return v;
+                        if (metadata.xsdType) return { '@type': metadata.xsdType, '@value': v };
+                        return v;
+                    });
+                    const filtered = omitEmpty
+                        ? items.filter(it => {
+                            if (it === null || it === undefined) return false;
+                            if (typeof it === 'object' && it !== null && '@value' in it) {
+                                const vv = (it as Record<string, unknown>)['@value'];
+                                return vv !== '' && vv != null;
+                            }
+                            return String(it) !== '';
+                        })
+                        : items;
+                    if (omitEmpty ? filtered.length > 0 : raw.length > 0) {
+                        result[key] = filtered;
+                    }
+                } else if (value !== '' && value != null) {
                     if (metadata.xsdType) {
                         result[key] = { '@type': metadata.xsdType, '@value': value };
                     } else {

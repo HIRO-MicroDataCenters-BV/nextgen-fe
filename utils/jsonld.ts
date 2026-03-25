@@ -1140,6 +1140,84 @@ export function convertJsonLdForTraining(input: unknown): {
   return { dataset: result };
 }
 
+/** @context for registration API (no vcard prefix — vcard:* keys are expanded to full IRIs). */
+const REGISTRATION_JSONLD_CONTEXT: Record<string, string> = {
+  dspace: "http://data-space.org/",
+  xsd: "http://www.w3.org/2001/XMLSchema#",
+  dcat: "http://www.w3.org/ns/dcat#",
+  dcatap: "http://data.europa.eu/r5r/",
+  dcterms: "http://purl.org/dc/terms/",
+  spdx: "http://spdx.org/rdf/terms#",
+  foaf: "http://xmlns.com/foaf/0.1/",
+  skos: "http://www.w3.org/2004/02/skos/core#",
+};
+
+const VCARD_PREFIX = "vcard:";
+const VCARD_NS = "http://www.w3.org/2006/vcard/ns#";
+
+/** Expand compact vcard:* keys so @context does not need the vcard prefix. */
+function expandVcardPrefixedKeys<T>(node: T): T {
+  if (!node || typeof node !== "object") return node;
+  if (Array.isArray(node)) {
+    return node.map((item) => expandVcardPrefixedKeys(item)) as unknown as T;
+  }
+  const o = node as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(o)) {
+    const keyOut = k.startsWith(VCARD_PREFIX)
+      ? `${VCARD_NS}${k.slice(VCARD_PREFIX.length)}`
+      : k;
+    next[keyOut] =
+      v && typeof v === "object" ? expandVcardPrefixedKeys(v) : v;
+  }
+  return next as unknown as T;
+}
+
+const SPDX_ALGO_LEGACY_TO_CANONICAL: Record<string, string> = {
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha256":
+    "http://spdx.org/rdf/terms#SHA256",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha512":
+    "http://spdx.org/rdf/terms#SHA512",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha1":
+    "http://spdx.org/rdf/terms#SHA1",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_md5":
+    "http://spdx.org/rdf/terms#MD5",
+};
+
+/** Normalize SPDX checksum algorithm @id to canonical fragment form (e.g. #SHA256). */
+function normalizeSpdxAlgorithmIds(node: unknown): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) normalizeSpdxAlgorithmIds(item);
+    return;
+  }
+  const o = node as Record<string, unknown>;
+  const checksum = o["spdx:checksum"];
+  if (checksum && typeof checksum === "object" && !Array.isArray(checksum)) {
+    const c = checksum as Record<string, unknown>;
+    const algo = c["spdx:algorithm"];
+    if (typeof algo === "string") {
+      const canon = SPDX_ALGO_LEGACY_TO_CANONICAL[algo] ?? algo;
+      c["spdx:algorithm"] = {
+        "@id": canon,
+        "@type": "spdx:ChecksumAlgorithm",
+      };
+    } else if (algo && typeof algo === "object" && "@id" in algo) {
+      const id = String((algo as Record<string, unknown>)["@id"]);
+      const canon = SPDX_ALGO_LEGACY_TO_CANONICAL[id] ?? id;
+      c["spdx:algorithm"] = {
+        ...(algo as Record<string, unknown>),
+        "@id": canon,
+        "@type":
+          (algo as Record<string, unknown>)["@type"] ?? "spdx:ChecksumAlgorithm",
+      };
+    }
+  }
+  for (const v of Object.values(o)) {
+    if (v && typeof v === "object") normalizeSpdxAlgorithmIds(v);
+  }
+}
+
 /**
  * Create JSON-LD dataset structure for saveDataset API
  * @param formData - Form values
@@ -1150,16 +1228,7 @@ export function createDatasetJsonLd(
   formData: Record<string, unknown>,
   filename: string
 ): string {
-  const context = {
-    dspace: "http://data-space.org/",
-    xsd: "http://www.w3.org/2001/XMLSchema#",
-    dcat: "http://www.w3.org/ns/dcat#",
-    dcatap: "http://data.europa.eu/r5r/",
-    dcterms: "http://purl.org/dc/terms/",
-    spdx: "http://spdx.org/rdf/terms#",
-    foaf: "http://xmlns.com/foaf/0.1/",
-    skos: "http://www.w3.org/2004/02/skos/core#",
-  };
+  const context = REGISTRATION_JSONLD_CONTEXT;
 
   const datasetId = `https://example.com/dataset/${filename.replace(
     /[^A-Za-z0-9_-]/g,
@@ -1191,9 +1260,11 @@ export function createDatasetJsonLd(
     };
 
   if (!baseDataset["@context"]) {
-    baseDataset["@context"] = context;
+    baseDataset["@context"] = { ...context };
   } else if (parsedMetadataContent && parsedMetadataContent["@context"]) {
-    baseDataset["@context"] = parsedMetadataContent["@context"];
+    baseDataset["@context"] = {
+      ...(parsedMetadataContent["@context"] as Record<string, string>),
+    };
   }
 
   if (!baseDataset["@id"]) {
@@ -1327,41 +1398,15 @@ export function createDatasetJsonLd(
         "@value": "Software",
       },
     };
-  }
-
-  const isDataset = formData.item_type === "dataset";
-  let relatedDataProductPath: string | null = null;
-  if (
-    isDataset &&
-    formData.related_data_product &&
-    typeof formData.related_data_product === "string" &&
-    formData.related_data_product.trim()
-  ) {
-    relatedDataProductPath = formData.related_data_product.trim();
-    const seriesId = relatedDataProductPath;
-    const seriesName =
-      seriesId.split("/").pop() ||
-      seriesId.split(":").pop() ||
-      "Data Product Series";
-
-    baseDataset["dcat:inSeries"] = {
-      "@id": seriesId,
-      "@type": "dcat:DatasetSeries",
-      "dcterms:title": {
+  } else if (!baseDataset["dcterms:type"]) {
+    // DCAT-AP 3: explicit dcmitype:Dataset + skos:Concept (aligns with catalogue / SHACL examples)
+    baseDataset["dcterms:type"] = {
+      "@id": "http://purl.org/dc/dcmitype/Dataset",
+      "@type": "skos:Concept",
+      "skos:prefLabel": {
         "@language": "en",
-        "@value": seriesName,
+        "@value": "Dataset",
       },
-      "dcterms:description": {
-        "@language": "en",
-        "@value": `Data product series: ${seriesName}`,
-      },
-    };
-  }
-
-  if (filename) {
-    baseDataset["dspace:metadataFilename"] = {
-      "@type": "xsd:string",
-      "@value": filename,
     };
   }
 
@@ -1379,38 +1424,17 @@ export function createDatasetJsonLd(
     }
   }
 
-  const SPDX_ALGORITHM_FIXES: Record<string, string> = {
-    "http://spdx.org/rdf/terms#SHA256": "http://spdx.org/rdf/terms#checksumAlgorithm_sha256",
-    "http://spdx.org/rdf/terms#SHA512": "http://spdx.org/rdf/terms#checksumAlgorithm_sha512",
-    "http://spdx.org/rdf/terms#SHA1": "http://spdx.org/rdf/terms#checksumAlgorithm_sha1",
-    "http://spdx.org/rdf/terms#MD5": "http://spdx.org/rdf/terms#checksumAlgorithm_md5",
-  };
-  const distributions = baseDataset["dcat:distribution"];
-  if (distributions) {
-    const dists = Array.isArray(distributions) ? distributions : [distributions];
-    dists.forEach((dist: unknown) => {
-      const d = dist as Record<string, unknown>;
-      const checksum = d?.["spdx:checksum"] as Record<string, unknown> | undefined;
-      if (checksum?.["spdx:algorithm"]) {
-        const algo = checksum["spdx:algorithm"] as Record<string, unknown> | string;
-        const id = typeof algo === "string" ? algo : (algo?.["@id"] as string);
-        const fixed = id ? SPDX_ALGORITHM_FIXES[id] : undefined;
-        const finalId = fixed ?? id;
-        if (finalId) {
-          const base = typeof algo === "object" && algo !== null ? { ...algo } : {};
-          checksum["spdx:algorithm"] = {
-            ...base,
-            "@id": finalId,
-            "@type": "spdx:ChecksumAlgorithm",
-          };
-        }
-      }
-    });
-  }
-
   const { "dspace:extraMetadata": _, ...payloadWithoutExtra } =
     baseDataset as Record<string, unknown> & { "dspace:extraMetadata"?: unknown };
   const finalPayload = payloadWithoutExtra as Record<string, unknown>;
 
-  return JSON.stringify(finalPayload, null, 2);
+  delete finalPayload["dcat:inSeries"];
+  delete finalPayload["dspace:metadataFilename"];
+
+  const vcardExpanded = expandVcardPrefixedKeys(finalPayload);
+  normalizeSpdxAlgorithmIds(vcardExpanded);
+
+  vcardExpanded["@context"] = { ...REGISTRATION_JSONLD_CONTEXT };
+
+  return JSON.stringify(vcardExpanded, null, 2);
 }

@@ -545,10 +545,11 @@ export function useJsonLdSchema() {
                     key: '@id',
                     label: 'Language',
                     type: 'uri',
-                    required: true,
+                    required: false,
                     readonly: false,
                     repeatable: false,
                     vocabulary: 'language',
+                    dcatApCompliance: 'recommended',
                     placeholder: 'http://publications.europa.eu/resource/authority/language/ENG',
                     description: 'Language code from EU Vocabularies (e.g., ENG, NLD, DEU)',
                 },
@@ -622,7 +623,7 @@ export function useJsonLdSchema() {
                     key: '@type',
                     label: 'Type',
                     type: 'string',
-                    required: true,
+                    required: false,
                     readonly: true,
                     repeatable: false,
                     hidden: true,
@@ -632,9 +633,10 @@ export function useJsonLdSchema() {
                     key: 'vcard:fn',
                     label: 'Contact Name',
                     type: 'string',
-                    required: true,
+                    required: false,
                     readonly: false,
                     repeatable: false,
+                    dcatApCompliance: 'recommended',
                     placeholder: 'e.g., Dr. Jane Smith or Data Access Office',
                     description: 'Full name of the contact (person or team)',
                 },
@@ -905,7 +907,7 @@ export function useJsonLdSchema() {
                     repeatable: false,
                     vocabulary: 'algorithm',
                     description: 'The algorithm used (e.g., SHA-256)',
-                    placeholder: 'http://spdx.org/rdf/terms#checksumAlgorithm_sha256',
+                    placeholder: 'http://spdx.org/rdf/terms#SHA256',
                 },
                 'spdx:checksumValue': {
                     key: 'spdx:checksumValue',
@@ -1008,6 +1010,12 @@ export function useJsonLdSchema() {
             .map(([key]) => key);
     };
 
+    /** Top-level dataset keys that are DCAT-AP mandatory (used for presence checks, excludes hidden/system). */
+    const getMandatoryDatasetFieldKeys = (): string[] =>
+        Object.entries(datasetSchema)
+            .filter(([_, def]) => def.dcatApCompliance === 'mandatory' && !def.hidden && !def.autoGenerate)
+            .map(([key]) => key);
+
     const getReadonlyFields = (): string[] => {
         return Object.entries(datasetSchema)
             .filter(([_, def]) => def.readonly)
@@ -1028,6 +1036,7 @@ export function useJsonLdSchema() {
         distributionSchema,
         getFieldDefinition,
         getRequiredFields,
+        getMandatoryDatasetFieldKeys,
         getReadonlyFields,
         getAddableFields,
     };

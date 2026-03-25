@@ -95,6 +95,11 @@ export interface AppFormProps {
 
 const props = withDefaults(defineProps<AppFormProps>(), {
   syncNameFromMetadata: false,
+  initialValues: undefined,
+  title: undefined,
+  description: undefined,
+  id: undefined,
+  serverErrors: undefined,
 });
 const emit = defineEmits<{
   (e: "submit", values: Record<string, unknown>): void;

@@ -317,7 +317,7 @@ const isNodeFilled = (n: JsonLdNode): boolean => {
 };
 
 const mandatoryNodes = computed(() =>
-  treeData.value.filter(n => n.metadata.required && !n.metadata.hidden && !n.metadata.readonly),
+  treeData.value.filter(n => n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden && !n.metadata.readonly),
 );
 
 const mandatoryProgress = computed(() => {

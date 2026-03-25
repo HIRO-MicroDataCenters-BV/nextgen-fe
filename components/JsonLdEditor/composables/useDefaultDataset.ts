@@ -154,6 +154,7 @@ export function useDefaultDataset() {
                 vocabulary: def.vocabulary,
                 dcatApCompliance: def.dcatApCompliance,
                 icon: def.icon,
+                xsdType: def.xsdType,
             },
         };
     };

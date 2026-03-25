@@ -9,8 +9,8 @@
       'field-highlight': isNewlyAdded,
       'field-flash': isFlashing,
       'field-card--nested': depth > 0,
-      'field-card--required-empty': node.metadata.required && !hasValue,
-      'field-card--required-filled': node.metadata.required && hasValue,
+      'field-card--required-empty': isDcatMandatory && !hasValue,
+      'field-card--required-filled': isDcatMandatory && hasValue,
     }"
   >
     <!-- ── Field Header ──────────────────────────────────── -->
@@ -23,7 +23,7 @@
       <div class="field-meta">
         <div class="field-label-row">
           <span class="field-label">{{ fieldLabel }}</span>
-          <span v-if="node.metadata.required && !hasValue" class="required-asterisk" title="This field is required">*</span>
+          <span v-if="isDcatMandatory && !hasValue" class="required-asterisk" title="This field is required">*</span>
           <span
             v-if="node.metadata.dcatApCompliance"
             class="compliance-pill"
@@ -247,6 +247,10 @@ const hasValue = computed(() => {
   return true;
 });
 
+const isDcatMandatory = computed(
+  () => props.node.metadata.dcatApCompliance === 'mandatory',
+);
+
 // ── Char counter ─────────────────────────────────────────────────────────────
 
 
@@ -288,7 +292,7 @@ const charCountClass = computed(() => {
   return '';
 });
 const canRemoveNode = computed(() =>
-  !props.node.metadata.required && (props.depth === 0),
+  props.node.metadata.dcatApCompliance !== 'mandatory' && props.depth === 0,
 );
 
 // ── Flash highlight (triggered externally via scrollToError) ───

@@ -11,9 +11,21 @@ const fieldLabel = (key: string) =>
 export function useJsonLdValidation() {
     const { t } = useI18n();
     const { selectedClient } = useClientSelector();
-    const { getRequiredFields, getFieldDefinition: _getFieldDefinition } = useJsonLdSchema();
+    const { getMandatoryDatasetFieldKeys, getFieldDefinition: _getFieldDefinition } = useJsonLdSchema();
 
     /** Returns true when a node has no meaningful value (handles language-string objects). */
+    /** Format/shape problems on non-mandatory fields must not block submit (warnings only). */
+    const formatIssueSeverity = (node: JsonLdNode): 'error' | 'warning' =>
+        node.metadata.dcatApCompliance === 'mandatory' ? 'error' : 'warning';
+
+    /**
+     * Defensive: these leaves sit under DCAT *recommended* parents; never treat as submit-blocking
+     * even if metadata was wrongly resolved (e.g. ambiguous @id).
+     */
+    const exemptFromMandatoryEmptyError = (path: string, key: string): boolean =>
+        (key === '@id' && path.includes('dcterms:language')) ||
+        (key === 'vcard:fn' && path.includes('dcat:contactPoint'));
+
     const isEffectivelyEmpty = (node: JsonLdNode): boolean => {
         // No value and no children
         if (node.value === undefined || node.value === null || node.value === '') {
@@ -33,12 +45,24 @@ export function useJsonLdValidation() {
         const errors: ValidationError[] = [];
         const currentPath = path ? `${path}.${node.key}` : node.key;
 
-        if (node.metadata.required && isEffectivelyEmpty(node)) {
-            errors.push({
-                path: currentPath,
-                message: `${fieldLabel(node.key)} is required`,
-                severity: 'error',
-            });
+        if (node.metadata.hidden) {
+            if (node.children?.length) {
+                for (const child of node.children) {
+                    errors.push(...validateNode(child, currentPath));
+                }
+            }
+            return errors;
+        }
+
+        // Only DCAT-AP *mandatory* fields block submission; schema `required` is used elsewhere (e.g. nested defaults).
+        if (node.metadata.dcatApCompliance === 'mandatory' && isEffectivelyEmpty(node)) {
+            if (!exemptFromMandatoryEmptyError(currentPath, node.key)) {
+                errors.push({
+                    path: currentPath,
+                    message: `${fieldLabel(node.key)} is required`,
+                    severity: 'error',
+                });
+            }
         }
 
         // ── URI validation (generic \u2014 skipped for vocabulary fields and format-specific ones) ──
@@ -68,7 +92,7 @@ export function useJsonLdValidation() {
                 errors.push({
                     path: currentPath,
                     message: `${fieldLabel(node.key)} must be a valid URI`,
-                    severity: 'error',
+                    severity: formatIssueSeverity(node),
                 });
             }
         }
@@ -79,12 +103,12 @@ export function useJsonLdValidation() {
             if (emailVal.startsWith('mailto:')) {
                 const email = emailVal.slice(7);
                 if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    errors.push({ path: currentPath, message: 'Invalid email format after mailto:', severity: 'error' });
+                    errors.push({ path: currentPath, message: 'Invalid email format after mailto:', severity: formatIssueSeverity(node) });
                 }
             } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
                 errors.push({ path: currentPath, message: 'Email should be in the form mailto:name@example.com', severity: 'warning' });
             } else {
-                errors.push({ path: currentPath, message: 'Email must be in the form mailto:name@example.com', severity: 'error' });
+                errors.push({ path: currentPath, message: 'Email must be in the form mailto:name@example.com', severity: formatIssueSeverity(node) });
             }
         }
 
@@ -99,7 +123,7 @@ export function useJsonLdValidation() {
             } else if (/^\+?[\d\s\-().]{5,20}$/.test(telVal)) {
                 errors.push({ path: currentPath, message: 'Phone should use tel: prefix, e.g. tel:+31201234567', severity: 'warning' });
             } else {
-                errors.push({ path: currentPath, message: 'Phone must be in the form tel:+31201234567', severity: 'error' });
+                errors.push({ path: currentPath, message: 'Phone must be in the form tel:+31201234567', severity: formatIssueSeverity(node) });
             }
         }
 
@@ -121,7 +145,7 @@ export function useJsonLdValidation() {
                         errors.push({
                             path: currentPath,
                             message: t(`jsonld.editor.validation.${config.invalidFormatKey}`, { field: fieldLabel(node.key) }),
-                            severity: 'error',
+                            severity: formatIssueSeverity(node),
                         });
                     }
                 } else if (config.allowedProtocols.length > 0 && !config.urlPattern) {
@@ -131,14 +155,14 @@ export function useJsonLdValidation() {
                             errors.push({
                                 path: currentPath,
                                 message: t(`jsonld.editor.validation.${config.invalidFormatKey}`, { field: fieldLabel(node.key) }),
-                                severity: 'error',
+                                severity: formatIssueSeverity(node),
                             });
                         }
                     } catch {
                         errors.push({
                             path: currentPath,
                             message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
-                            severity: 'error',
+                            severity: formatIssueSeverity(node),
                         });
                     }
                 } else if (hasWrongProtocol) {
@@ -155,14 +179,14 @@ export function useJsonLdValidation() {
                             errors.push({
                                 path: currentPath,
                                 message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
-                                severity: 'error',
+                                severity: formatIssueSeverity(node),
                             });
                         }
                     } catch {
                         errors.push({
                             path: currentPath,
                             message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
-                            severity: 'error',
+                            severity: formatIssueSeverity(node),
                         });
                     }
                 }
@@ -184,7 +208,7 @@ export function useJsonLdValidation() {
                     errors.push({
                         path: currentPath,
                         message: t('jsonld.editor.validation.url_valid', { field: fieldLabel(node.key) }),
-                        severity: 'error',
+                        severity: formatIssueSeverity(node),
                     });
                 }
             }
@@ -193,7 +217,7 @@ export function useJsonLdValidation() {
         // ── Hex (format: 'hex') ────────────────────────────────
         if (node.metadata.format === 'hex' && node.value) {
             if (!/^[0-9a-fA-F]+$/.test(String(node.value).trim())) {
-                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid hexadecimal string`, severity: 'error' });
+                errors.push({ path: currentPath, message: `${fieldLabel(node.key)} must be a valid hexadecimal string`, severity: formatIssueSeverity(node) });
             }
         }
 
@@ -203,14 +227,14 @@ export function useJsonLdValidation() {
                 errors.push({
                     path: currentPath,
                     message: `${node.key} must be a valid number`,
-                    severity: 'error',
+                    severity: formatIssueSeverity(node),
                 });
             }
             if (node.metadata.xsdType === 'xsd:nonNegativeInteger' && numValue < 0) {
                 errors.push({
                     path: currentPath,
                     message: `${node.key} must be non-negative`,
-                    severity: 'error',
+                    severity: formatIssueSeverity(node),
                 });
             }
         }
@@ -221,7 +245,7 @@ export function useJsonLdValidation() {
                 errors.push({
                     path: currentPath,
                     message: `${node.key} must be a valid date`,
-                    severity: 'error',
+                    severity: formatIssueSeverity(node),
                 });
             }
         }
@@ -255,16 +279,16 @@ export function useJsonLdValidation() {
             errors.push(...validateNode(node));
         }
 
-        const requiredDatasetFields = getRequiredFields('dataset');
+        const mandatoryTopLevelKeys = getMandatoryDatasetFieldKeys();
         const hasData = tree.some(node => !isEffectivelyEmpty(node));
 
         if (hasData) {
             const presentKeys = new Set(tree.map(n => n.key));
-            for (const requiredField of requiredDatasetFields) {
-                if (!presentKeys.has(requiredField)) {
+            for (const fieldKey of mandatoryTopLevelKeys) {
+                if (!presentKeys.has(fieldKey)) {
                     errors.push({
-                        path: requiredField,
-                        message: `${fieldLabel(requiredField)} is required`,
+                        path: fieldKey,
+                        message: `${fieldLabel(fieldKey)} is required`,
                         severity: 'error',
                     });
                 }
@@ -314,8 +338,8 @@ export function useJsonLdValidation() {
             };
         }
 
-        const requiredFields = getRequiredFields('dataset');
-        for (const field of requiredFields) {
+        const mandatoryFields = getMandatoryDatasetFieldKeys();
+        for (const field of mandatoryFields) {
             if (!(field in data)) {
                 errors.push({
                     path: field,
@@ -326,7 +350,7 @@ export function useJsonLdValidation() {
         }
 
         return {
-            valid: errors.length === 0,
+            valid: errors.filter(e => e.severity === 'error').length === 0,
             errors,
         };
     };
