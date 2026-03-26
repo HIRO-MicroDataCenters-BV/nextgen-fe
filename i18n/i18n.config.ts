@@ -309,6 +309,7 @@ export default defineI18nConfig(() => {
           item_type: "Item Type",
           related_data_product: "Related Data Product",
           file: "File",
+          mmio_data_file: "MMIO file",
           metadata_content: "Metadata Content",
           dataset: "Dataset",
           application: "Application",
@@ -417,8 +418,10 @@ export default defineI18nConfig(() => {
           uploading: "Uploading...",
           upload_mmio_first: "Upload MMIO file first",
           tar_contains_bundle: ".tar already contains both MMIO and OCA bundle",
+          tar_mmio_archive:
+            ".tar should contain mmio.json and OCA bundle files",
           accepted_file_types_json_jar:
-            "MMIO (.json) or MMIO + OCA bundle (.tar)",
+            "Single MMIO descriptor: unarchived .json or .tar archive",
           your: "Your",
           in: "In",
           all: "All",

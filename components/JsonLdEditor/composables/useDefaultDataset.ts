@@ -62,12 +62,38 @@ function mergeObjectChildrenByTemplate(
     return merged;
 }
 
+/** Same top-level keys as repo `metadata.json` (DCAT body shape for create flow). */
+const MINIMAL_DEFAULT_DATASET_KEYS: string[] = [
+    'dcterms:identifier',
+    'dcterms:title',
+    'dcterms:description',
+    'dcterms:type',
+    'dcat:keyword',
+    'dcterms:license',
+    'dcat:theme',
+    'dcat:distribution',
+];
+
 export function useDefaultDataset() {
     const { datasetSchema, distributionSchema } = useJsonLdSchema();
     const { createDefaultNode, serializeJsonLd } = useJsonLdTransform();
 
     const makeId = () =>
         `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    /** Strip schema default IRIs/labels so the template starts empty (still same shape). */
+    const clearDctermsTypeDefaults = (nodes: JsonLdNode[]): void => {
+        const typeNode = nodes.find(n => n.key === 'dcterms:type');
+        if (!typeNode?.children) return;
+        for (const ch of typeNode.children) {
+            if (ch.key === '@id') {
+                ch.value = '';
+            }
+            if (ch.key === 'skos:prefLabel') {
+                ch.value = { '@language': 'en', '@value': '' };
+            }
+        }
+    };
 
     /**
      * Build a single empty array item node, seeded with schema children.
@@ -159,25 +185,14 @@ export function useDefaultDataset() {
         };
     };
 
-    /** Returns a pre-populated tree with DCAT-AP 3 mandatory + recommended fields. */
+    /** Minimal dataset field tree aligned with `metadata.json` (empty values, full shape). */
     const buildDefaultDatasetTree = (): JsonLdNode[] => {
-        const keys = [
-            'dcterms:title',
-            'dcterms:description',
-            'dcterms:identifier',
-            'dcat:keyword',
-            'dcat:theme',
-            'dcterms:publisher',
-            'dcterms:modified',
-            'dcterms:language',
-            'dcterms:spatial',
-            'dcat:contactPoint',
-            'dcterms:accessRights',
-        ];
-        return keys.flatMap(k => {
+        const tree = MINIMAL_DEFAULT_DATASET_KEYS.flatMap(k => {
             const n = buildNode(k);
             return n ? [n] : [];
         });
+        clearDctermsTypeDefaults(tree);
+        return tree;
     };
 
     /** True when the tree has no visible, editable fields (i.e. it's a new dataset). */
@@ -204,13 +219,29 @@ export function useDefaultDataset() {
         return merged;
     };
 
-    /** Full default metadata object for create forms (all template keys + @context, @type). */
+    /** Default metadata for create: same structure as `metadata.json`, literals empty. */
     const buildDefaultMetadataContentObject = (): Record<string, unknown> => {
         const tree = buildDefaultDatasetTree();
         const data = serializeJsonLd(tree, DCAT_AP_CONTEXT, 'object', { omitEmpty: false }) as Record<string, unknown>;
         if (typeof data['@type'] !== 'string') {
             data['@type'] = 'dcat:Dataset';
         }
+        data['@id'] = '';
+
+        const kw = data['dcat:keyword'];
+        if (!Array.isArray(kw)) {
+            data['dcat:keyword'] = [{ '@type': 'xsd:string', '@value': '' }];
+        }
+
+        const dist = data['dcat:distribution'];
+        if (Array.isArray(dist)) {
+            for (const item of dist) {
+                if (item && typeof item === 'object' && !Array.isArray(item)) {
+                    (item as Record<string, unknown>)['@id'] = '';
+                }
+            }
+        }
+
         return data;
     };
 
