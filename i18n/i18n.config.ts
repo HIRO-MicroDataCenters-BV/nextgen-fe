@@ -456,6 +456,8 @@ export default defineI18nConfig(() => {
           required_date: "This field must be a valid date",
           related_data_product_required:
             "Related Data Product is required to submit this request.",
+          catalog_save_missing_filename:
+            "Could not resolve the data file name. Re-select your JSON or TAR file and try again.",
         },
         training: {
           success_title: "Continue with training",

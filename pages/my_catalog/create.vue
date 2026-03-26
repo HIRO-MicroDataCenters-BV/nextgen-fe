@@ -155,12 +155,37 @@ const onSubmitDirect = () => {
 
 const onSubmit = async (formValues: Record<string, unknown>) => {
   const uploadedFilename = formRef.value?.getUploadedFile?.("file");
+  const meta = formValues.metadata_content;
+  console.info("[my_catalog/create] Save", {
+    uploadedFilename,
+    item_type: formValues.item_type,
+    metadataType: meta === null || meta === undefined ? "empty" : typeof meta,
+    metadataTopKeys:
+      meta && typeof meta === "object" && !Array.isArray(meta)
+        ? Object.keys(meta as Record<string, unknown>)
+        : [],
+    hasDspaceExtra:
+      meta &&
+      typeof meta === "object" &&
+      !Array.isArray(meta) &&
+      "dspace:extraMetadata" in (meta as Record<string, unknown>),
+  });
 
   if (!uploadedFilename) {
+    console.error(
+      "[my_catalog/create] Save aborted: no filename — check DCAT-only JSON flow or file field",
+    );
+    serverErrors.value = [
+      { message: t("validation.catalog_save_missing_filename") },
+    ];
     return;
   }
 
   const datasetJsonLd = createDatasetJsonLd(formValues, uploadedFilename);
+  console.info(
+    "[my_catalog/create] JSON-LD payload length (chars):",
+    datasetJsonLd.length,
+  );
 
   const isApplication = formValues.item_type === "application";
 

@@ -65,7 +65,12 @@ export interface MmioModality {
 export interface MmioData {
     version: string;
     id: string;
-    modalities: MmioModality[];
+    /** May be absent in malformed files; always guard with `modalitiesList()`. */
+    modalities?: MmioModality[];
+}
+
+function modalitiesList(data: MmioData): MmioModality[] {
+    return Array.isArray(data.modalities) ? data.modalities : [];
 }
 
 export interface OcaAttribute {
@@ -222,16 +227,34 @@ export function useMmioProcessor() {
         }
 
         console.log('[MMIO DEBUG] processTarMmio: bundlesBySaid keys =', Array.from(bundlesBySaid.keys()));
-        console.log('[MMIO DEBUG] processTarMmio: mmio modalities =', mmioData.modalities.map(m => ({ id: m.id, oca_bundle_said: m.oca_bundle.value })));
+        const modalities = modalitiesList(mmioData);
+        if (modalities.length === 0) {
+            console.warn(
+                '[MMIO DEBUG] processTarMmio: mmio.json has no modalities[] — expected MMIO schema',
+            );
+        }
+        console.log(
+            '[MMIO DEBUG] processTarMmio: mmio modalities =',
+            modalities.map((m) => ({
+                id: m.id,
+                oca_bundle_said: m.oca_bundle?.value,
+            })),
+        );
 
         // Build extraMetadata array - one entry per modality
         // Namespace is always the fixed "123" base (matching existing dataset format)
         const extraMetadata: Array<Record<string, unknown>> = [];
         const baseNs = `http://oca.example.org/123`;
 
-        for (let i = 0; i < mmioData.modalities.length; i++) {
-            const modality = mmioData.modalities[i];
-            const bundleSaid = modality.oca_bundle.value;
+        for (let i = 0; i < modalities.length; i++) {
+            const modality = modalities[i];
+            const bundleSaid = modality?.oca_bundle?.value ?? '';
+            if (!bundleSaid) {
+                console.warn(
+                    '[MMIO DEBUG] processTarMmio: modality missing oca_bundle.value, index =',
+                    i,
+                );
+            }
             // @id format: http://oca.example.org/123/{mmio_id}/{modality_index}/0
             const entryId = `${baseNs}/${mmioData.id}/${i}/0`;
 
@@ -334,10 +357,23 @@ export function useMmioProcessor() {
             } catch { /* skip */ }
         }
 
+        const modalities = modalitiesList(mmioData);
+        if (modalities.length === 0) {
+            console.warn(
+                '[MMIO DEBUG] _processWithMmioDataAndBundles: no modalities[] in mmio JSON — check file is MMIO (not DCAT)',
+            );
+        }
+
         const extraMetadata: Array<Record<string, unknown>> = [];
-        for (let i = 0; i < mmioData.modalities.length; i++) {
-            const modality = mmioData.modalities[i];
-            const bundleSaid = modality.oca_bundle.value;
+        for (let i = 0; i < modalities.length; i++) {
+            const modality = modalities[i];
+            const bundleSaid = modality?.oca_bundle?.value ?? '';
+            if (!bundleSaid) {
+                console.warn(
+                    '[MMIO DEBUG] _processWithMmioDataAndBundles: modality missing oca_bundle.value, index =',
+                    i,
+                );
+            }
             const entryId = `${baseNs}/${mmioData.id}/${i}/0`;
             const entry: Record<string, unknown> = {
                 '@type': 'dcat:Dataset',
