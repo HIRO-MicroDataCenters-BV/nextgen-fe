@@ -9,7 +9,9 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.69",
@@ -53,6 +55,7 @@
   "packageManager": "yarn@4.9.1+sha512.f95ce356460e05be48d66401c1ae64ef84d163dd689964962c6888a9810865e39097a5e9de748876c2e0bf89b232d583c33982773e9903ae7a76257270986538",
   "devDependencies": {
     "nuxt-proxy-request": "^2.1.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "3.0.9"
   }
 }

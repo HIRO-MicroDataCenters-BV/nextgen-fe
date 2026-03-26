@@ -118,13 +118,38 @@ const emit = defineEmits<{
 
 
 const isMandatoryNode = (n: JsonLdNodeType) =>
-  n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden;
+  n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden && !n.metadata.readonly;
 
-const allRequiredFilled = computed(() =>
-  props.modelValue
-    .filter(isMandatoryNode)
-    .every(n => !!(n.value && n.value !== '') || !!(n.children?.some(c => c.value))),
-);
+/**
+ * Mirrors useJsonLdValidation.isEffectivelyEmpty — returns true when a node has
+ * no meaningful value. Handles plain strings, language-string objects
+ * ({ '@value': '', '@language': 'en' }), and nodes whose value lives in children.
+ */
+const nodeIsEffectivelyEmpty = (n: JsonLdNodeType): boolean => {
+  if (n.value === undefined || n.value === null || n.value === '') {
+    return !n.children?.length;
+  }
+  if (typeof n.value === 'object' && !Array.isArray(n.value)) {
+    const v = n.value as Record<string, unknown>;
+    if ('@value' in v) {
+      return v['@value'] === '' || v['@value'] === undefined || v['@value'] === null;
+    }
+  }
+  return false;
+};
+
+/** True only when every mandatory field has a real value AND all hard errors are resolved. */
+const allRequiredFilled = computed(() => {
+  const mandatoryNodes = props.modelValue.filter(isMandatoryNode);
+  // Must have at least one mandatory field tracked
+  if (mandatoryNodes.length === 0) return false;
+  // All mandatory nodes must be genuinely filled
+  const allFilled = mandatoryNodes.every(n => !nodeIsEffectivelyEmpty(n));
+  if (!allFilled) return false;
+  // Must have no hard (severity=error) validation errors
+  const hardErrors = (props.validationErrors ?? []).filter(e => e.severity === 'error');
+  return hardErrors.length === 0;
+});
 
 const ONBOARDING_KEY = 'jsonld-onboarding-dismissed';
 const showOnboarding = ref(false);
@@ -139,7 +164,7 @@ onMounted(() => {
   // Only show when mandatory fields are all empty (fresh dataset)
   const mandatoryEmpty = props.modelValue
     .filter(isMandatoryNode)
-    .every(n => !n.value && !n.children?.some(c => c.value));
+    .every(n => nodeIsEffectivelyEmpty(n));
   if (mandatoryEmpty) showOnboarding.value = true;
 });
 
