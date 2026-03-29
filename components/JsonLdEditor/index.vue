@@ -215,6 +215,11 @@ interface Props {
   contentFromFile?: boolean;
   /** Item type from form (dataset | application). When set, validates dcterms:type matches. */
   itemType?: string;
+  /**
+   * When false (e.g. catalog edit: client selector is fixed), Access/Download URL is not
+   * validated against the globally selected connector — allows file://, s3://, https:// etc.
+   */
+  enforceClientAccessUrl?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -224,6 +229,7 @@ const props = withDefaults(defineProps<Props>(), {
   extraMetadata: null,
   contentFromFile: false,
   itemType: undefined,
+  enforceClientAccessUrl: true,
 });
 
 const { t } = useI18n();
@@ -490,7 +496,9 @@ watch(() => props.extraMetadata, (newExtra) => {
 
 
 const validationResult = computed(() => {
-  return validateTree(treeData.value, props.itemType);
+  return validateTree(treeData.value, props.itemType, {
+    enforceClientAccessUrl: props.enforceClientAccessUrl,
+  });
 });
 
 const toggleMode = (checked: boolean) => {

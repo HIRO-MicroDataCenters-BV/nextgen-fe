@@ -618,6 +618,7 @@ defineExpose({
                 :title="field.label"
                 :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
                 :item-type="field.name === 'metadata_content' ? values.item_type : undefined"
+                :enforce-client-access-url="field.name === 'metadata_content' ? !isEditMode : true"
                 @update:model-value="componentField['onUpdate:modelValue']"
               />
             </FormControl>

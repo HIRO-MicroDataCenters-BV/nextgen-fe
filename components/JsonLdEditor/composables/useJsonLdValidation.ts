@@ -41,14 +41,20 @@ export function useJsonLdValidation() {
         return false;
     };
 
-    const validateNode = (node: JsonLdNode, path: string = ''): ValidationError[] => {
+    type ValidateCtx = { enforceClientAccessUrl: boolean };
+
+    const validateNode = (
+        node: JsonLdNode,
+        path: string = '',
+        ctx: ValidateCtx = { enforceClientAccessUrl: true },
+    ): ValidationError[] => {
         const errors: ValidationError[] = [];
         const currentPath = path ? `${path}.${node.key}` : node.key;
 
         if (node.metadata.hidden) {
             if (node.children?.length) {
                 for (const child of node.children) {
-                    errors.push(...validateNode(child, currentPath));
+                    errors.push(...validateNode(child, currentPath, ctx));
                 }
             }
             return errors;
@@ -134,7 +140,7 @@ export function useJsonLdValidation() {
             const client = selectedClient.value;
             const config = client ? CLIENT_URL_CONFIG[client] : null;
 
-            if (isAccessOrDownloadUrl && config) {
+            if (isAccessOrDownloadUrl && config && ctx.enforceClientAccessUrl) {
                 const hasExpectedPrefix = config.protocolPrefix ? val.startsWith(config.protocolPrefix) : false;
                 const hasWrongProtocol = Object.values(CLIENT_URL_CONFIG).some(
                     (c) => c !== config && c.protocolPrefix && val.startsWith(c.protocolPrefix)
@@ -193,9 +199,14 @@ export function useJsonLdValidation() {
             } else {
                 try {
                     const u = new URL(val);
-                    const allowedProtocols = ['http:', 'https:', 'file:'];
-                    if (isAccessOrDownloadUrl && config?.allowedProtocols.includes('s3:')) {
-                        allowedProtocols.push('s3:');
+                    let allowedProtocols: string[];
+                    if (isAccessOrDownloadUrl && !ctx.enforceClientAccessUrl) {
+                        allowedProtocols = ['http:', 'https:', 'file:', 's3:'];
+                    } else {
+                        allowedProtocols = ['http:', 'https:', 'file:'];
+                        if (isAccessOrDownloadUrl && config?.allowedProtocols.includes('s3:')) {
+                            allowedProtocols.push('s3:');
+                        }
                     }
                     if (!allowedProtocols.includes(u.protocol)) {
                         errors.push({
@@ -252,7 +263,7 @@ export function useJsonLdValidation() {
 
         if (node.children) {
             for (const child of node.children) {
-                errors.push(...validateNode(child, currentPath));
+                errors.push(...validateNode(child, currentPath, ctx));
             }
         }
 
@@ -268,15 +279,22 @@ export function useJsonLdValidation() {
         return String(idNode.value).trim();
     };
 
-    const validateTree = (tree: JsonLdNode[], itemType?: string): ValidationResult => {
+    const validateTree = (
+        tree: JsonLdNode[],
+        itemType?: string,
+        options?: { enforceClientAccessUrl?: boolean },
+    ): ValidationResult => {
         const errors: ValidationError[] = [];
+        const ctx: ValidateCtx = {
+            enforceClientAccessUrl: options?.enforceClientAccessUrl !== false,
+        };
 
         if (!tree || tree.length === 0) {
             return { valid: true, errors: [] };
         }
 
         for (const node of tree) {
-            errors.push(...validateNode(node));
+            errors.push(...validateNode(node, '', ctx));
         }
 
         const mandatoryTopLevelKeys = getMandatoryDatasetFieldKeys();
