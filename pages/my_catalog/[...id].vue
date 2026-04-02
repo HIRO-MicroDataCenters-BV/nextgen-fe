@@ -42,6 +42,7 @@ import {
   convertJsonLdDatasetToJson,
   createDatasetJsonLd,
 } from "~/utils/jsonld";
+import { hasMetadataItemTypeMismatch } from "~/utils/metadataItemTypeConsistency";
 import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
@@ -67,12 +68,23 @@ const initialValues = ref<Record<string, unknown> | null>(null);
 const formRef = ref();
 const existingMetadataFilename = ref<string | null>(null);
 
-const formSchema = z.object({
-  item_type: z.string().min(1),
-  related_data_product: z.string().optional().nullable(),
-  file: z.any().optional().nullable(),
-  metadata_content: z.union([z.string().min(1), z.record(z.unknown())]),
-});
+const formSchema = computed(() =>
+  z
+    .object({
+      item_type: z.string().min(1),
+      related_data_product: z.string().optional().nullable(),
+      file: z.any().optional().nullable(),
+      metadata_content: z.union([z.string().min(1), z.record(z.unknown())]),
+    })
+    .refine(
+      (data) =>
+        !hasMetadataItemTypeMismatch(data.metadata_content, data.item_type),
+      {
+        message: t("jsonld.editor.validation.item_type_mismatch"),
+        path: ["metadata_content"],
+      }
+    )
+);
 
 const fields = computed<FormFieldDefinition[]>(() => [
   {

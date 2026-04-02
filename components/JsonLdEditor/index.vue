@@ -496,9 +496,25 @@ watch(() => props.extraMetadata, (newExtra) => {
 
 
 const validationResult = computed(() => {
-  return validateTree(treeData.value, props.itemType, {
+  const opts = {
     enforceClientAccessUrl: props.enforceClientAccessUrl,
-  });
+  };
+  if (currentMode.value === 'code') {
+    const raw = props.modelValue;
+    try {
+      if (typeof raw === 'string') {
+        const { tree } = parseJsonLd(raw);
+        return validateTree(tree, props.itemType, opts);
+      }
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        const { tree } = parseJsonLd(raw as Record<string, unknown>);
+        return validateTree(tree, props.itemType, opts);
+      }
+    } catch {
+      /* invalid JSON in code mode — skip tree-based checks */
+    }
+  }
+  return validateTree(treeData.value, props.itemType, opts);
 });
 
 const toggleMode = (checked: boolean) => {

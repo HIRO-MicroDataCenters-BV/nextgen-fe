@@ -28,6 +28,7 @@ import { useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
 import { createDatasetJsonLd } from "@/utils/jsonld";
+import { hasMetadataItemTypeMismatch } from "@/utils/metadataItemTypeConsistency";
 import { useDefaultDataset } from "@/components/JsonLdEditor/composables/useDefaultDataset";
 
 const { t } = useI18n();
@@ -60,6 +61,14 @@ const formSchema = computed(() =>
       {
         message: t("validation.related_data_product_required"),
         path: ["related_data_product"],
+      }
+    )
+    .refine(
+      (data) =>
+        !hasMetadataItemTypeMismatch(data.metadata_content, data.item_type),
+      {
+        message: t("jsonld.editor.validation.item_type_mismatch"),
+        path: ["metadata_content"],
       }
     )
 );

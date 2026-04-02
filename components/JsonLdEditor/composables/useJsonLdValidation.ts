@@ -2,6 +2,10 @@ import type { JsonLdNode, ValidationResult, ValidationError } from '../types/edi
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
 import { CLIENT_URL_CONFIG } from '@/constants';
+import {
+    getDctermsTypeIdFromTreeNodes,
+    hasItemTypeMismatchForDctermsId,
+} from '~/utils/metadataItemTypeConsistency';
 
 type FieldKey = keyof typeof jsonldFieldsEn;
 const fieldLabel = (key: string) =>
@@ -271,14 +275,6 @@ export function useJsonLdValidation() {
     };
 
 
-    const extractDctermsTypeId = (nodes: JsonLdNode[]): string | null => {
-        const typeNode = nodes.find(n => n.key === 'dcterms:type');
-        if (!typeNode?.children) return null;
-        const idNode = typeNode.children.find(n => n.key === '@id');
-        if (!idNode?.value) return null;
-        return String(idNode.value).trim();
-    };
-
     const validateTree = (
         tree: JsonLdNode[],
         itemType?: string,
@@ -314,28 +310,13 @@ export function useJsonLdValidation() {
         }
 
         if (itemType && hasData) {
-            const dctermsTypeId = extractDctermsTypeId(tree);
-            const datasetUri = 'http://purl.org/dc/dcmitype/Dataset';
-            const softwareUri = 'http://purl.org/dc/dcmitype/Software';
-
-            if (dctermsTypeId) {
-                const expectDataset = itemType === 'dataset';
-                const isDataset = dctermsTypeId === datasetUri || dctermsTypeId.endsWith('#Dataset') || dctermsTypeId.endsWith('/Dataset');
-                const isSoftware = dctermsTypeId === softwareUri || dctermsTypeId.endsWith('#Software') || dctermsTypeId.endsWith('/Software');
-
-                if (expectDataset && isSoftware) {
-                    errors.push({
-                        path: 'dcterms:type',
-                        message: t('jsonld.editor.validation.item_type_mismatch'),
-                        severity: 'error',
-                    });
-                } else if (!expectDataset && isDataset) {
-                    errors.push({
-                        path: 'dcterms:type',
-                        message: t('jsonld.editor.validation.item_type_mismatch'),
-                        severity: 'error',
-                    });
-                }
+            const dctermsTypeId = getDctermsTypeIdFromTreeNodes(tree);
+            if (hasItemTypeMismatchForDctermsId(dctermsTypeId, itemType)) {
+                errors.push({
+                    path: 'dcterms:type',
+                    message: t('jsonld.editor.validation.item_type_mismatch'),
+                    severity: 'error',
+                });
             }
         }
 
