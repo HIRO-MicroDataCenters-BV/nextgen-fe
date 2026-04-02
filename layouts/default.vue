@@ -104,7 +104,7 @@
         </div>
       </header>
       <div
-        class="flex flex-1 flex-col gap-4 md:gap-8 px-8 mx-auto max-w-[calc(840px+16px)] w-full"
+        class="flex min-h-0 flex-1 flex-col gap-4 md:gap-8 px-8 mx-auto max-w-[calc(840px+16px)] w-full"
       >
         <slot />
       </div>

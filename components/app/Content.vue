@@ -12,7 +12,7 @@ defineProps<{
 :title="title" :description="description" :show-available-biobanks="showAvailableBiobanks"
       @change-file="emit('change-file')" @submit="emit('submit')" />
   </div> -->
-  <div class="content-slot">
+  <div class="content-slot flex min-h-0 flex-1 flex-col">
     <slot />
   </div>
 </template>

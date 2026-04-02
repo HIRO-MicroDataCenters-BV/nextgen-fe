@@ -793,7 +793,7 @@ defineExpose({ fetchData, getSelectedRaw });
 </script>
 
 <template>
-  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)] relative">
+  <div class="relative flex min-h-0 w-full flex-1 flex-col py-4">
     <div
       v-if="hasSourceHeader"
       class="flex items-center justify-between gap-2 mb-4 flex-wrap"
@@ -887,8 +887,9 @@ defineExpose({ fetchData, getSelectedRaw });
     <AppTablePreloader v-if="isLoading" />
     <div
       v-else
-      class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
+      class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border"
     >
+      <div class="min-h-0 flex-1 overflow-auto">
       <Table
         :data-source="dataSource"
         :columns="columns"
@@ -896,13 +897,16 @@ defineExpose({ fetchData, getSelectedRaw });
         :title="title"
       >
         <TableHeader
-          class="sticky top-0 bg-gray-50 z-10 outline outline-1 outline-gray-200"
+          class="bg-gray-50 outline outline-1 outline-gray-200"
         >
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
           >
-            <TableHead v-if="isSelectionVisible">
+            <TableHead
+              v-if="isSelectionVisible"
+              class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50"
+            >
               <div v-if="selectionMode === 'multiple'" class="flex items-center justify-center">
                 <Checkbox
                   :model-value="
@@ -918,7 +922,11 @@ defineExpose({ fetchData, getSelectedRaw });
                 />
               </div>
             </TableHead>
-            <TableHead v-for="header in headerGroup.headers" :key="header.id">
+            <TableHead
+              v-for="header in headerGroup.headers"
+              :key="header.id"
+              class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50"
+            >
               <FlexRender
                 v-if="!header.isPlaceholder"
                 :render="header.column.columnDef.header"
@@ -966,6 +974,7 @@ defineExpose({ fetchData, getSelectedRaw });
           </TableRow>
         </TableBody>
       </Table>
+      </div>
     </div>
     <AppTableRowMenu
       :rows="selectedRows"
