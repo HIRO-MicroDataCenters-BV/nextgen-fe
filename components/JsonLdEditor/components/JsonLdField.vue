@@ -118,6 +118,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import ControlledVocabularySelect from './ControlledVocabularySelect.vue';
 import DatePickerField from './DatePickerField.vue';
 import type { JsonLdNode, ValidationError } from '../types/editor.types';
+import { jsonLdValueToPlainString } from '@/utils/jsonld';
 
 
 interface Props {
@@ -142,11 +143,14 @@ const displayValue = computed(() => {
     return v.map(item => {
       if (typeof item === 'object' && item !== null) {
         const obj = item as Record<string, unknown>;
-        if ('@value' in obj) return String(obj['@value']);
+        if ('@value' in obj) return jsonLdValueToPlainString(obj['@value']);
         if ('@id' in obj) return String(obj['@id']);
       }
-      return String(item);
+      return jsonLdValueToPlainString(item);
     }).join(', ');
+  }
+  if (typeof v === 'object') {
+    return jsonLdValueToPlainString(v);
   }
   return String(v);
 });
@@ -175,9 +179,14 @@ const handleTelUpdate = (v: string | number) => {
 
 // Language-string
 const languageValue = computed(() => {
-  if (props.node.type === 'language-string' && props.node.value && typeof props.node.value === 'object') {
+  if (
+    props.node.type === 'language-string' &&
+    props.node.value &&
+    typeof props.node.value === 'object' &&
+    !Array.isArray(props.node.value)
+  ) {
     const v = props.node.value as Record<string, unknown>;
-    return String(v['@value'] ?? '');
+    return jsonLdValueToPlainString(v['@value']);
   }
   return '';
 });

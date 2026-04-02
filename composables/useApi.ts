@@ -9,6 +9,7 @@ import type {
   ApiErrorDetail,
   ApiFilterGroup,
 } from "~/types/api.types";
+import { sanitizeDatasetDctermsTitleInPlace } from "~/utils/jsonld";
 
 export const useApi = () => {
   const config = useRuntimeConfig();
@@ -279,6 +280,7 @@ export const useApi = () => {
         `/datasets/${id}/`,
         "GET"
       );
+      if (response) sanitizeDatasetDctermsTitleInPlace(response);
       return response || null;
     },
 
@@ -309,6 +311,13 @@ export const useApi = () => {
         dataset,
         { showToast: true, hasRawData: true, returnErrorDetails: true }
       );
+      if (
+        response &&
+        typeof response === "object" &&
+        !("error" in response && (response as { error?: boolean }).error === true)
+      ) {
+        sanitizeDatasetDctermsTitleInPlace(response);
+      }
       return response ?? null;
     },
 

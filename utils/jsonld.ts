@@ -11,6 +11,122 @@ import type {
   SearchFilter,
 } from "~/types/jsonld.types";
 
+const JSONLD_PLAIN_MAX_DEPTH = 12;
+
+const JSONLD_BOGUS_OBJECT_PLACEHOLDER = /^\[object object\]$/i;
+
+/** True when the string is the JS coercion artifact from serializing a plain object. */
+export function isBogusJsonLdObjectPlaceholder(text: string): boolean {
+  return JSONLD_BOGUS_OBJECT_PLACEHOLDER.test(text.trim());
+}
+
+/**
+ * Flatten a JSON-LD literal / nested @value tree to a display or API-safe string.
+ * Avoids "[object Object]" when @value is an object or array.
+ */
+export function jsonLdValueToPlainString(
+  input: unknown,
+  depth = 0
+): string {
+  if (input == null || depth > JSONLD_PLAIN_MAX_DEPTH) return "";
+  if (typeof input === "string") return input;
+  if (typeof input === "number" || typeof input === "boolean") {
+    return String(input);
+  }
+  if (Array.isArray(input)) {
+    return input
+      .map((x) => jsonLdValueToPlainString(x, depth + 1))
+      .filter((s) => s.trim().length > 0)
+      .join(", ");
+  }
+  if (typeof input === "object") {
+    const o = input as Record<string, unknown>;
+    if ("@value" in o) {
+      return jsonLdValueToPlainString(o["@value"], depth + 1);
+    }
+    if ("@id" in o && Object.keys(o).length <= 3) {
+      const id = o["@id"];
+      if (typeof id === "string") return id;
+    }
+  }
+  return "";
+}
+
+/**
+ * Collapse dcterms:title-style language maps to one { @language, @value } with a plain string @value.
+ * Prefers preferredLanguage; handles arrays of literals and typed { @type, @value }.
+ */
+export function normalizeDctermsLanguageLiteral(
+  value: unknown,
+  preferredLanguage = "en"
+): { "@language": string; "@value": string } {
+  const leaf = (v: unknown) => jsonLdValueToPlainString(v);
+
+  if (Array.isArray(value)) {
+    const picks: { lang: string; text: string }[] = [];
+    for (const item of value) {
+      if (typeof item === "string") {
+        const t = item.trim();
+        if (t && !isBogusJsonLdObjectPlaceholder(t)) {
+          picks.push({ lang: preferredLanguage, text: t });
+        }
+        continue;
+      }
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const lang =
+        typeof o["@language"] === "string" ? o["@language"] : preferredLanguage;
+      const text = leaf(
+        o["@value"] !== undefined ? o["@value"] : o
+      ).trim();
+      if (text && !isBogusJsonLdObjectPlaceholder(text)) {
+        picks.push({ lang, text });
+      }
+    }
+    // Same language repeated (invalid but common after merges): use the **last** entry —
+    // usually the newest edit; the first match was wrongly shown in catalog lists.
+    const preferredMatches = picks.filter(
+      (p) => p.lang === preferredLanguage
+    );
+    const best =
+      preferredMatches.length > 0
+        ? preferredMatches[preferredMatches.length - 1]
+        : picks.length > 0
+          ? picks[picks.length - 1]
+          : undefined;
+    return {
+      "@language": best?.lang ?? preferredLanguage,
+      "@value": best?.text ?? "",
+    };
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    const lang =
+      typeof o["@language"] === "string" ? o["@language"] : preferredLanguage;
+    if ("@value" in o) {
+      const plain = leaf(o["@value"]);
+      if (isBogusJsonLdObjectPlaceholder(plain)) {
+        return { "@language": preferredLanguage, "@value": "" };
+      }
+      return { "@language": lang, "@value": plain };
+    }
+  }
+
+  if (typeof value === "string") {
+    if (isBogusJsonLdObjectPlaceholder(value)) {
+      return { "@language": preferredLanguage, "@value": "" };
+    }
+    return { "@language": preferredLanguage, "@value": value };
+  }
+
+  const fallback = leaf(value);
+  if (isBogusJsonLdObjectPlaceholder(fallback)) {
+    return { "@language": preferredLanguage, "@value": "" };
+  }
+  return { "@language": preferredLanguage, "@value": fallback };
+}
+
 /**
  * Extract value from JSON-LD value object
  */
@@ -20,10 +136,23 @@ export function getJsonLdValue(
   if (!value) return "";
 
   if (Array.isArray(value)) {
-    return value[0]?.["@value"] || "";
+    const first = value[0];
+    if (!first) return "";
+    if (typeof first === "object" && first !== null && "@value" in first) {
+      return jsonLdValueToPlainString(
+        (first as Record<string, unknown>)["@value"]
+      );
+    }
+    return jsonLdValueToPlainString(first);
   }
 
-  return value["@value"] || "";
+  if (typeof value === "object" && value !== null && "@value" in value) {
+    return jsonLdValueToPlainString(
+      (value as Record<string, unknown>)["@value"]
+    );
+  }
+
+  return "";
 }
 
 /**
@@ -54,14 +183,10 @@ function getLanguageValue(
   preferredLanguage: string = "en"
 ): string {
   if (!value) return "";
-
-  if (Array.isArray(value)) {
-    const preferred = value.find((v) => v["@language"] === preferredLanguage);
-    if (preferred) return preferred["@value"];
-    return value[0]?.["@value"] || "";
-  }
-
-  return value["@value"] || "";
+  return normalizeDctermsLanguageLiteral(
+    value as unknown,
+    preferredLanguage
+  )["@value"];
 }
 
 function extractTitleNodePlain(
@@ -71,31 +196,14 @@ function extractTitleNodePlain(
   if (typeof node === "string") return node.trim();
   if (!node) return "";
   if (Array.isArray(node)) {
-    const preferred = node.find(
-      (x) =>
-        x &&
-        typeof x === "object" &&
-        (x as Record<string, unknown>)["@language"] === preferredLanguage
-    );
-    if (
-      preferred &&
-      typeof preferred === "object" &&
-      "@value" in preferred
-    ) {
-      const v = (preferred as { "@value": unknown })["@value"];
-      if (typeof v === "string" && v.trim()) return v.trim();
-      if (v != null && String(v).trim()) return String(v).trim();
-    }
-    for (const item of node) {
-      const s = extractTitleNodePlain(item, preferredLanguage);
-      if (s) return s;
-    }
-    return "";
+    return normalizeDctermsLanguageLiteral(node, preferredLanguage)[
+      "@value"
+    ].trim();
   }
   if (typeof node === "object" && node !== null && "@value" in node) {
-    const v = (node as { "@value": unknown })["@value"];
-    if (typeof v === "string") return v.trim();
-    if (v != null) return String(v).trim();
+    return jsonLdValueToPlainString(
+      (node as { "@value": unknown })["@value"]
+    ).trim();
   }
   return "";
 }
@@ -638,6 +746,21 @@ export function findDatasetInJsonLd(jsonLdData: unknown): JsonLdObject | null {
   }
 
   return null;
+}
+
+/**
+ * Collapse invalid multi-title arrays and strip `[object Object]` artifacts on the dataset
+ * actually used in the payload (in-place). Safe to call on GET responses before editing.
+ */
+export function sanitizeDatasetDctermsTitleInPlace(root: unknown): void {
+  if (!root || typeof root !== "object") return;
+  const dataset = findDatasetInJsonLd(root);
+  const target = (dataset ?? root) as Record<string, unknown>;
+  if (target["dcterms:title"] == null) return;
+  target["dcterms:title"] = normalizeDctermsLanguageLiteral(
+    target["dcterms:title"],
+    "en"
+  );
 }
 
 /**
@@ -1224,6 +1347,13 @@ function normalizeSpdxAlgorithmIds(node: unknown): void {
  * @param filename - Filename of uploaded file
  * @returns JSON-LD dataset object as string
  */
+/** Deep-clone to plain JSON data (strips Vue proxies / non-JSON values) for stable API payloads. */
+function jsonLdMetadataToPlainObject(
+  value: Record<string, unknown>
+): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
+
 export function createDatasetJsonLd(
   formData: Record<string, unknown>,
   filename: string
@@ -1238,12 +1368,14 @@ export function createDatasetJsonLd(
   let parsedMetadataContent: Record<string, unknown> | null = null;
   if (formData.metadata_content) {
     if (typeof formData.metadata_content === "object") {
-      parsedMetadataContent = formData.metadata_content as Record<string, unknown>;
+      parsedMetadataContent = jsonLdMetadataToPlainObject(
+        formData.metadata_content as Record<string, unknown>
+      );
     } else if (typeof formData.metadata_content === "string") {
       try {
         const parsed = JSON.parse(formData.metadata_content);
         if (parsed && typeof parsed === "object") {
-          parsedMetadataContent = parsed;
+          parsedMetadataContent = parsed as Record<string, unknown>;
         }
       } catch {
         void 0;
@@ -1279,16 +1411,26 @@ export function createDatasetJsonLd(
     if (Array.isArray(value)) {
       const normalized = value.map((item) => {
         if (typeof item === "object" && item !== null) {
-          if ("@language" in item && "@value" in item) {
+          const o = item as Record<string, unknown>;
+          if ("@language" in o && "@value" in o) {
             return {
-              "@language": String(item["@language"]),
-              "@value": String(item["@value"]),
+              "@language": String(o["@language"]),
+              "@value": jsonLdValueToPlainString(o["@value"]),
+            };
+          }
+          if ("@value" in o) {
+            return {
+              "@language": "en",
+              "@value": jsonLdValueToPlainString(o["@value"]),
             };
           }
         }
+        if (typeof item === "string") {
+          return { "@language": "en", "@value": item };
+        }
         return {
           "@language": "en",
-          "@value": String(item),
+          "@value": jsonLdValueToPlainString(item),
         };
       });
       if (normalized.length === 1) {
@@ -1297,17 +1439,24 @@ export function createDatasetJsonLd(
       return normalized;
     }
     if (typeof value === "object" && value !== null) {
-      if ("@language" in value && "@value" in value) {
+      const o = value as Record<string, unknown>;
+      if ("@language" in o && "@value" in o) {
         return {
-          "@language": String(value["@language"]),
-          "@value": String(value["@value"]),
+          "@language": String(o["@language"]),
+          "@value": jsonLdValueToPlainString(o["@value"]),
+        };
+      }
+      if ("@value" in o) {
+        return {
+          "@language": "en",
+          "@value": jsonLdValueToPlainString(o["@value"]),
         };
       }
     }
     if (value) {
       return {
         "@language": "en",
-        "@value": String(value),
+        "@value": jsonLdValueToPlainString(value),
       };
     }
     return {
@@ -1331,27 +1480,26 @@ export function createDatasetJsonLd(
       "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
     };
   } else if (baseDataset["dcterms:title"]) {
-    const normalizedTitle = normalizeLanguageValue(
-      baseDataset["dcterms:title"]
+    baseDataset["dcterms:title"] = normalizeDctermsLanguageLiteral(
+      baseDataset["dcterms:title"],
+      "en"
     );
-    if (Array.isArray(normalizedTitle)) {
-      baseDataset["dcterms:title"] =
-        normalizedTitle.length > 0 ? normalizedTitle[0] : normalizedTitle;
-    } else {
-      baseDataset["dcterms:title"] = normalizedTitle;
-    }
   }
 
+  // Only when metadata is plain text (not failed JSON parse of an object string).
   if (
     formData.metadata_content &&
     typeof formData.metadata_content === "string" &&
     formData.metadata_content.trim() &&
     !parsedMetadataContent
   ) {
-    baseDataset["dcterms:description"] = {
-      "@language": "en",
-      "@value": formData.metadata_content.trim(),
-    };
+    const rawMeta = formData.metadata_content.trim();
+    if (!rawMeta.startsWith("{") && !rawMeta.startsWith("[")) {
+      baseDataset["dcterms:description"] = {
+        "@language": "en",
+        "@value": rawMeta,
+      };
+    }
   } else if (baseDataset["dcterms:description"]) {
     const normalizedDesc = normalizeLanguageValue(
       baseDataset["dcterms:description"]
@@ -1434,7 +1582,17 @@ export function createDatasetJsonLd(
   const vcardExpanded = expandVcardPrefixedKeys(finalPayload);
   normalizeSpdxAlgorithmIds(vcardExpanded);
 
-  vcardExpanded["@context"] = { ...REGISTRATION_JSONLD_CONTEXT };
+  const existingCtx = vcardExpanded["@context"];
+  const userCtx =
+    existingCtx &&
+    typeof existingCtx === "object" &&
+    !Array.isArray(existingCtx)
+      ? (existingCtx as Record<string, string>)
+      : {};
+  vcardExpanded["@context"] = {
+    ...REGISTRATION_JSONLD_CONTEXT,
+    ...userCtx,
+  };
 
   return JSON.stringify(vcardExpanded, null, 2);
 }

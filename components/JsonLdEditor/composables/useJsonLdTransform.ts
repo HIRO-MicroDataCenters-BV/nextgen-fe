@@ -1,6 +1,7 @@
 import type { JsonLdNode, JsonLdNodeType, FieldDefinition } from '../types/editor.types';
 import { useJsonLdSchema } from './useJsonLdSchema';
 import { useIdGenerator } from '@/composables/useIdGenerator';
+import { normalizeDctermsLanguageLiteral } from '@/utils/jsonld';
 
 export type SerializeTreeOptions = { omitEmpty?: boolean };
 
@@ -106,11 +107,22 @@ export function useJsonLdTransform() {
             // by detectType). Structural types (object, array, language-string) are always
             // determined from the data shape so they parse correctly regardless of schema.
             const STRUCTURAL_TYPES: JsonLdNodeType[] = ['object', 'array', 'language-string'];
-            const type: JsonLdNodeType = (
+            let type: JsonLdNodeType = (
                 fieldDef?.type &&
                 !STRUCTURAL_TYPES.includes(detectedType) &&  // data shape wins for structures
                 fieldDef.type !== 'array' && fieldDef.type !== 'object'  // schema object/array need data shape
             ) ? fieldDef.type as JsonLdNodeType : detectedType;
+
+            // Schema language-string must win over a literal array (invalid but common API/MMIO shape),
+            // otherwise the editor treats title as comma-joined array and serializes garbage.
+            if (fieldDef?.type === 'language-string') {
+                type = 'language-string';
+            }
+
+            const valueForNode =
+                fieldDef?.type === 'language-string'
+                    ? normalizeDctermsLanguageLiteral(value, 'en')
+                    : value;
 
             const node: JsonLdNode = {
                 id: generateId(),
@@ -136,10 +148,10 @@ export function useJsonLdTransform() {
             };
 
             if (type === 'object') {
-                const objValue = value as Record<string, unknown>;
+                const objValue = valueForNode as Record<string, unknown>;
                 node.children = parseJsonLdToTree(objValue, key, context, fieldDef?.children as Record<string, FieldDefinition> | undefined);
             } else if (type === 'array') {
-                const arrValue = value as unknown[];
+                const arrValue = valueForNode as unknown[];
 
                 /**
                  * DCAT-AP 3 array parsing rules:
@@ -216,23 +228,23 @@ export function useJsonLdTransform() {
                     node.value = arrValue;
                 }
             } else if (type === 'language-string') {
-                const langValue = value as { '@language': string; '@value': string };
+                const langValue = valueForNode as { '@language': string; '@value': string };
                 node.value = langValue;
                 node.metadata.language = langValue['@language'];
             } else {
                 // Handle other types
-                if (typeof value === 'object' && value !== null) {
-                    const objValue = value as Record<string, unknown>;
+                if (typeof valueForNode === 'object' && valueForNode !== null) {
+                    const objValue = valueForNode as Record<string, unknown>;
                     if ('@value' in objValue) {
                         node.value = objValue['@value'];
                     } else if ('@id' in objValue) {
                         node.value = objValue['@id'];
                     } else {
-                        node.value = value;
+                        node.value = valueForNode;
                     }
                 } else {
                     // Primitive value (string, number, boolean)
-                    node.value = value;
+                    node.value = valueForNode;
                 }
             }
 
