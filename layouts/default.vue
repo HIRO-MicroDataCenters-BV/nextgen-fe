@@ -34,7 +34,7 @@
                               src="/images/logo.svg"
                               class="size-10"
                               alt="cog-logo"
-                            >
+                            />
                             <div class="space-y-1">
                               <div class="mb-2">
                                 <h4 class="text-sm font-semibold">

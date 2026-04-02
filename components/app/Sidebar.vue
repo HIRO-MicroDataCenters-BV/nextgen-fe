@@ -27,7 +27,7 @@ function handleUserLogout() {
                 <div
                   class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-md"
                 >
-                  <img src="/images/logo.svg" alt="cog-logo" >
+                  <img src="/images/logo.svg" alt="cog-logo" />
                 </div>
                 <div
                   class="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
@@ -179,7 +179,7 @@ function handleUserLogout() {
                     alt=""
                     decoding="async"
                     fetchpriority="low"
-                  >
+                  />
                 </div>
                 <div
                   class="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
@@ -199,7 +199,10 @@ function handleUserLogout() {
               align="end"
               :side-offset="8"
             >
-              <DropdownMenuItem class="cursor-pointer" @click="handleUserLogout">
+              <DropdownMenuItem
+                class="cursor-pointer"
+                @click="handleUserLogout"
+              >
                 <Icon class="mr-2 size-4" name="lucide:log-out" />
                 {{ t("menu.logout") }}
               </DropdownMenuItem>
