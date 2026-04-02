@@ -47,13 +47,14 @@ const props = withDefaults(defineProps<TableProps>(), {
   selectionMode: "multiple",
 });
 
-const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } = props;
+const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
+  props;
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
   (
     e: "pass-to-training",
-    value: { dataset: Array<Record<string, unknown>> }
+    value: { dataset: Array<Record<string, unknown>> },
   ): void;
 }>();
 const serverData = shallowRef<TableRowData[]>([]); // Raw data from server
@@ -76,7 +77,7 @@ const {
 
 // Sync selectedFilters with filterGroups UI state
 const syncFiltersToUI = (
-  filters: Record<string, boolean | string | number>
+  filters: Record<string, boolean | string | number>,
 ) => {
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
@@ -118,7 +119,7 @@ const selectedFilters = ref<Record<string, boolean | string | number>>(
       // Error parsing filters
     }
     return {} as Record<string, boolean | string | number>;
-  })()
+  })(),
 );
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 
@@ -172,7 +173,7 @@ const resetUpdatingFlag = () => {
 const handleFilterChange = (
   key: string,
   value: boolean | string | number,
-  multiple: boolean
+  multiple: boolean,
 ) => {
   isUpdatingFromState.value = true;
   const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
@@ -348,7 +349,7 @@ const applyClientSearch = () => {
   }
 
   const searchLower = clientSearchTerm.value.toLowerCase().trim();
-  
+
   data.value = serverData.value.filter((row: TableRowData) => {
     // Search across all column values
     return Object.values(row).some((value) => {
@@ -361,12 +362,12 @@ const applyClientSearch = () => {
 const columnFilters = ref<ColumnFiltersState>(
   route.query.filters && typeof route.query.filters === "string"
     ? JSON.parse(decodeURIComponent(route.query.filters))
-    : []
+    : [],
 );
 const columnVisibility = ref<VisibilityState>(
   route.query.visibility && typeof route.query.visibility === "string"
     ? JSON.parse(decodeURIComponent(route.query.visibility))
-    : {}
+    : {},
 );
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
@@ -374,7 +375,7 @@ const expanded = ref<ExpandedState>({});
 const currentPage = ref<number>(
   route.query.page && typeof route.query.page === "string"
     ? parseInt(route.query.page)
-    : 0
+    : 0,
 );
 
 const getColumns = (cols: TableColumn[] | undefined) => {
@@ -382,7 +383,8 @@ const getColumns = (cols: TableColumn[] | undefined) => {
   return cols.map((item) => ({
     id: item.id,
     accessorKey: item.id,
-    header: () => createColumnHeader(t(`column.${item.id}`), item.icon, item.iconOnly),
+    header: () =>
+      createColumnHeader(t(`column.${item.id}`), item.icon, item.iconOnly),
     cell: item.cell,
   }));
 };
@@ -391,7 +393,7 @@ const selectedRows = ref<Row<TableRowData>[]>([]);
 
 const mappedColumns = ref(getColumns(columns));
 const isSelectionVisible = computed(
-  () => props.selectionEnabled && selectedType.value === "datasets"
+  () => props.selectionEnabled && selectedType.value === "datasets",
 );
 const table = useVueTable({
   data,
@@ -403,7 +405,7 @@ const table = useVueTable({
   getExpandedRowModel: getExpandedRowModel(),
   getRowId: (row) => String((row as TableRowData).id),
   enableRowSelection: true,
-  enableMultiRowSelection: props.selectionMode === 'multiple',
+  enableMultiRowSelection: props.selectionMode === "multiple",
   onColumnFiltersChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, columnFilters),
   onColumnVisibilityChange: (updaterOrValue) =>
@@ -414,7 +416,7 @@ const table = useVueTable({
   manualPagination: true,
   globalFilterFn: (row, columnId) => {
     const searchFilter = columnFilters.value.find(
-      (filter) => filter.id === "search"
+      (filter) => filter.id === "search",
     ) as TableFilter | undefined;
     if (!searchFilter) return true;
     if (searchFilter.column !== "all" && searchFilter.column !== columnId) {
@@ -528,7 +530,7 @@ watch(
         const currentColumnFilters = columnFilters.value;
         if (currentColumnFilters.length > 0) {
           const searchFilter = currentColumnFilters.find(
-            (filter) => filter.id === "search"
+            (filter) => filter.id === "search",
           ) as TableFilter | undefined;
           if (searchFilter) {
             searchValue.value = searchFilter.value as string;
@@ -541,7 +543,7 @@ watch(
 
       if (newQuery.visibility && typeof newQuery.visibility === "string") {
         columnVisibility.value = JSON.parse(
-          decodeURIComponent(newQuery.visibility)
+          decodeURIComponent(newQuery.visibility),
         );
       } else {
         columnVisibility.value = {};
@@ -563,7 +565,7 @@ watch(
       }, 50);
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 );
 
 watch(
@@ -573,10 +575,12 @@ watch(
     if (groups.length > 0 && Object.keys(selectedFilters.value).length > 0) {
       isUpdatingFromState.value = true;
       syncFiltersToUI(selectedFilters.value);
-      nextTick(() => { isUpdatingFromState.value = false; });
+      nextTick(() => {
+        isUpdatingFromState.value = false;
+      });
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 watch(
@@ -586,7 +590,7 @@ watch(
     currentPage.value = 0;
     updateURLQuery();
     fetchData();
-  }
+  },
 );
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -620,7 +624,7 @@ watch(
     if (isUpdatingFromState.value) return;
     updateURLQuery();
   },
-  { deep: true }
+  { deep: true },
 );
 
 onMounted(() => {
@@ -661,7 +665,7 @@ watch(
     selectedRows.value = table.getSelectedRowModel().rows;
     emit("selection-change", ids);
   },
-  { deep: true }
+  { deep: true },
 );
 
 const filterItems = computed<DropdownMenuItem[]>(() =>
@@ -674,7 +678,7 @@ const filterItems = computed<DropdownMenuItem[]>(() =>
       value: item.key,
       label: item.label,
     })),
-  }))
+  })),
 );
 
 const filterLabelByKey = computed(() => {
@@ -741,7 +745,7 @@ const handlePassToTraining = () => {
       String(raws[0]["@type"]).includes("dcat:Dataset")) ||
       (Array.isArray(raws[0]["@type"]) &&
         (raws[0]["@type"] as unknown[]).some((t) =>
-          String(t).includes("dcat:Dataset")
+          String(t).includes("dcat:Dataset"),
         )));
 
   const inputForConverter = looksJsonLdDataset
@@ -750,27 +754,31 @@ const handlePassToTraining = () => {
 
   // Convert to simplified format for training
   const payload = convertJsonLdForTraining(inputForConverter);
-  
+
   // Attach original JSON-LD data to each dataset for Checkout Service
   // This preserves dcat:distribution in JSON-LD format
   if (looksJsonLdDataset && raws.length > 0) {
-    payload.dataset = payload.dataset.map((converted: Record<string, unknown>, index: number) => {
-      const original = raws[index];
-      if (original && typeof original === "object") {
-        // Preserve original dcat:distribution if it exists
-        if (original["dcat:distribution"]) {
-          (converted as Record<string, unknown>)["_original_dcat_distribution"] = original["dcat:distribution"];
+    payload.dataset = payload.dataset.map(
+      (converted: Record<string, unknown>, index: number) => {
+        const original = raws[index];
+        if (original && typeof original === "object") {
+          // Preserve original dcat:distribution if it exists
+          if (original["dcat:distribution"]) {
+            (converted as Record<string, unknown>)[
+              "_original_dcat_distribution"
+            ] = original["dcat:distribution"];
+          }
+          // Preserve original region from catalog if available
+          // Region might be in the catalog's dcterms:title
         }
-        // Preserve original region from catalog if available
-        // Region might be in the catalog's dcterms:title
-      }
-      return converted;
-    });
+        return converted;
+      },
+    );
   }
-  
+
   emit(
     "pass-to-training",
-    payload as { dataset: Array<Record<string, unknown>> }
+    payload as { dataset: Array<Record<string, unknown>> },
   );
 };
 
@@ -793,187 +801,204 @@ defineExpose({ fetchData, getSelectedRaw });
 </script>
 
 <template>
-  <div class="relative flex min-h-0 w-full flex-1 flex-col py-4">
+  <div class="relative flex min-h-0 w-full flex-1 flex-col">
+    <!-- Sticks below layout header (h-16) while the main column scrolls -->
     <div
-      v-if="hasSourceHeader"
-      class="flex items-center justify-between gap-2 mb-4 flex-wrap"
+      class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
     >
-      <div class="flex items-center gap-2">
-        <AppHeaderSource />
-      </div>
-      <div class="flex items-center gap-2">
-        <Button class="cursor-pointer" @click="handleCreate">{{
-          t("action.add_new_item")
-        }}</Button>
-      </div>
-    </div>
-    <div class="mb-4 flex items-center justify-between gap-2">
-      <Tabs
-        :model-value="selectedType"
-        @update:model-value="handleTypeTabChange"
-      >
-        <TabsList class="flex mx-auto justify-center items-center mx-auto">
-          <TabsTrigger value="datasets">
-            <Icon name="lucide:table-2" />
-            {{ isMyCatalog ? $t("hint.your") : "" }} {{ $t("action.datasets") }}
-          </TabsTrigger>
-          <TabsTrigger value="applications">
-            <Icon name="lucide:box" />
-            {{ isMyCatalog ? $t("hint.your") : "" }}
-            {{ $t("action.applications") }}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div class="flex gap-2 items-center">
-        <div class="flex-auto flex flex-wrap gap-2">
-          <div class="flex gap-2 relative max-w-sm items-center">
-            <Input
-              v-model="searchValue"
-              class="w-64 pl-8"
-              type="search"
-              :placeholder="t('placeholder.search', { type: selectedType })"
-              @update:model-value="applySearchFilter"
-            />
-            <span
-              class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
-            >
-              <Icon name="lucide:search" />
-            </span>
+      <div class="mx-auto max-w-[calc(840px+16px)] w-full px-8 py-4">
+        <div
+          v-if="hasSourceHeader"
+          class="flex flex-wrap items-center justify-between gap-2"
+        >
+          <div class="flex items-center gap-2">
+            <AppHeaderSource />
           </div>
+          <div class="flex items-center gap-2">
+            <Button class="cursor-pointer" @click="handleCreate">{{
+              t("action.add_new_item")
+            }}</Button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <Tabs
+            :model-value="selectedType"
+            @update:model-value="handleTypeTabChange"
+          >
+            <TabsList class="mx-auto flex items-center justify-center">
+              <TabsTrigger value="datasets">
+                <Icon name="lucide:table-2" />
+                {{ isMyCatalog ? $t("hint.your") : "" }}
+                {{ $t("action.datasets") }}
+              </TabsTrigger>
+              <TabsTrigger value="applications">
+                <Icon name="lucide:box" />
+                {{ isMyCatalog ? $t("hint.your") : "" }}
+                {{ $t("action.applications") }}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          <AppTableDropdownFilter
-            id="filter"
-            label="filter"
-            :items="filterItems"
-            :selected-values="selectedFilterKeys"
-            @filter-change="handleFilterChange"
-          />
+          <div class="flex items-center gap-2">
+            <div class="flex flex-auto flex-wrap gap-2">
+              <div class="relative flex max-w-sm items-center gap-2">
+                <Input
+                  v-model="searchValue"
+                  class="w-64 pl-8"
+                  type="search"
+                  :placeholder="t('placeholder.search', { type: selectedType })"
+                  @update:model-value="applySearchFilter"
+                />
+                <span
+                  class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
+                >
+                  <Icon name="lucide:search" />
+                </span>
+              </div>
+
+              <AppTableDropdownFilter
+                id="filter"
+                label="filter"
+                :items="filterItems"
+                :selected-values="selectedFilterKeys"
+                @filter-change="handleFilterChange"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="filters-list">
+          <div
+            v-if="Object.keys(selectedFilters).length > 0"
+            class="flex flex-wrap items-center gap-2"
+          >
+            <Button
+              variant="default"
+              size="sm"
+              class="h-6 rounded-sm px-2 py-0 text-sm font-normal"
+              @click="handleClearAllFilters"
+            >
+              {{ t("action.clear_filters") }}
+            </Button>
+            <Badge
+              v-for="(value, key) in selectedFilters"
+              :key="key"
+              variant="secondary"
+              class="h-6 rounded-sm px-2 text-sm capitalize"
+            >
+              {{ filterLabelByKey[key] ?? key }}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="ml-1 h-auto w-auto p-0"
+                @click.stop="handleRemoveFilter(key as string)"
+              >
+                <Icon name="lucide:x" class="h-3 w-3" />
+              </Button>
+            </Badge>
+          </div>
         </div>
       </div>
     </div>
-    <div class="filters-list">
+    <!-- end sticky table toolbar -->
+    <AppTablePreloader v-if="isLoading" class="mt-4" />
+    <div v-else class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden">
       <div
-        v-if="Object.keys(selectedFilters).length > 0"
-        class="flex gap-2 items-center flex-wrap my-4 mb-6"
+        class="min-h-0 flex-1 overflow-auto px-8 mx-auto max-w-[calc(840px+16px)] w-full mt-4"
       >
-        <Button
-          variant="default"
-          size="sm"
-          class="rounded-sm px-2 text-sm py-0 font-normal h-6"
-          @click="handleClearAllFilters"
+        <Table
+          :data-source="dataSource"
+          :columns="columns"
+          :page-size="pageSize"
+          :title="title"
+          class="outline outline-1 outline-gray-200 rounded-md overflow-hidden"
         >
-          {{ t("action.clear_filters") }}
-        </Button>
-        <Badge
-          v-for="(value, key) in selectedFilters"
-          :key="key"
-          variant="secondary"
-          class="rounded-sm px-2 text-sm capitalize h-6"
-        >
-          {{ filterLabelByKey[key] ?? key }}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="p-0 h-auto w-auto ml-1"
-            @click.stop="handleRemoveFilter(key as string)"
-          >
-            <Icon name="lucide:x" class="h-3 w-3" />
-          </Button>
-        </Badge>
-      </div>
-    </div>
-    <!-- end table filters -->
-    <AppTablePreloader v-if="isLoading" />
-    <div
-      v-else
-      class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border"
-    >
-      <div class="min-h-0 flex-1 overflow-auto">
-      <Table
-        :data-source="dataSource"
-        :columns="columns"
-        :page-size="pageSize"
-        :title="title"
-      >
-        <TableHeader
-          class="bg-gray-50 outline outline-1 outline-gray-200"
-        >
-          <TableRow
-            v-for="headerGroup in table.getHeaderGroups()"
-            :key="headerGroup.id"
-          >
-            <TableHead
-              v-if="isSelectionVisible"
-              class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50"
+          <TableHeader class="bg-gray-50 outline outline-1 outline-gray-200">
+            <TableRow
+              v-for="headerGroup in table.getHeaderGroups()"
+              :key="headerGroup.id"
             >
-              <div v-if="selectionMode === 'multiple'" class="flex items-center justify-center">
-                <Checkbox
-                  :model-value="
-                    table.getIsAllRowsSelected()
-                      ? true
-                      : table.getIsSomeRowsSelected()
-                      ? 'indeterminate'
-                      : false
-                  "
-                  aria-label="select all"
-                  class="cursor-pointer border-primary"
-                  @update:model-value="(v) => table.toggleAllRowsSelected(!!v)"
-                />
-              </div>
-            </TableHead>
-            <TableHead
-              v-for="header in headerGroup.headers"
-              :key="header.id"
-              class="sticky top-0 z-10 border-b border-gray-200 bg-gray-50"
-            >
-              <FlexRender
-                v-if="!header.isPlaceholder"
-                :render="header.column.columnDef.header"
-                :props="header.getContext()"
-              />
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="table.getRowModel().rows?.length">
-            <template v-for="row in table.getRowModel().rows" :key="row.id">
-              <TableRow :data-state="row.getIsSelected() && 'selected'">
-                <TableCell v-if="isSelectionVisible">
-                  <div class="flex items-center justify-center">
-                    <Checkbox
-                      :model-value="row.getIsSelected()"
-                      :disabled="!row.getCanSelect()"
-                      aria-label="select row"
-                      :class="['cursor-pointer border-primary', selectionMode === 'single' ? 'rounded-full' : '']"
-                      @update:model-value="(v) => row.toggleSelected(!!v)"
-                    >
-                      <template v-if="selectionMode === 'single'">
-                        <div class="h-2 w-2 rounded-full bg-current" />
-                      </template>
-                    </Checkbox>
-                  </div>
-                </TableCell>
-                <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                  <FlexRender
-                    :render="cell.column.columnDef.cell"
-                    :props="cell.getContext()"
+              <TableHead
+                v-if="isSelectionVisible"
+                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50 border-t rounded-t-md overflow-hidden rounded-md"
+              >
+                <div
+                  v-if="selectionMode === 'multiple'"
+                  class="flex items-center justify-center"
+                >
+                  <Checkbox
+                    :model-value="
+                      table.getIsAllRowsSelected()
+                        ? true
+                        : table.getIsSomeRowsSelected()
+                          ? 'indeterminate'
+                          : false
+                    "
+                    aria-label="select all"
+                    class="cursor-pointer border-primary"
+                    @update:model-value="
+                      (v) => table.toggleAllRowsSelected(!!v)
+                    "
                   />
-                </TableCell>
-              </TableRow>
+                </div>
+              </TableHead>
+              <TableHead
+                v-for="header in headerGroup.headers"
+                :key="header.id"
+                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50"
+              >
+                <FlexRender
+                  v-if="!header.isPlaceholder"
+                  :render="header.column.columnDef.header"
+                  :props="header.getContext()"
+                />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="table.getRowModel().rows?.length">
+              <template v-for="row in table.getRowModel().rows" :key="row.id">
+                <TableRow :data-state="row.getIsSelected() && 'selected'">
+                  <TableCell v-if="isSelectionVisible">
+                    <div class="flex items-center justify-center">
+                      <Checkbox
+                        :model-value="row.getIsSelected()"
+                        :disabled="!row.getCanSelect()"
+                        aria-label="select row"
+                        :class="[
+                          'cursor-pointer border-primary',
+                          selectionMode === 'single' ? 'rounded-full' : '',
+                        ]"
+                        @update:model-value="(v) => row.toggleSelected(!!v)"
+                      >
+                        <template v-if="selectionMode === 'single'">
+                          <div class="h-2 w-2 rounded-full bg-current" />
+                        </template>
+                      </Checkbox>
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    v-for="cell in row.getVisibleCells()"
+                    :key="cell.id"
+                  >
+                    <FlexRender
+                      :render="cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </TableCell>
+                </TableRow>
+              </template>
             </template>
-          </template>
 
-          <TableRow v-else>
-            <TableCell
-              :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
-              class="h-24 text-center"
-            >
-              {{ t("hint.no_results") }}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+            <TableRow v-else>
+              <TableCell
+                :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
+                class="h-24 text-center"
+              >
+                {{ t("hint.no_results") }}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
     </div>
     <AppTableRowMenu

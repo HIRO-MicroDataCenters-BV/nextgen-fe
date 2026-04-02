@@ -7,21 +7,25 @@ const { menu, user } = useMenu();
 
 <template>
   <Sidebar collapsible="icon">
-    <SidebarHeader class="border-b border-gray-200">
-      <SidebarMenu>
-        <SidebarMenuItem>
+    <SidebarHeader
+      class="h-16 max-h-16 shrink-0 gap-0 border-b border-gray-200 p-0 px-2"
+    >
+      <SidebarMenu class="h-full min-h-0 gap-0">
+        <SidebarMenuItem class="flex h-full min-h-0">
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <SidebarMenuButton
-                class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                class="h-full min-h-0 max-h-full data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground group-data-[collapsible=icon]:!h-full group-data-[collapsible=icon]:!max-h-full group-data-[collapsible=icon]:!min-h-0 group-data-[collapsible=icon]:!w-full"
                 size="lg"
               >
                 <div
-                  class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
+                  class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-md"
                 >
-                  <img src="/images/logo.svg" class="size-10" alt="cog-logo" >
+                  <img src="/images/logo.svg" alt="cog-logo" />
                 </div>
-                <div class="grid flex-1 text-left text-sm leading-tight">
+                <div
+                  class="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
+                >
                   <span class="truncate font-semibold">{{
                     t("general.project_name")
                   }}</span>
@@ -146,7 +150,7 @@ const { menu, user } = useMenu();
       <div class="mb-2 border-b border-sidebar-border">
         <div class="flex items-center space-x-3">
           <div class="flex-shrink-0">
-            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" >
+            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-medium truncate">{{ user.name }}</p>

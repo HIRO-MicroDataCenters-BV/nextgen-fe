@@ -1,75 +1,84 @@
 <template>
-  <div v-if="data" class="px-10">
-    <Table class="w-full table-fixed">
-      <TableBody>
-        <TableRow
-          v-for="(item, index) in flattenedData"
-          :key="`content-item-${index}`"
-        >
-          <TableCell
-            class="text-left pb-4 pr-8 border-none text-gray-400 uppercase align-top overflow-hidden"
+  <div
+    v-if="data"
+    class="flex w-full min-w-0 flex-col py-6"
+  >
+    <div
+      class="mx-auto w-full max-w-[calc(840px+16px)] min-w-0 px-8"
+    >
+      <Table class="w-full table-fixed">
+        <TableBody>
+          <TableRow
+            v-for="(item, index) in flattenedData"
+            :key="`content-item-${index}`"
           >
-            <span class="w-full overflow-elipsis overflow-hidden">
-              {{ formatLabel(item.key) }}
-            </span>
-          </TableCell>
-          <TableCell class="text-left pb-4 pr-8 border-none py-8">
-            <!-- String/Text -->
-            <template v-if="item.type === 'string'">
-              <span class="text-gray-900">{{ item.value }}</span>
-            </template>
-
-            <!-- Date -->
-            <template v-if="item.type === 'date'">
-              <span class="text-gray-900">
-                {{ dayjs(item.value).format("YYYY-MM-DD HH:mm:ss") }}
+            <TableCell
+              class="whitespace-normal text-left pb-4 pr-8 border-none text-gray-400 uppercase align-top break-words"
+            >
+              <span class="w-full whitespace-normal break-words">
+                {{ formatLabel(item.key) }}
               </span>
-            </template>
+            </TableCell>
+            <TableCell
+              class="whitespace-normal text-left pb-4 pr-8 border-none py-8 break-words"
+            >
+              <!-- String/Text -->
+              <template v-if="item.type === 'string'">
+                <span class="text-gray-900">{{ item.value }}</span>
+              </template>
 
-            <!-- Boolean -->
-            <template v-if="item.type === 'boolean'">
-              <Icon name="lucide:check" />
-            </template>
+              <!-- Date -->
+              <template v-if="item.type === 'date'">
+                <span class="text-gray-900">
+                  {{ dayjs(item.value).format("YYYY-MM-DD HH:mm:ss") }}
+                </span>
+              </template>
 
-            <!-- Array -->
-            <template v-if="item.type === 'array'">
-              <div class="flex flex-wrap gap-2">
-                <Badge
-                  v-for="(arrayItem, arrayIndex) in item.value"
-                  :key="arrayIndex"
-                  variant="secondary"
-                >
-                  {{ getDisplayValue(arrayItem) }}
-                </Badge>
-              </div>
-            </template>
+              <!-- Boolean -->
+              <template v-if="item.type === 'boolean'">
+                <Icon name="lucide:check" />
+              </template>
 
-            <!-- Object -->
-            <template v-if="item.type === 'object'">
-              <div class="space-y-2">
-                <div
-                  v-for="(objValue, objKey) in item.value"
-                  :key="objKey"
-                  class="flex items-center gap-2"
-                >
-                  <span class="text-sm text-gray-500 min-w-20 overflow-hidden"
-                    >{{ objKey }}:</span
+              <!-- Array -->
+              <template v-if="item.type === 'array'">
+                <div class="flex flex-wrap gap-2">
+                  <Badge
+                    v-for="(arrayItem, arrayIndex) in item.value"
+                    :key="arrayIndex"
+                    variant="secondary"
                   >
-                  <span class="text-gray-900">{{
-                    getDisplayValue(objValue)
-                  }}</span>
+                    {{ getDisplayValue(arrayItem) }}
+                  </Badge>
                 </div>
-              </div>
-            </template>
+              </template>
 
-            <!-- Number -->
-            <template v-if="item.type === 'number'">
-              <span class="text-gray-900 font-mono">{{ item.value }}</span>
-            </template>
-          </TableCell>
-        </TableRow>
-      </TableBody>
-    </Table>
+              <!-- Object -->
+              <template v-if="item.type === 'object'">
+                <div class="space-y-2">
+                  <div
+                    v-for="(objValue, objKey) in item.value"
+                    :key="objKey"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="text-sm text-gray-500 min-w-20 overflow-hidden"
+                      >{{ objKey }}:</span
+                    >
+                    <span class="text-gray-900">{{
+                      getDisplayValue(objValue)
+                    }}</span>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Number -->
+              <template v-if="item.type === 'number'">
+                <span class="text-gray-900 font-mono">{{ item.value }}</span>
+              </template>
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
   </div>
 </template>
 
