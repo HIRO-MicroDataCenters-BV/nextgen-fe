@@ -25,7 +25,9 @@ RUN apk add --no-cache python3 make g++
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 # Bind-mount lockfiles so the layer invalidates when deps change; cache pnpm store.
-RUN corepack enable
+# Install pnpm via npm (not corepack): corepack in some Node images fails signature
+# verification when resolving pnpm ("Cannot find matching keyid"). Match package.json "packageManager".
+RUN npm install -g pnpm@9.15.9
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
     --mount=type=bind,source=.npmrc,target=.npmrc \
