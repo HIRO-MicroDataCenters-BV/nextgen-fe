@@ -293,14 +293,12 @@ const getFormattedDate = (date: unknown) => {
 
 const onSubmit = handleSubmit(
   (formData) => {
-    console.info("[AppForm] submit valid", {
-      fileSlotFilename: getFileFieldFilename(),
-      hasExtraMetadata: Boolean(mmioExtraMetadata.value?.length),
-    });
     emit("submit", formData);
   },
   (ctx) => {
-    console.warn("[AppForm] submit blocked (validation)", ctx.errors);
+    if (import.meta.dev) {
+      console.warn("[AppForm] submit blocked (validation)", ctx.errors);
+    }
   },
 );
 
@@ -364,8 +362,8 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
           }
         }
       }
-    } else {
-      console.warn('[AppForm] uploadMmioFile returned no location');
+    } else if (import.meta.dev) {
+      console.warn("[AppForm] uploadMmioFile returned no location");
     }
   } catch (err) {
     console.error('[AppForm] file upload failed:', err);

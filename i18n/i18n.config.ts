@@ -116,7 +116,7 @@ export default defineI18nConfig(() => {
           edit_catalog_item: "Edit item",
           unsaved_changes: "Unsaved Changes",
         },
-        welcome: "Welcome11",
+        welcome: "Welcome",
         nextgen: "NextGen",
         general: {
           project_name: "NextGen UI",
@@ -151,6 +151,7 @@ export default defineI18nConfig(() => {
           my_catalog: "My Catalog",
           settings: "Settings",
           help: "Help",
+          guest_user: "Guest",
           logout: "Logout",
           hus_catalog: "My Catalog",
           ki_catalog: "My Catalog",

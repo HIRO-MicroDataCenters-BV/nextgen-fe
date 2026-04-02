@@ -24,20 +24,19 @@ ENV NUXT_PUBLIC_APP_VERSION=$NUXT_PUBLIC_APP_VERSION
 RUN apk add --no-cache python3 make g++
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage bind mounts to package.json and yarn.lock to avoid having to copy them
-# into this layer.
+# Bind-mount lockfiles so the layer invalidates when deps change; cache pnpm store.
 RUN corepack enable
 RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=.yarnrc.yml,target=.yarnrc.yml \
-    --mount=type=bind,source=yarn.lock,target=yarn.lock \
-    --mount=type=cache,id=yarn,target=/root/.yarn \
-    yarn install --immutable
+    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
+    --mount=type=bind,source=.npmrc,target=.npmrc \
+    --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # Copy the rest of the source files into the image.
 COPY . .
 
 # Run the build script.
-RUN yarn build
+RUN pnpm run build
 
 ################################################################################
 FROM node:${NODE_VERSION}-alpine AS runtime

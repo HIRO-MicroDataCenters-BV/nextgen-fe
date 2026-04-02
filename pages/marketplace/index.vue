@@ -85,8 +85,6 @@ setPage({
 
 const baseUrl = page.value.section;
 
-// const mock = useMock();
-
 // Defining columns for the table
 const columns: TableColumn[] = [
   {
@@ -97,11 +95,14 @@ const columns: TableColumn[] = [
       const item = row.original as CatalogItem;
       const id = item.id;
 
-      return h(
-        Button,
-        { as: "a", variant: "link", class: "p-0", href: `${baseUrl}/${id}` },
-        row.getValue("name")
-      );
+      return h(Button, {
+        as: "a",
+        variant: "link",
+        class: "p-0",
+        href: `${baseUrl}/${id}`,
+      }, {
+        default: () => String(row.getValue("name") ?? ""),
+      });
     },
   },
   {
@@ -118,7 +119,6 @@ const columns: TableColumn[] = [
   },
 ];
 
-// Function to fetch data for the table from the mock data
 const fetchTableData = async (
   paramsAsUnknown: unknown
 ): Promise<TableDataResponse> => {

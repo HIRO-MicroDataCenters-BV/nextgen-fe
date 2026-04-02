@@ -463,7 +463,6 @@ const table = useVueTable({
   },
 });
 
-const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
 let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
 let isFetching = false;
@@ -1005,20 +1004,6 @@ defineExpose({ fetchData, getSelectedRaw });
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"
       @on-clear-all="handleClearAll"
-    />
-
-    <!-- <AppTablePagination
-      :current-page="currentPage"
-      :total-pages="Math.ceil(totalItems / pageSize)"
-      :total-items="totalItems"
-      :page-size="pageSize"
-      :can-previous-page="currentPage > 0"
-      :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
-      @page-change="handlePageChange"
-    /> -->
-    <AppDialogDataset
-      :open="openAddDataset"
-      @on-close="() => (openAddDataset = false)"
     />
   </div>
 </template>

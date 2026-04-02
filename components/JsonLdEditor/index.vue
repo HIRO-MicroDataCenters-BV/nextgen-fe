@@ -436,11 +436,6 @@ watch(() => props.extraMetadata, (newExtra) => {
     }
     return;
   }
-  console.log('[JsonLdEditor DEBUG] treeWithoutExtra length =', treeWithoutExtra.length);
-
-  // ──── BEFORE ────
-  const beforeJson = serializeJsonLd(treeWithoutExtra, preservedContext.value, 'object');
-  console.log('[JsonLdEditor DEBUG] ▼ metadata_content BEFORE merge:', JSON.stringify(beforeJson, null, 2));
 
   const setReadonlyFromMmioRecursive = (nodes: JsonLdNode[]): void => {
     for (const n of nodes) {
@@ -482,16 +477,8 @@ watch(() => props.extraMetadata, (newExtra) => {
     },
   };
 
-  console.log('[JsonLdEditor DEBUG] extraNode children count =', extraNode.children.length);
-  console.log('[JsonLdEditor DEBUG] extraNode children[0] children count =', extraNode.children[0]?.children?.length ?? 'none');
-
   const mergedTree = [...treeWithoutExtra, extraNode];
   treeData.value = mergedTree;
-
-  // ──── AFTER ────
-  const afterJson = serializeJsonLd(mergedTree, preservedContext.value, 'object');
-  console.log('[JsonLdEditor DEBUG] ▼ metadata_content AFTER merge:', JSON.stringify(afterJson, null, 2));
-  console.log('[JsonLdEditor DEBUG] treeData updated, total nodes =', treeData.value.length);
 }, { deep: true });
 
 

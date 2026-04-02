@@ -3,6 +3,12 @@ import { NuxtLink } from "#components";
 
 const { t } = useI18n();
 const { menu, user } = useMenu();
+const { logout } = useAuthUser();
+
+function handleUserLogout() {
+  logout();
+  navigateTo("/login");
+}
 </script>
 
 <template>
@@ -21,7 +27,7 @@ const { menu, user } = useMenu();
                 <div
                   class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-md"
                 >
-                  <img src="/images/logo.svg" alt="cog-logo" />
+                  <img src="/images/logo.svg" alt="cog-logo" >
                 </div>
                 <div
                   class="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
@@ -67,7 +73,10 @@ const { menu, user } = useMenu();
                         </span>
                         <span>{{ item.title }}</span>
                       </div>
-                      <Icon class="icon-chevron" name="lucide:chevron-right" />
+                      <Icon
+                        class="icon-chevron shrink-0 group-data-[collapsible=icon]:hidden"
+                        name="lucide:chevron-right"
+                      />
                     </div>
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
@@ -122,7 +131,10 @@ const { menu, user } = useMenu();
                         </span>
                         <span>{{ item.title }}</span>
                       </div>
-                      <Icon class="icon-chevron" name="lucide:chevron-right" />
+                      <Icon
+                        class="icon-chevron shrink-0 group-data-[collapsible=icon]:hidden"
+                        name="lucide:chevron-right"
+                      />
                     </div>
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
@@ -147,21 +159,53 @@ const { menu, user } = useMenu();
       </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
-      <div class="mb-2 border-b border-sidebar-border">
-        <div class="flex items-center space-x-3">
-          <div class="flex-shrink-0">
-            <img :src="user.avatar" class="size-8 rounded" alt="User avatar" />
-          </div>
-          <div class="flex-1 min-w-0">
-            <p class="text-sm font-medium truncate">{{ user.name }}</p>
-            <p class="text-xs text-muted-foreground truncate">
-              {{ user.email }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <SidebarMenu>
+      <SidebarMenu class="gap-2">
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <SidebarMenuButton
+                size="lg"
+                class="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                :tooltip="`${user.name} — ${user.email}`"
+              >
+                <div
+                  class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-md"
+                >
+                  <img
+                    :src="user.avatar"
+                    width="32"
+                    height="32"
+                    class="size-8 rounded-md object-cover"
+                    alt=""
+                    decoding="async"
+                    fetchpriority="low"
+                  >
+                </div>
+                <div
+                  class="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden"
+                >
+                  <p class="truncate font-medium">
+                    {{ user.name }}
+                  </p>
+                  <p class="truncate text-xs text-muted-foreground">
+                    {{ user.email }}
+                  </p>
+                </div>
+              </SidebarMenuButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              class="w-56"
+              side="top"
+              align="end"
+              :side-offset="8"
+            >
+              <DropdownMenuItem class="cursor-pointer" @click="handleUserLogout">
+                <Icon class="mr-2 size-4" name="lucide:log-out" />
+                {{ t("menu.logout") }}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
         <SidebarMenuItem v-for="item in menu.footer" :key="item.key">
           <SidebarMenuButton :tooltip="item.title">
             <span class="text-lg">

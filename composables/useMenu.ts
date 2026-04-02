@@ -1,6 +1,9 @@
 import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
+import type { AuthUserProfile } from "./useAuthUser";
+
+export type UserProfile = AuthUserProfile;
 
 export interface MenuItem {
   id: string;
@@ -18,26 +21,14 @@ export interface MenuStructure {
   footer: MenuItem[];
 }
 
-export interface UserProfile {
-  name: string;
-  email: string;
-  avatar: string;
-}
-
 export function useMenu() {
   const { t } = useI18n();
   const route = useRoute();
   const config = useRuntimeConfig();
+  const { user: authUserDisplay } = useAuthUser();
 
   // App version
   const version = ref("v1.0.0");
-
-  // User profile
-  const userProfile = ref<UserProfile>({
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: "/images/logo.svg", // Temporary avatar image
-  });
 
   const catalogName = config.public.catalogName;
 
@@ -100,7 +91,7 @@ export function useMenu() {
   // Exporting data and methods
   return {
     menu: computed(() => menuItems.value),
-    user: computed(() => userProfile.value),
+    user: authUserDisplay,
     version,
     updateActiveState,
   };

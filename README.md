@@ -86,13 +86,15 @@ Set backend URLs and options via environment variables (see `nuxt.config.ts` →
 
 ```bash
 corepack enable
-yarn install
+pnpm install
 ```
+
+Uses the pnpm version from `package.json` → `packageManager` (via Corepack).
 
 ## Development
 
 ```bash
-yarn dev
+pnpm dev
 ```
 
 App runs at [http://localhost:3000](http://localhost:3000) (default Nuxt dev server).
@@ -100,7 +102,7 @@ App runs at [http://localhost:3000](http://localhost:3000) (default Nuxt dev ser
 ## Production
 
 ```bash
-yarn build
+pnpm build
 ```
 
 See [Nuxt deployment](https://nuxt.com/docs/getting-started/deployment).
@@ -108,8 +110,8 @@ See [Nuxt deployment](https://nuxt.com/docs/getting-started/deployment).
 ## Lint
 
 ```bash
-yarn lint
-yarn lint:fix
+pnpm lint
+pnpm lint:fix
 ```
 
 ---

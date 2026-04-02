@@ -3,8 +3,22 @@ import tailwindcss from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 export default defineNuxtConfig({
-  compatibilityDate: "2024-11-01",
-  devtools: { enabled: true },
+  compatibilityDate: "2025-12-01",
+  future: {
+    compatibilityVersion: 4,
+  },
+  devtools: {
+    enabled: process.env.NODE_ENV !== "production",
+  },
+
+  app: {
+    head: {
+      link: [
+        { rel: "preconnect", href: "https://ui-avatars.com" },
+        { rel: "dns-prefetch", href: "https://ui-avatars.com" },
+      ],
+    },
+  },
 
   alias: {
     "@": fileURLToPath(new URL(".", import.meta.url)),
@@ -21,7 +35,6 @@ export default defineNuxtConfig({
     "dayjs-nuxt",
     //"@nuxtjs/color-mode",
     "@vueuse/nuxt",
-    "nuxt-proxy-request",
   ],
   icon: {
     serverBundle: {
@@ -50,6 +63,8 @@ export default defineNuxtConfig({
   },
   */
   i18n: {
+    defaultLocale: "en",
+    locales: [{ code: "en", language: "en-US", name: "English" }],
     bundle: {
       optimizeTranslationDirective: false,
     },
