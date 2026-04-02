@@ -1,13 +1,3 @@
-export interface MockDataItem {
-  id: number;
-  name: string;
-  description: string;
-  status: string;
-  type: string;
-  biobank: string;
-  last_update: string;
-}
-
 export interface CatalogItem {
   id: string;
   name: string;

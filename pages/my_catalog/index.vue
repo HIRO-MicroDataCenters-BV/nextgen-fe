@@ -115,8 +115,12 @@ const columns: TableColumn[] = [
     id: "issued",
     icon: "lucide:calendar",
     header: () => t("label.issued"),
-    cell: ({ row }) =>
-      dayjs(row.getValue("issued") as string).format("DD/MM/YYYY"),
+    cell: ({ row }) => {
+      const raw = row.getValue("issued") as string;
+      if (!raw || !String(raw).trim()) return "—";
+      const d = dayjs(raw);
+      return d.isValid() ? d.format("DD/MM/YYYY") : "—";
+    },
   },
   {
     id: "actions",

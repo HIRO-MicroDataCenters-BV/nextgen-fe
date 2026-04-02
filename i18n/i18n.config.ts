@@ -30,6 +30,17 @@ export default defineI18nConfig(() => {
               technical: 'Technical Details',
               other: 'Other Fields',
             },
+            /** Short line under each category title in the visual editor */
+            categorySubtitles: {
+              identification: 'What is this dataset?',
+              provenance: 'Who made it and when?',
+              coverage: 'Where and when does the data apply?',
+              access: 'Who can access it and under what terms?',
+              distribution: 'Where and in what format is the data available?',
+            },
+            /** Badge next to section header — count of visible fields (not a form value) */
+            sectionFieldCount: '{count} fields',
+            sectionFieldCountTitle: '{count} fields in this section',
             compliance: {
               mandatory: 'Required',
               recommended: 'Recommended',

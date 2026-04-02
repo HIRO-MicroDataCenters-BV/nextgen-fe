@@ -133,7 +133,11 @@ export function normalizeDctermsLanguageLiteral(
 export function getJsonLdValue(
   value: JsonLdValue | JsonLdValue[] | undefined
 ): string {
-  if (!value) return "";
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
 
   if (Array.isArray(value)) {
     const first = value[0];

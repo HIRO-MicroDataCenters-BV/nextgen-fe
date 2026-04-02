@@ -44,9 +44,14 @@
             <span class="section-emoji">{{ categoryEmoji[category] ?? '📋' }}</span>
             <div class="section-title-block">
               <span class="section-title">{{ t(`jsonld.editor.categories.${category}`) }}</span>
-              <span class="section-subtitle">{{ categorySubtitle[category] }}</span>
+              <span class="section-subtitle">{{ t(`jsonld.editor.categorySubtitles.${category}`) }}</span>
             </div>
-            <span class="section-count">{{ filteredNodes[category]?.length }}</span>
+            <span
+              class="section-count"
+              :title="t('jsonld.editor.sectionFieldCountTitle', { count: filteredNodes[category]?.length ?? 0 })"
+            >
+              {{ t('jsonld.editor.sectionFieldCount', { count: filteredNodes[category]?.length ?? 0 }) }}
+            </span>
           </div>
 
           <!-- Fields -->
@@ -68,8 +73,15 @@
       <div v-if="filteredNodes.other?.length" class="category-section">
         <div class="section-header">
           <span class="section-emoji">📌</span>
-          <span class="section-title">{{ t('jsonld.editor.categories.other', 'Other') }}</span>
-          <span class="section-count">{{ filteredNodes.other?.length }}</span>
+          <div class="section-title-block">
+            <span class="section-title">{{ t('jsonld.editor.categories.other', 'Other') }}</span>
+          </div>
+          <span
+            class="section-count"
+            :title="t('jsonld.editor.sectionFieldCountTitle', { count: filteredNodes.other?.length ?? 0 })"
+          >
+            {{ t('jsonld.editor.sectionFieldCount', { count: filteredNodes.other?.length ?? 0 }) }}
+          </span>
         </div>
         <div class="section-fields">
           <JsonLdNode
@@ -177,14 +189,6 @@ const categoryEmoji: Record<string, string> = {
   coverage:       '🌍',
   access:         '🔑',
   distribution:   '📦',
-};
-
-const categorySubtitle: Record<string, string> = {
-  identification: 'What is this dataset?',
-  provenance:     'Who made it and when?',
-  coverage:       'Where and when does the data apply?',
-  access:         'Who can access it and under what terms?',
-  distribution:   'Where and in what format is the data available?',
 };
 
 // ── Node filtering & grouping ──────────────────────────────────
@@ -356,14 +360,16 @@ const handleNodeRemove = (nodeId: string) => {
   font-style: italic;
 }
 .section-count {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: #d1d5db;
   background: #f3f4f6;
   border-radius: 999px;
-  padding: 1px 7px;
-  min-width: 20px;
+  padding: 2px 8px;
+  max-width: 7rem;
   text-align: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 :root.dark .section-count { background: #374151; color: #9ca3af; }
 
