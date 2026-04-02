@@ -35,6 +35,7 @@ interface TableProps {
   pageSize?: number;
   selectionEnabled?: boolean;
   hasSourceHeader?: boolean;
+  selectionMode?: "single" | "multiple";
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -43,9 +44,10 @@ const props = withDefaults(defineProps<TableProps>(), {
   pageSize: 10,
   selectionEnabled: true,
   hasSourceHeader: false,
+  selectionMode: "multiple",
 });
 
-const { dataSource, columns, pageSize, title, hasSourceHeader } = props;
+const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } = props;
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
@@ -401,7 +403,7 @@ const table = useVueTable({
   getExpandedRowModel: getExpandedRowModel(),
   getRowId: (row) => String((row as TableRowData).id),
   enableRowSelection: true,
-  enableMultiRowSelection: true,
+  enableMultiRowSelection: props.selectionMode === 'multiple',
   onColumnFiltersChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, columnFilters),
   onColumnVisibilityChange: (updaterOrValue) =>
@@ -901,7 +903,7 @@ defineExpose({ fetchData, getSelectedRaw });
             :key="headerGroup.id"
           >
             <TableHead v-if="isSelectionVisible">
-              <div class="flex items-center justify-center">
+              <div v-if="selectionMode === 'multiple'" class="flex items-center justify-center">
                 <Checkbox
                   :model-value="
                     table.getIsAllRowsSelected()
@@ -935,9 +937,13 @@ defineExpose({ fetchData, getSelectedRaw });
                       :model-value="row.getIsSelected()"
                       :disabled="!row.getCanSelect()"
                       aria-label="select row"
-                      class="cursor-pointer border-primary"
+                      :class="['cursor-pointer border-primary', selectionMode === 'single' ? 'rounded-full' : '']"
                       @update:model-value="(v) => row.toggleSelected(!!v)"
-                    />
+                    >
+                      <template v-if="selectionMode === 'single'">
+                        <div class="h-2 w-2 rounded-full bg-current" />
+                      </template>
+                    </Checkbox>
                   </div>
                 </TableCell>
                 <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">

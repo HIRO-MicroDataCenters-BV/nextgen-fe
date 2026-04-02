@@ -8,8 +8,15 @@
       :title="t(`menu.${catalogName}`)"
       :columns="columns"
       :data-source="fetchTableData"
-      :selection-enabled="false"
+      :selection-enabled="true"
+      selection-mode="single"
       :has-source-header="true"
+      @pass-to-training="handlePassToTraining"
+    />
+    <TrainingSuccessDialog
+      :open="showSuccessDialog"
+      :order-id="successData?.data?.order_id"
+      @update:open="showSuccessDialog = $event"
     />
   </AppContent>
 </template>
@@ -30,6 +37,7 @@ import {
 } from "~/utils/jsonld";
 import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
+import TrainingSuccessDialog from "@/components/app/TrainingSuccessDialog.vue";
 import type { SearchFilter } from "~/types/api.types";
 
 const config = useRuntimeConfig();
@@ -48,6 +56,39 @@ setPage({
   subtitle: t("subtitle.my_catalog"),
   source: catalogName as string,
 });
+
+const showSuccessDialog = ref(false);
+const successData = ref<{
+  status_code: number;
+  message: string;
+  data: {
+    id: string;
+    pipeline_name: string;
+    order_id: string;
+    status: string;
+  };
+} | null>(null);
+
+const handlePassToTraining = async (payload: {
+  dataset: Array<Record<string, unknown>>;
+}) => {
+  const checkoutResponse = await api.checkout(payload.dataset);
+  if (!checkoutResponse) {
+    return;
+  }
+
+  successData.value = {
+    status_code: 201,
+    message: "Order created successfully",
+    data: {
+      id: "",
+      pipeline_name: "",
+      order_id: checkoutResponse.order_id,
+      status: "CREATED",
+    },
+  };
+  showSuccessDialog.value = true;
+};
 
 // Defining columns for the table
 const columns: TableColumn[] = [
