@@ -62,4 +62,33 @@ describe("metadataItemTypeConsistency", () => {
     });
     expect(hasMetadataItemTypeMismatch(json, "dataset")).toBe(true);
   });
+
+  it("detects mismatch when metadata is wrapped in dcat:dataset", () => {
+    expect(
+      hasMetadataItemTypeMismatch(
+        {
+          "dcat:dataset": {
+            "dcterms:type": { "@id": DCMI_TYPE_SOFTWARE },
+          },
+        },
+        "dataset",
+      ),
+    ).toBe(true);
+  });
+
+  it("detects mismatch when metadata is in @graph dataset node", () => {
+    expect(
+      hasMetadataItemTypeMismatch(
+        {
+          "@graph": [
+            {
+              "@type": "dcat:Dataset",
+              "dcterms:type": { "@id": DCMI_TYPE_DATASET },
+            },
+          ],
+        },
+        "application",
+      ),
+    ).toBe(true);
+  });
 });
