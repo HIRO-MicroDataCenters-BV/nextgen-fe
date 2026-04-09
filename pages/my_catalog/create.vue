@@ -73,7 +73,7 @@ const formSchema = computed(() =>
         !hasMetadataItemTypeMismatch(data.metadata_content, data.item_type),
       {
         message: t("jsonld.editor.validation.item_type_mismatch"),
-        path: ["metadata_content"],
+        path: ["item_type"],
       }
     )
 );

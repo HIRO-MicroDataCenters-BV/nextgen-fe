@@ -91,4 +91,31 @@ describe("metadataItemTypeConsistency", () => {
       ),
     ).toBe(true);
   });
+
+  it("detects mismatch for rich Software payload used as dataset", () => {
+    expect(
+      hasMetadataItemTypeMismatch(
+        {
+          "@context": {
+            dcat: "http://www.w3.org/ns/dcat#",
+            dcterms: "http://purl.org/dc/terms/",
+            skos: "http://www.w3.org/2004/02/skos/core#",
+          },
+          "@type": "dcat:Dataset",
+          "dcterms:type": {
+            "@id": DCMI_TYPE_SOFTWARE,
+            "@type": "skos:Concept",
+            "skos:prefLabel": { "@language": "en", "@value": "Software" },
+          },
+          "dcat:distribution": [
+            {
+              "@type": "dcat:Distribution",
+              "dcat:accessURL": { "@id": "s3://disease_xyz/ecgs/pt1_ecg.xml" },
+            },
+          ],
+        },
+        "dataset",
+      ),
+    ).toBe(true);
+  });
 });
