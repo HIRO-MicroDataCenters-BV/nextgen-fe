@@ -18,12 +18,17 @@ const props = withDefaults(defineProps<{
 
 const { id, config } = useChart()
 
-const payload = computed(() => Object.entries(config.value).map(([key, _value]) => {
-  return {
-    key: props.nameKey || key,
-    itemConfig: config.value[key],
-  }
-}))
+const payload = computed(() =>
+  Object.entries(config.value)
+    .map(([key]) => ({
+      key: props.nameKey || key,
+      itemConfig: config.value[key],
+    }))
+    .filter(
+      (item): item is { key: string; itemConfig: NonNullable<typeof item.itemConfig> } =>
+        !!item.itemConfig
+    )
+)
 
 const containerSelector = ref("")
 onMounted(() => {

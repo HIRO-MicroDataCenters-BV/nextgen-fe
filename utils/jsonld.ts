@@ -144,7 +144,7 @@ export function getJsonLdValue(
     if (!first) return "";
     if (typeof first === "object" && first !== null && "@value" in first) {
       return jsonLdValueToPlainString(
-        (first as Record<string, unknown>)["@value"]
+        (first as unknown as Record<string, unknown>)["@value"]
       );
     }
     return jsonLdValueToPlainString(first);
@@ -152,7 +152,7 @@ export function getJsonLdValue(
 
   if (typeof value === "object" && value !== null && "@value" in value) {
     return jsonLdValueToPlainString(
-      (value as Record<string, unknown>)["@value"]
+      (value as unknown as Record<string, unknown>)["@value"]
     );
   }
 
@@ -1113,7 +1113,7 @@ export function convertJsonLdForTraining(input: unknown): {
 
   const keyFromIri = (iri: string): string => {
     const bySlash = iri.split("/");
-    const last = bySlash[bySlash.length - 1];
+    const last = bySlash[bySlash.length - 1] ?? "";
     return last.replace(/[^A-Za-z0-9_-]/g, "_");
   };
 
@@ -1438,7 +1438,7 @@ export function createDatasetJsonLd(
         };
       });
       if (normalized.length === 1) {
-        return normalized[0];
+        return normalized[0] ?? { "@language": "en", "@value": "" };
       }
       return normalized;
     }

@@ -34,12 +34,13 @@ import type { FormFieldDefinition } from "@/components/app/Form.vue";
 import { createDatasetJsonLd } from "@/utils/jsonld";
 import { hasMetadataItemTypeMismatch } from "@/utils/metadataItemTypeConsistency";
 import { useDefaultDataset } from "@/components/JsonLdEditor/composables/useDefaultDataset";
+import type { ApiErrorDetail } from "~/types/api.types";
 
 const { t } = useI18n();
 const { saveDataset, getDataproducts } = useApi();
 const { selectedClient } = useClientSelector();
 const router = useRouter();
-const serverErrors = ref<Array<{ code?: string; message?: string; details?: unknown[] }> | null>(null);
+const serverErrors = ref<ApiErrorDetail[] | null>(null);
 
 // Wrap getDataproducts to pass the currently selected client interface
 const getDataproductsForClient = () => {
@@ -210,7 +211,7 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
     } else {
       errors = [{ message: "Server error occurred" }];
     }
-    serverErrors.value = errors;
+    serverErrors.value = errors as ApiErrorDetail[];
     return;
   }
 

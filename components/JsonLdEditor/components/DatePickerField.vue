@@ -25,7 +25,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CalendarDate} from '@internationalized/date';
+import type { CalendarDate, DateValue } from '@internationalized/date';
 import { parseDate } from '@internationalized/date';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -77,17 +77,28 @@ const displayDate = computed(() => {
 });
 
 // Handle date selection from Calendar
-const handleDateSelect = (date: CalendarDate | undefined) => {
+const handleDateSelect = (date: DateValue | undefined) => {
   if (!date) {
     emit('update:modelValue', '');
     return;
   }
+  const hasYmd =
+    typeof date === 'object' &&
+    date !== null &&
+    'year' in date &&
+    'month' in date &&
+    'day' in date;
+  if (!hasYmd) {
+    emit('update:modelValue', '');
+    return;
+  }
+  const d = date as CalendarDate;
   
   // Convert CalendarDate to ISO 8601 format (YYYY-MM-DD)
   // CalendarDate has year, month, day properties
-  const year = date.year;
-  const month = String(date.month).padStart(2, '0');
-  const day = String(date.day).padStart(2, '0');
+  const year = d.year;
+  const month = String(d.month).padStart(2, '0');
+  const day = String(d.day).padStart(2, '0');
   const isoDate = `${year}-${month}-${day}`;
   
   emit('update:modelValue', isoDate);

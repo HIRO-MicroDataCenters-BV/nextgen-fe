@@ -87,7 +87,7 @@ const tooltipLabel = computed(() => {
               :style="{
                 '--color-bg': indicatorColor,
                 '--color-border': indicatorColor,
-              }"
+              } as Record<string, string>"
             />
           </template>
 

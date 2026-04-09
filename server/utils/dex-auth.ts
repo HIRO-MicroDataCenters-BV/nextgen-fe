@@ -57,6 +57,7 @@ export async function getDexSessionCookie(): Promise<string> {
         const setCookieHeaders = response.headers.getSetCookie?.() || [];
         setCookieHeaders.forEach((cookieStr) => {
             const [nameValue] = cookieStr.split(";");
+            if (!nameValue) return;
             const [name, value] = nameValue.split("=");
             if (name && value) {
                 cookies.set(name.trim(), value.trim());

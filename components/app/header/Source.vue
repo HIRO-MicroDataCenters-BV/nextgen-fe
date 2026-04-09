@@ -26,7 +26,7 @@ watch(page, (newVal) => {
   source.value = newVal.source;
 });
 
-const fullSource = {
+const fullSource: Record<string, string> = {
   umcu_catalog: "Athero-Express Biobank Study",
   ki_catalog: "Kliniek Informatie",
   hus_catalog: "Hospital Information System",
@@ -34,7 +34,7 @@ const fullSource = {
   tum_catalog: "Technical University of Munich",
 };
 
-const nameSource = {
+const nameSource: Record<string, string> = {
   umcu_catalog: "UMCU",
   ki_catalog: "KI",
   hus_catalog: "HUS",

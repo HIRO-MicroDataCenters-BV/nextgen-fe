@@ -7,6 +7,20 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
+  sourcemap: {
+    client: false,
+    server: false,
+  },
+  experimental: {
+    typedPages: false,
+  },
+  typescript: {
+    tsConfig: {
+      vueCompilerOptions: {
+        plugins: [],
+      },
+    },
+  },
   devtools: {
     enabled: process.env.NODE_ENV !== "production",
   },
@@ -65,9 +79,6 @@ export default defineNuxtConfig({
   i18n: {
     defaultLocale: "en",
     locales: [{ code: "en", language: "en-US", name: "English" }],
-    bundle: {
-      optimizeTranslationDirective: false,
-    },
   },
   shadcn: {
     prefix: "",
@@ -98,6 +109,13 @@ export default defineNuxtConfig({
     },
   },
   vite: {
+    logLevel: "error",
+    build: {
+      sourcemap: false,
+    },
+    css: {
+      devSourcemap: false,
+    },
     plugins: [tailwindcss()],
     resolve: {
       alias: {

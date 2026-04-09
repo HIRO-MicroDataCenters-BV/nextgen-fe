@@ -230,7 +230,7 @@ const isFromMmio = computed(() =>
   currentPath.value === 'dspace:extraMetadata' || currentPath.value.startsWith('dspace:extraMetadata.')
 );
 // Fields marked as loaded from a file (readonly until file is removed)
-const isFromFile = computed(() => (props.node.metadata as Record<string, unknown>).fromFile === true);
+const isFromFile = computed(() => (props.node.metadata as unknown as Record<string, unknown>).fromFile === true);
 // Effective readonly: either from MMIO section, or from file load, or prop
 const effectiveReadonly = computed(() => props.readonly || isFromMmio.value || isFromFile.value);
 const fieldErrors = computed(() =>
@@ -371,8 +371,10 @@ const handleAddArrayItem = () => {
   const nextIndex = existingItems.length;
 
   if (existingItems.length > 0) {
+    const firstItem = existingItems[0];
+    if (!firstItem) return;
     // Clone structure of first item, reset values
-    newItem = deepCloneEmpty(existingItems[0]);
+    newItem = deepCloneEmpty(firstItem);
     newItem.key = `[${nextIndex}]`;
     newItem.metadata = { ...newItem.metadata, isNew: true };
   } else {

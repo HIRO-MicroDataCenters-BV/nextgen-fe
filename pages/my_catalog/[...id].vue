@@ -54,6 +54,7 @@ import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
+import type { ApiErrorDetail } from "~/types/api.types";
 import type { JsonLdObject } from "~/types/jsonld.types";
 import {
   findDatasetInJsonLd,
@@ -65,7 +66,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
 const { saveDataset, getDataset } = useApi();
-const serverErrors = ref<Array<{ code?: string; message?: string; details?: unknown[] }> | null>(null);
+const serverErrors = ref<ApiErrorDetail[] | null>(null);
 const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
 
@@ -379,7 +380,7 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
       } else {
         errors = [{ message: "Server error occurred" }];
       }
-      serverErrors.value = errors;
+      serverErrors.value = errors as ApiErrorDetail[];
       nextTick(() => {
         serverErrorsRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
       });

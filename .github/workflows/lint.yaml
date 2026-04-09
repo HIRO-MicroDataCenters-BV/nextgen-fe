@@ -1,4 +1,4 @@
-name: Lint
+name: Quality
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  quality:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,3 +33,13 @@ jobs:
 
       - name: Lint all files
         run: pnpm run lint
+
+      - name: Typecheck
+        continue-on-error: true
+        run: pnpm run typecheck
+
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build

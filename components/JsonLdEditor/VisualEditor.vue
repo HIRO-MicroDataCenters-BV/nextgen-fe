@@ -197,13 +197,22 @@ const visibleNodes = computed(() =>
 );
 
 const groupedNodes = computed(() => {
-  const groups: Record<string, JsonLdNodeType[]> = {
+  const groups: {
+    identification: JsonLdNodeType[];
+    provenance: JsonLdNodeType[];
+    coverage: JsonLdNodeType[];
+    access: JsonLdNodeType[];
+    distribution: JsonLdNodeType[];
+    other: JsonLdNodeType[];
+  } = {
     identification: [], provenance: [], coverage: [],
     access: [], distribution: [], other: [],
   };
   for (const node of visibleNodes.value) {
     const cat = node.metadata.category || 'other';
-    (groups[cat] ?? groups.other).push(node);
+    const target =
+      cat in groups ? groups[cat as keyof typeof groups] : groups.other;
+    (target ?? groups.other).push(node);
   }
   // Sort within each group: mandatory → recommended → optional
   const complianceRank: Record<string, number> = { mandatory: 0, recommended: 1, optional: 2 };

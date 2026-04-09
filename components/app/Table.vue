@@ -740,12 +740,18 @@ const handlePassToTraining = () => {
 
   const looksJsonLdDataset =
     raws.length > 0 &&
-    ((typeof raws[0]["@type"] === "string" &&
-      String(raws[0]["@type"]).includes("dcat:Dataset")) ||
-      (Array.isArray(raws[0]["@type"]) &&
-        (raws[0]["@type"] as unknown[]).some((t) =>
+    (() => {
+      const firstRaw = raws[0];
+      if (!firstRaw) return false;
+      return (
+        (typeof firstRaw["@type"] === "string" &&
+          String(firstRaw["@type"]).includes("dcat:Dataset")) ||
+        (Array.isArray(firstRaw["@type"]) &&
+          (firstRaw["@type"] as unknown[]).some((t) =>
           String(t).includes("dcat:Dataset"),
-        )));
+          ))
+      );
+    })();
 
   const inputForConverter = looksJsonLdDataset
     ? ({ "dcat:dataset": raws } as unknown)
@@ -865,7 +871,7 @@ defineExpose({ fetchData, getSelectedRaw });
             </div>
           </div>
         </div>
-        <div class="filters-list">
+        <div class="filters-list mt-2">
           <div
             v-if="Object.keys(selectedFilters).length > 0"
             class="flex flex-wrap items-center gap-2"

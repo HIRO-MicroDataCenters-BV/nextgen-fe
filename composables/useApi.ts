@@ -10,6 +10,12 @@ import type {
   ApiFilterGroup,
 } from "~/types/api.types";
 import { sanitizeDatasetDctermsTitleInPlace } from "~/utils/jsonld";
+import {
+  catalogDatasetSchema,
+  catalogSearchResponseSchema,
+} from "~/schemas/catalog.schema";
+
+type RequestError = { error: true; data: unknown };
 
 export const useApi = () => {
   const config = useRuntimeConfig();
@@ -34,6 +40,35 @@ export const useApi = () => {
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
   const toaster = useToaster();
+  const isRequestError = (value: unknown): value is RequestError =>
+    !!value &&
+    typeof value === "object" &&
+    "error" in value &&
+    (value as { error?: unknown }).error === true;
+
+  const validateCatalogPayload = <T extends Record<string, unknown>>(
+    payload: unknown,
+    kind: "dataset" | "catalog"
+  ): T | null => {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const parsed =
+      kind === "dataset"
+        ? catalogDatasetSchema.safeParse(payload)
+        : catalogSearchResponseSchema.safeParse(payload);
+
+    if (parsed.success) {
+      return parsed.data as T;
+    }
+
+    if (import.meta.dev) {
+      console.warn(`[useApi] Invalid ${kind} payload`, parsed.error.flatten());
+    }
+    toaster.show("error", t("app.error.fetch"));
+    return null;
+  };
 
   const getHeaders = (isFormData: boolean = false) => {
     const headers: {
@@ -106,12 +141,16 @@ export const useApi = () => {
             if (showToast) {
               toaster.show("error", t("app.error.unauthorized"));
             }
-            return options?.returnErrorDetails ? ({ error: true, data }) : null;
+            return options?.returnErrorDetails
+              ? ({ error: true as const, data } satisfies RequestError)
+              : null;
           default:
             if (showToast) {
               toaster.show("error", errorMessage);
             }
-            return options?.returnErrorDetails ? ({ error: true, data }) : null;
+            return options?.returnErrorDetails
+              ? ({ error: true as const, data } satisfies RequestError)
+              : null;
         }
       }
 
@@ -193,13 +232,15 @@ export const useApi = () => {
     },
 
     getConnectorMetadata: async () => {
-      return request<{
+      const response = await request<{
         connector_id: string;
         region: string;
         supported_interfaces: string[];
         status: string;
         version: string;
       }>("connector", `/connector-metadata`, "GET", undefined, { showToast: false });
+      if (!response || isRequestError(response)) return null;
+      return response;
     },
 
     getMetrics: async () => {
@@ -258,6 +299,7 @@ export const useApi = () => {
         undefined,
         { showToast: false }
       );
+      if (!response || isRequestError(response)) return [];
       return response?.groups ?? [];
     },
 
@@ -271,7 +313,8 @@ export const useApi = () => {
         "POST",
         preparedFilter
       );
-      return response || null;
+      if (!response || isRequestError(response)) return null;
+      return validateCatalogPayload<CatalogResponse>(response, "catalog");
     },
 
     getDataset: async (id: string): Promise<CatalogDataset | null> => {
@@ -280,8 +323,14 @@ export const useApi = () => {
         `/datasets/${id}/`,
         "GET"
       );
-      if (response) sanitizeDatasetDctermsTitleInPlace(response);
-      return response || null;
+      if (!response || isRequestError(response)) return null;
+      const dataset = validateCatalogPayload<CatalogDataset>(
+        response,
+        "dataset"
+      );
+      if (!dataset) return null;
+      sanitizeDatasetDctermsTitleInPlace(dataset);
+      return dataset;
     },
 
     saveDataset: async (
@@ -304,20 +353,23 @@ export const useApi = () => {
         url += `?related_data_product=${encodedParam}`;
       }
 
-      const response = await request<CatalogDataset>(
+      const response = await request<CatalogDataset | RequestError>(
         "catalog",
         url,
         "POST",
         dataset,
         { showToast: true, hasRawData: true, returnErrorDetails: true }
       );
-      if (
-        response &&
-        typeof response === "object" &&
-        !("error" in response && (response as { error?: boolean }).error === true)
-      ) {
-        sanitizeDatasetDctermsTitleInPlace(response);
+      if (response && !isRequestError(response)) {
+        const dataset = validateCatalogPayload<CatalogDataset>(
+          response,
+          "dataset"
+        );
+        if (!dataset) return null;
+        sanitizeDatasetDctermsTitleInPlace(dataset);
+        return dataset;
       }
+      if (isRequestError(response)) return response;
       return response ?? null;
     },
 
@@ -364,7 +416,7 @@ export const useApi = () => {
           showToast: options?.showToast,
         }
       );
-
+      if (isRequestError(result)) return null;
       return result ?? null;
     },
 
@@ -376,6 +428,7 @@ export const useApi = () => {
         undefined,
         { showToast: true }
       );
+      if (isRequestError(response)) return null;
       return response || null;
     },
 
@@ -395,6 +448,7 @@ export const useApi = () => {
         `/dataproducts/${id}`,
         "GET"
       );
+      if (isRequestError(response)) return null;
       return response || null;
     },
 

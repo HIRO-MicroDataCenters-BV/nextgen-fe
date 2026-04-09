@@ -51,6 +51,7 @@ import MmioUploadZone from "@/components/app/MmioUploadZone.vue";
 import { useApi } from "@/composables/useApi";
 import { useMmioProcessor } from "@/composables/useMmioProcessor";
 import { extractDctermsTitlePlainText } from "~/utils/jsonld";
+import type { ApiErrorDetail } from "~/types/api.types";
 
 export interface FormFieldOption {
   value: string;
@@ -83,12 +84,12 @@ export interface FormFieldDefinition {
 export interface AppFormProps {
   fields: FormFieldDefinition[];
   initialValues?: Record<string, unknown>;
-  formSchema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  formSchema: z.ZodTypeAny;
   title?: string;
   description?: string;
   disabled?: boolean;
   id?: string | null;
-  serverErrors?: Array<{ code?: string; message?: string; details?: unknown[] }> | null;
+  serverErrors?: ApiErrorDetail[] | null;
   /** Create flow: keep `name` in sync with `dcterms:title` in metadata (name field should be disabled). */
   syncNameFromMetadata?: boolean;
 }
@@ -233,14 +234,15 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
     const initialStr =
       typeof rawInitial === "string" ? rawInitial.trim() : "";
     const valToEnsure = currentStr || initialStr;
+    const currentOptions = fieldOptions.value[field.name] ?? [];
     if (
       isEditMode.value &&
       valToEnsure &&
-      !fieldOptions.value[field.name].some((o) => o.value === valToEnsure)
+      !currentOptions.some((o) => o.value === valToEnsure)
     ) {
       fieldOptions.value[field.name] = [
         { value: valToEnsure, label: valToEnsure },
-        ...fieldOptions.value[field.name],
+        ...currentOptions,
       ];
     }
   } catch {
@@ -331,7 +333,8 @@ const clearFileField = (fieldName: string) => {
 const handleFileChange = async (fieldName: string, files: FileList | null) => {
   if (!files || files.length === 0) return;
 
-  const file = files[0];
+  const file = files.item(0);
+  if (!file) return;
   uploadingFiles.value[fieldName] = true;
 
   try {

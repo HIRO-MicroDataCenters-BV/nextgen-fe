@@ -29,7 +29,7 @@ function parseTar(arrayBuffer: ArrayBuffer): TarFile[] {
       .trim();
     const size = parseInt(sizeStr, 8) || 0;
 
-    const type = String.fromCharCode(header[156]);
+    const type = String.fromCharCode(header[156] ?? 0);
 
     offset += 512;
 

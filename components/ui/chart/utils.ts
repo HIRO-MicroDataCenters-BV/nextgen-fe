@@ -30,12 +30,14 @@ export function componentToString<P>(config: ChartConfig, component: Constructor
   // https://unovis.dev/docs/auxiliary/Crosshair#component-props
   return (_data: Record<string, unknown>, x: number | Date) => {
     const data = "data" in _data ? _data.data : _data
-    const serializedKey = `${id}-${serializeKey(data)}`
+    const recordData =
+      data && typeof data === "object" ? (data as Record<string, unknown>) : {}
+    const serializedKey = `${id}-${serializeKey(recordData)}`
     const cachedContent = cache.get(serializedKey)
     if (cachedContent)
       return cachedContent
 
-    const vnode = h<unknown>(component, { ...props, payload: data, config, x })
+    const vnode = h<unknown>(component, { ...props, payload: recordData, config, x })
     const div = document.createElement("div")
     render(vnode, div)
     cache.set(serializedKey, div.innerHTML)

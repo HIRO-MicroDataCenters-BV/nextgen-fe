@@ -354,7 +354,7 @@ const markFileNodesRecursive = (nodes: JsonLdNode[]): void => {
     if (nodeHasValue(n)) {
       // Use a dedicated 'fromFile' flag — do NOT set readonly: true to avoid
       // triggering the existing "hide readonly/system nodes" logic in the template
-      (n.metadata as Record<string, unknown>).fromFile = true;
+      (n.metadata as unknown as Record<string, unknown>).fromFile = true;
     }
     if (n.children?.length) markFileNodesRecursive(n.children);
   }
@@ -440,7 +440,7 @@ watch(() => props.extraMetadata, (newExtra) => {
   const setReadonlyFromMmioRecursive = (nodes: JsonLdNode[]): void => {
     for (const n of nodes) {
       n.metadata.readonly = true;
-      (n.metadata as Record<string, unknown>).fromMmio = true;
+      (n.metadata as unknown as Record<string, unknown>).fromMmio = true;
       if (n.children?.length) setReadonlyFromMmioRecursive(n.children);
     }
   };

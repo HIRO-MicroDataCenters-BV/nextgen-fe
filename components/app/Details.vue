@@ -30,7 +30,7 @@
               <!-- Date -->
               <template v-if="item.type === 'date'">
                 <span class="text-gray-900">
-                  {{ dayjs(item.value).format("YYYY-MM-DD HH:mm:ss") }}
+                  {{ dayjs(String(item.value ?? "")).format("YYYY-MM-DD HH:mm:ss") }}
                 </span>
               </template>
 
@@ -90,6 +90,12 @@ interface Props {
   data: unknown;
 }
 
+type FlatItem = {
+  key: string;
+  value: unknown;
+  type: "string" | "date" | "boolean" | "array" | "object" | "number";
+};
+
 const props = defineProps<Props>();
 const dayjs = useDayjs();
 
@@ -99,7 +105,7 @@ const flattenedData = computed(() => {
 });
 
 // Helper function to determine data type
-function getDataType(value: unknown): string {
+function getDataType(value: unknown): FlatItem["type"] {
   if (value === null || value === undefined) return "string";
   if (typeof value === "boolean") return "boolean";
   if (typeof value === "number") return "number";
@@ -118,9 +124,9 @@ function getDataType(value: unknown): string {
 function formatLabel(key: string): string {
   if (key.includes(".")) {
     const parts = key.split(".");
-    const end = parts[parts.length - 1];
+    const end = parts[parts.length - 1] ?? "";
 
-    let result = parts[0];
+    let result = parts[0] ?? "";
     if (end.includes("/")) {
       const endParts = end.split("/");
       if (endParts.length > 1) {
@@ -138,10 +144,11 @@ function formatLabel(key: string): string {
 function getDisplayValue(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "object") {
-    if (value.label) return value.label;
-    if (value.name) return value.name;
-    if (value.title) return value.title;
-    if (value.id) return value.id;
+    const v = value as Record<string, unknown>;
+    if (typeof v.label === "string") return v.label;
+    if (typeof v.name === "string") return v.name;
+    if (typeof v.title === "string") return v.title;
+    if (typeof v.id === "string") return v.id;
     return JSON.stringify(value);
   }
   
@@ -157,10 +164,12 @@ function getDisplayValue(value: unknown): string {
 }
 
 // Function to flatten nested data into a flat structure
-function flattenData(data: unknown, prefix = ""): unknown[] {
-  const result = [];
+function flattenData(data: unknown, prefix = ""): FlatItem[] {
+  const result: FlatItem[] = [];
+  if (!data || typeof data !== "object" || Array.isArray(data)) return result;
+  const dataObj = data as Record<string, unknown>;
 
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(dataObj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
     const type = getDataType(value);
 
@@ -169,15 +178,16 @@ function flattenData(data: unknown, prefix = ""): unknown[] {
 
     if (type === "object" && value && !Array.isArray(value)) {
       // For simple objects, show as object type
-      if (Object.keys(value).length <= 5) {
+      const objectValue = value as Record<string, unknown>;
+      if (Object.keys(objectValue).length <= 5) {
         result.push({
           key: fullKey,
-          value,
+          value: objectValue,
           type: "object",
         });
       } else {
         // For complex objects, flatten them
-        result.push(...flattenData(value, fullKey));
+        result.push(...flattenData(objectValue, fullKey));
       }
     } else {
       result.push({
