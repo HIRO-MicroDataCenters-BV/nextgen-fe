@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
 import type { z } from "zod";
@@ -44,7 +45,13 @@ import {
 import Button from "@/components/ui/button/Button.vue";
 import Input from "@/components/ui/input/Input.vue";
 import Textarea from "@/components/ui/textarea/Textarea.vue";
+import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
+import ServerErrorsBlock from "@/components/app/ServerErrorsBlock.vue";
+import MmioUploadZone from "@/components/app/MmioUploadZone.vue";
 import { useApi } from "@/composables/useApi";
+import { useMmioProcessor } from "@/composables/useMmioProcessor";
+import { extractDctermsTitlePlainText } from "~/utils/jsonld";
+import type { ApiErrorDetail } from "~/types/api.types";
 
 export interface FormFieldOption {
   value: string;
@@ -54,7 +61,7 @@ export interface FormFieldOption {
 export interface FormFieldDefinition {
   name: string;
   label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file";
+  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "jsonld-editor" | "client-selector";
   placeholder?: string;
   hint?: string | null;
   options?: FormFieldOption[];
@@ -77,17 +84,27 @@ export interface FormFieldDefinition {
 export interface AppFormProps {
   fields: FormFieldDefinition[];
   initialValues?: Record<string, unknown>;
-  formSchema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  formSchema: z.ZodTypeAny;
   title?: string;
   description?: string;
   disabled?: boolean;
   id?: string | null;
+  serverErrors?: ApiErrorDetail[] | null;
+  /** Create flow: keep `name` in sync with `dcterms:title` in metadata (name field should be disabled). */
+  syncNameFromMetadata?: boolean;
 }
 
-const props = defineProps<AppFormProps>();
+const props = withDefaults(defineProps<AppFormProps>(), {
+  syncNameFromMetadata: false,
+  initialValues: undefined,
+  title: undefined,
+  description: undefined,
+  id: undefined,
+  serverErrors: undefined,
+});
 const emit = defineEmits<{
   (e: "submit", values: Record<string, unknown>): void;
-  (e: "cancel"): void;
+  (e: "cancel" | "clear-server-errors"): void;
 }>();
 
 const router = useRouter();
@@ -95,19 +112,50 @@ const { t } = useI18n();
 const dayjs = useDayjs();
 const df = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
 const { uploadMmioFile, deleteMmioFile } = useApi();
+const { processMmioFile } = useMmioProcessor();
 
 const uploadedFiles = ref<Record<string, { filename: string; file: File }>>({});
 const uploadingFiles = ref<Record<string, boolean>>({});
 const fileInputKeys = ref<Record<string, number>>({});
+// Extra system metadata from MMIO file — stored independently from the JsonLd editor tree
+const mmioExtraMetadata = ref<Array<Record<string, unknown>> | null>(null);
+// Display name for the uploaded MMIO file (from server response or original filename)
+const displayedMmioFileName = ref<string | null>(null);
 
 const isEditMode = computed(() => Boolean(props.id));
 
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
-const { handleSubmit, values, meta, resetForm, setFieldValue } = useForm({
+const { handleSubmit, values, meta, resetForm, setFieldValue, validateField } = useForm({
   validationSchema: typedSchema,
   initialValues: props.initialValues || {},
 });
+
+/** File in the main slot: server-uploaded MMIO/TAR or client-only DCAT JSON (File on form). */
+const getFileFieldFile = (): File | undefined => {
+  const uploaded = uploadedFiles.value.file;
+  if (uploaded?.file) return uploaded.file;
+  const v = values.file;
+  return v instanceof File ? v : undefined;
+};
+
+/** Filename for API / createDatasetJsonLd: prefer server-stored name, else local File name. */
+const getFileFieldFilename = (): string | undefined => {
+  const uploaded = uploadedFiles.value.file;
+  if (uploaded?.filename) return uploaded.filename;
+  const f = getFileFieldFile();
+  if (f) return f.name;
+  return displayedMmioFileName.value ?? undefined;
+};
+
+watch(
+  () => values.metadata_content,
+  (meta) => {
+    if (!props.syncNameFromMetadata || isEditMode.value) return;
+    setFieldValue("name", extractDctermsTitlePlainText(meta));
+  },
+  { deep: true, immediate: true },
+);
 
 const fieldOptions = ref<Record<string, FormFieldOption[]>>({});
 const loadingOptions = ref<Record<string, boolean>>({});
@@ -175,6 +223,28 @@ const loadFieldOptions = async (field: FormFieldDefinition) => {
         label: String(item),
       };
     });
+
+    // Edit mode: Radix Select shows nothing if the form value is not in `SelectItem` list.
+    // Dataproducts are fetched per client interface — wrong interface or slow initClient
+    // can omit the value that still exists in metadata (dcat:inSeries title).
+    const rawCurrent = (values as Record<string, unknown>)[field.name];
+    const currentStr =
+      typeof rawCurrent === "string" ? rawCurrent.trim() : "";
+    const rawInitial = props.initialValues?.[field.name];
+    const initialStr =
+      typeof rawInitial === "string" ? rawInitial.trim() : "";
+    const valToEnsure = currentStr || initialStr;
+    const currentOptions = fieldOptions.value[field.name] ?? [];
+    if (
+      isEditMode.value &&
+      valToEnsure &&
+      !currentOptions.some((o) => o.value === valToEnsure)
+    ) {
+      fieldOptions.value[field.name] = [
+        { value: valToEnsure, label: valToEnsure },
+        ...currentOptions,
+      ];
+    }
   } catch {
     // Error loading options
   } finally {
@@ -196,6 +266,10 @@ onMounted(() => {
           filename: initialValue,
           file: null as unknown as File, // No actual File object for existing files
         };
+        // Also set the display name so MmioUploadZone shows the file
+        if (field.name === 'file') {
+          displayedMmioFileName.value = initialValue;
+        }
       }
     }
   });
@@ -219,9 +293,16 @@ const getFormattedDate = (date: unknown) => {
   return null;
 };
 
-const onSubmit = handleSubmit((formData) => {
-  emit("submit", formData);
-});
+const onSubmit = handleSubmit(
+  (formData) => {
+    emit("submit", formData);
+  },
+  (ctx) => {
+    if (import.meta.dev) {
+      console.warn("[AppForm] submit blocked (validation)", ctx.errors);
+    }
+  },
+);
 
 const handleDiscard = () => {
   if (hasChanges.value) {
@@ -243,14 +324,17 @@ const clearFileField = (fieldName: string) => {
   uploadedFiles.value = newUploadedFiles;
   setFieldValue(fieldName, undefined);
   fileInputKeys.value[fieldName] = (fileInputKeys.value[fieldName] || 0) + 1;
+  if (fieldName === 'file') {
+    mmioExtraMetadata.value = null;
+    displayedMmioFileName.value = null;
+  }
 };
 
 const handleFileChange = async (fieldName: string, files: FileList | null) => {
-  if (!files || files.length === 0) {
-    return;
-  }
+  if (!files || files.length === 0) return;
 
-  const file = files[0];
+  const file = files.item(0);
+  if (!file) return;
   uploadingFiles.value[fieldName] = true;
 
   try {
@@ -259,13 +343,44 @@ const handleFileChange = async (fieldName: string, files: FileList | null) => {
     if (location) {
       const filename = location.split("/").pop() || file.name;
       uploadedFiles.value[fieldName] = { filename, file };
+      displayedMmioFileName.value = filename;
       setFieldValue(fieldName, file);
+      validateField(fieldName);
+      emit('clear-server-errors');
+
+      if (fieldName === 'file') {
+        // New file = reset MMIO state, then load from new file
+        mmioExtraMetadata.value = null;
+        if (file.name.endsWith('.tar') || file.name.endsWith('.json')) {
+          try {
+            const mmioMetadata = await processMmioFile(file);
+            if (mmioMetadata) {
+              const extra = mmioMetadata.extraMetadata;
+              mmioExtraMetadata.value = Array.isArray(extra)
+                ? extra
+                : [extra as Record<string, unknown>];
+            }
+          } catch (error) {
+            console.error('[AppForm] MMIO file processing failed:', error);
+          }
+        }
+      }
+    } else if (import.meta.dev) {
+      console.warn("[AppForm] uploadMmioFile returned no location");
     }
-  } catch {
+  } catch (err) {
+    console.error('[AppForm] file upload failed:', err);
     clearFileField(fieldName);
   } finally {
     uploadingFiles.value[fieldName] = false;
   }
+};
+
+// Convert a single File to a FileList-like object for handleFileChange compatibility
+const fileToFileList = (file: File): FileList => {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  return dt.files;
 };
 
 const handleFileDelete = async (fieldName: string) => {
@@ -297,14 +412,30 @@ const isFieldVisible = (field: FormFieldDefinition): boolean => {
   });
 };
 
+const refreshFieldOptions = (
+  fieldName: string,
+  opts?: { preserveValue?: boolean },
+) => {
+  const field = props.fields.find((f) => f.name === fieldName);
+  if (field?.dataSource && field?.type === "select") {
+    if (!opts?.preserveValue) {
+      setFieldValue(fieldName, null);
+    }
+    loadFieldOptions(field);
+  }
+};
+
 defineExpose({
   submit: onSubmit,
   resetForm,
   values,
   meta,
-  getUploadedFile: (fieldName: string) =>
-    uploadedFiles.value[fieldName]?.filename,
+  getUploadedFile: (fieldName: string) => {
+    if (fieldName === "file") return getFileFieldFilename();
+    return uploadedFiles.value[fieldName]?.filename;
+  },
   isEditMode,
+  refreshFieldOptions,
 });
 </script>
 
@@ -319,8 +450,12 @@ defineExpose({
       </p>
     </div>
     <template v-for="field in fields" :key="field.name">
+      <!-- Client selector is rendered outside the FormField wrapper -->
+      <div v-if="field.type === 'client-selector' && isFieldVisible(field)">
+        <AppClientSelector />
+      </div>
       <FormField
-        v-if="isFieldVisible(field)"
+        v-else-if="isFieldVisible(field)"
         v-slot="{ componentField, value: fieldValue }"
         :name="field.name"
       >
@@ -475,65 +610,46 @@ defineExpose({
               </TagsInput>
             </FormControl>
           </template>
+          <template v-else-if="field.type === 'jsonld-editor'">
+            <FormControl>
+              <JsonLdEditor
+                :id="field.name"
+                :model-value="componentField.modelValue"
+                :readonly="field.disabled || props.disabled"
+                :title="field.label"
+                :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
+                :item-type="field.name === 'metadata_content' ? values.item_type : undefined"
+                :enforce-client-access-url="field.name === 'metadata_content' ? !isEditMode : true"
+                @update:model-value="componentField['onUpdate:modelValue']"
+              />
+            </FormControl>
+          </template>
           <template v-else-if="field.type === 'file'">
             <FormControl>
-              <div class="space-y-2">
-                <Input
-                  :id="field.name"
-                  :key="`file-input-${field.name}-${
-                    fileInputKeys[field.name] || 0
-                  }`"
-                  type="file"
-                  :placeholder="field.placeholder"
-                  :multiple="Boolean(field.props?.multiple)"
-                  :accept="field.accept || String(field.props?.accept || '')"
-                  :disabled="
-                    field.disabled ||
-                    props.disabled ||
-                    uploadingFiles[field.name]
-                  "
-                  @change="(e: Event) => {
-                    const input = e.target as HTMLInputElement;
-                    if (input?.files) {
-                      handleFileChange(field.name, input.files);
-                    }
-                  }"
-                />
-                <div
-                  v-if="uploadingFiles[field.name]"
-                  class="text-sm text-muted-foreground"
-                >
-                  {{ t("hint.uploading") }}
-                </div>
-                <div
-                  v-if="
-                    uploadedFiles[field.name] && !uploadingFiles[field.name]
-                  "
-                  class="flex items-center gap-2"
-                >
-                  <span class="text-sm text-muted-foreground">
-                    {{ uploadedFiles[field.name].file?.name || uploadedFiles[field.name].filename }}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    :disabled="field.disabled || props.disabled"
-                    @click="handleFileDelete(field.name)"
-                  >
-                    {{ t("action.delete") }}
-                  </Button>
-                </div>
-              </div>
+              <MmioUploadZone
+                :mmio-file="displayedMmioFileName"
+                :uploading="uploadingFiles[field.name]"
+                :disabled="field.disabled || props.disabled"
+                :readonly="field.disabled || props.disabled"
+                :input-key="fileInputKeys[field.name] || 0"
+                @change-mmio="(file) => handleFileChange(field.name, fileToFileList(file))"
+                @remove-mmio="handleFileDelete(field.name)"
+              />
             </FormControl>
           </template>
           <FormMessage />
-          <p v-if="field.hint" class="text-sm text-muted-foreground mt-1">
+          <p v-if="field.hint && !(field.disabled || props.disabled)" class="text-sm text-muted-foreground mt-1">
             {{ field.hint }}
           </p>
         </FormItem>
       </FormField>
     </template>
+
+    <ServerErrorsBlock
+      v-if="props.serverErrors && props.serverErrors.length > 0"
+      :errors="props.serverErrors"
+      class="mt-4"
+    />
 
     <div class="actions flex justify-start gap-2 pt-4">
       <Button

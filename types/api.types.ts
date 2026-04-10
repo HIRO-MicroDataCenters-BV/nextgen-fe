@@ -106,6 +106,29 @@ export interface CatalogResponse extends JsonLdObject {
   "dcat:dataset": CatalogDataset[];
 }
 
+export interface ApiFilterItem {
+  id: string;
+  label: string;
+}
+
+export interface ApiFilterGroup {
+  id: string;
+  label: string;
+  items: ApiFilterItem[];
+}
+
 export interface ApiError {
-  detail: string;
+  detail: string | ApiErrorDetail[];
+}
+
+export interface ApiErrorDetail {
+  code?: string;
+  message?: string;
+  details?: Array<{
+    type?: string;
+    resultMessage?: string;
+    resultPath?: string;
+    focusNode?: string;
+    value?: string;
+  }>;
 }

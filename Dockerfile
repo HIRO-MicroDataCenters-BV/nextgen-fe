@@ -4,7 +4,7 @@
 # If you need more help, visit the Dockerfile reference guide at
 # https://docs.docker.com/engine/reference/builder/
 
-ARG NODE_VERSION=20.17.0
+ARG NODE_VERSION=22.12.0
 
 ################################################################################
 # Use node image for base image for all stages.
@@ -24,20 +24,21 @@ ENV NUXT_PUBLIC_APP_VERSION=$NUXT_PUBLIC_APP_VERSION
 RUN apk add --no-cache python3 make g++
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
-# Leverage bind mounts to package.json and yarn.lock to avoid having to copy them
-# into this layer.
-RUN corepack enable
+# Bind-mount lockfiles so the layer invalidates when deps change; cache pnpm store.
+# Install pnpm via npm (not corepack): corepack in some Node images fails signature
+# verification when resolving pnpm ("Cannot find matching keyid"). Match package.json "packageManager".
+RUN npm install -g --no-audit --no-fund pnpm@9.15.9
 RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=.yarnrc.yml,target=.yarnrc.yml \
-    --mount=type=bind,source=yarn.lock,target=yarn.lock \
-    --mount=type=cache,id=yarn,target=/root/.yarn \
-    yarn install --immutable
+    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
+    --mount=type=bind,source=.npmrc,target=.npmrc \
+    --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # Copy the rest of the source files into the image.
 COPY . .
 
 # Run the build script.
-RUN yarn build
+RUN pnpm run build
 
 ################################################################################
 FROM node:${NODE_VERSION}-alpine AS runtime

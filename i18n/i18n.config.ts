@@ -1,9 +1,103 @@
+import { jsonldFieldsEn } from './jsonld-fields';
+
 export default defineI18nConfig(() => {
   return {
     legacy: false,
     locale: "en",
     messages: {
       en: {
+        jsonld: {
+          fields: jsonldFieldsEn,
+          editor: {
+            visual: 'Visual',
+            code: 'Code',
+            noMetadata: 'No metadata to display',
+            addField: 'Add Field',
+            validationErrors: 'Validation Errors:',
+            serverErrors: 'Server Errors',
+            readonly: 'Read-only',
+            fromMmioReadonly: 'Loaded from MMIO file — read-only',
+            categories: {
+              identification: 'Identification',
+              provenance: 'Provenance',
+              coverage: 'Coverage',
+              access: 'Access & Rights',
+              distribution: 'Distributions',
+              // Legacy (kept for backwards compatibility)
+              basic: 'Basic Information',
+              rights: 'Rights & Access',
+              contact: 'Contact & Publisher',
+              technical: 'Technical Details',
+              other: 'Other Fields',
+            },
+            /** Short line under each category title in the visual editor */
+            categorySubtitles: {
+              identification: 'What is this dataset?',
+              provenance: 'Who made it and when?',
+              coverage: 'Where and when does the data apply?',
+              access: 'Who can access it and under what terms?',
+              distribution: 'Where and in what format is the data available?',
+            },
+            /** Badge next to section header — count of visible fields (not a form value) */
+            sectionFieldCount: '{count} fields',
+            sectionFieldCountTitle: '{count} fields in this section',
+            compliance: {
+              mandatory: 'Required',
+              recommended: 'Recommended',
+              optional: 'Optional',
+              mandatoryTooltip: 'This field is required by DCAT-AP 3',
+              recommendedTooltip: 'Strongly recommended for interoperability',
+              optionalTooltip: 'Optional additional information',
+            },
+            addFieldDialog: {
+              title: 'Add Metadata Field',
+              description: 'Choose a metadata field to add to this dataset',
+              searchPlaceholder: 'Search fields...',
+              noFieldsAvailable: 'All available fields are already added',
+              alreadyAdded: 'Already added',
+              categories: {
+                identification: 'Identification',
+                provenance: 'Provenance',
+                coverage: 'Coverage',
+                access: 'Access & Rights',
+                distribution: 'Distributions',
+              },
+              cancel: 'Cancel',
+              confirm: 'Add Field',
+            },
+            addAnotherItem: 'Add another item',
+            errors: 'errors',
+            warnings: 'warnings',
+            saving: 'Saving…',
+            saved: 'Saved',
+            searchPlaceholderVisual: 'Search fields…',
+            searchPlaceholderCode: 'Search in code…',
+            noRequiredFields: 'No required fields',
+            allRequiredComplete: 'All required fields complete',
+            ofRequiredFields: 'of {total} required fields complete',
+            collapseField: 'Collapse',
+            expandField: 'Expand',
+            modeVisual: 'Visual',
+            modeJson: 'JSON',
+            modeToggleTitle: 'Switch between visual and JSON code view',
+            bannerAllSet: 'All set!',
+            bannerAllSetDesc: 'Your dataset meets DCAT-AP 3 requirements — every required field is complete.',
+            bannerGettingStarted: 'Getting started?',
+            bannerGettingStartedDesc: 'Fill in Title and Description first — they’re required for DCAT-AP compliance.',
+            bannerDismiss: 'Dismiss',
+            validation: {
+              url_http_only: '{field} must be an http(s) URL',
+              url_valid: '{field} must be a valid URL',
+              url_s3_invalid: '{field} must be a valid S3 URL (e.g. s3://bucket/path)',
+              url_file_invalid: '{field} must be a valid file URL (e.g. file://path/to/file)',
+              url_rest_requires_http: '{field} must be an http(s) URL for REST API client',
+              url_s3_requires_s3: '{field} must be an S3 URL (s3://bucket/path) for S3 client',
+              url_file_requires_file: '{field} must be a file URL (file://path) for Local File Server',
+              item_type_mismatch:
+                'Dataset Type (dcterms:type) must match Item Type: use dcmitype:Dataset for Dataset, dcmitype:Software for Application',
+            },
+          },
+        },
         app: {
           title: "NextGen",
           description:
@@ -33,7 +127,7 @@ export default defineI18nConfig(() => {
           edit_catalog_item: "Edit item",
           unsaved_changes: "Unsaved Changes",
         },
-        welcome: "Welcome11",
+        welcome: "Welcome",
         nextgen: "NextGen",
         general: {
           project_name: "NextGen UI",
@@ -68,6 +162,7 @@ export default defineI18nConfig(() => {
           my_catalog: "My Catalog",
           settings: "Settings",
           help: "Help",
+          guest_user: "Guest",
           logout: "Logout",
           hus_catalog: "My Catalog",
           ki_catalog: "My Catalog",
@@ -81,6 +176,8 @@ export default defineI18nConfig(() => {
         },
         breadcrumb: {
           marketplace: "Marketplace",
+          my_catalog: "My Catalog",
+          create: "Create",
         },
         filter: {
           distribution: "Distribution",
@@ -224,6 +321,7 @@ export default defineI18nConfig(() => {
           item_type: "Item Type",
           related_data_product: "Related Data Product",
           file: "File",
+          mmio_data_file: "MMIO file",
           metadata_content: "Metadata Content",
           dataset: "Dataset",
           application: "Application",
@@ -265,6 +363,12 @@ export default defineI18nConfig(() => {
           has_sex: "Has Sex",
           has_height: "Has Height",
           has_medical_conditions: "Has (Medical Conditions)",
+          mmio_json_desc: "MMIO schema only",
+          mmio_tar_desc: "MMIO + OCA bundle",
+          or: "or",
+          or_drag_drop: "or drop",
+          uploaded: "Uploaded",
+          optional: "optional",
         },
         action: {
           processed: "Procesed",
@@ -287,6 +391,7 @@ export default defineI18nConfig(() => {
           update: "Update",
           save_changes: "Save Changes",
           discard: "Discard",
+          click_to_browse: "Click to browse",
           create_new: "Create New",
           login: "Login",
           filter: "Filter",
@@ -307,10 +412,13 @@ export default defineI18nConfig(() => {
           select_data_product: "Select a data product",
           select_file: "Select a file",
           search: "Search {type}...",
+          search_filters: "Search filters...",
           select_filter: "Select filter",
           select_license: "Select license",
           pick_date: "Pick a date",
           data_product_name: "Enter a data product name",
+          name_from_metadata:
+            "Same as Title in Metadata Content (dcterms:title)",
           creator: "Enter a creator name",
           email: "Enter your email",
           password: "Enter your password",
@@ -320,8 +428,12 @@ export default defineI18nConfig(() => {
         },
         hint: {
           uploading: "Uploading...",
+          upload_mmio_first: "Upload MMIO file first",
+          tar_contains_bundle: ".tar already contains both MMIO and OCA bundle",
+          tar_mmio_archive:
+            ".tar should contain mmio.json and OCA bundle files",
           accepted_file_types_json_jar:
-            "MMIO (.json) or MMIO + OCA bundle (.tar)",
+            "Single MMIO descriptor: unarchived .json or .tar archive",
           your: "Your",
           in: "In",
           all: "All",
@@ -338,6 +450,14 @@ export default defineI18nConfig(() => {
           quarter: "Q{quarter}, {year}",
           try_changing_search_query_or_filters:
             "Try changing search query or filters, filters is required",
+          open_menu: "Open menu",
+          related_data_product_required:
+            "Related Data Product is required to submit this request.",
+          related_data_product_no_options:
+            "No related data products available. Please create one before proceeding.",
+        },
+        common: {
+          remove: "Remove",
         },
         validation: {
           required: "This field is required",
@@ -349,6 +469,10 @@ export default defineI18nConfig(() => {
           required_max_length:
             "This field must be at most {max} characters long",
           required_date: "This field must be a valid date",
+          related_data_product_required:
+            "Related Data Product is required to submit this request.",
+          catalog_save_missing_filename:
+            "Could not resolve the data file name. Re-select your JSON or TAR file and try again.",
         },
         training: {
           success_title: "Continue with training",
@@ -465,10 +589,27 @@ export default defineI18nConfig(() => {
               "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
           },
         },
+        client_selector: {
+          label: "Client",
+          placeholder: "Select a client",
+          interfaces: {
+            s3: "S3",
+            file: "Local File Server",
+            rest: "REST API",
+          },
+          status: {
+            checking: "Checking connection...",
+            valid: "Client is reachable",
+            error: "Client unreachable",
+          },
+          error_description:
+            "The selected client is not reachable. Please check the service configuration or try a different client.",
+        },
         zodI18n: {
           types: {
             string: "Expected string",
             null: "Expected null",
+            object: "Expected object",
           },
           errors: {
             required: "This field is required",
@@ -490,6 +631,7 @@ export default defineI18nConfig(() => {
             invalid_type_received_boolean: "Invalid type received",
             invalid_type_received_object: "Invalid type received",
             invalid_type_received_array: "Invalid type received",
+            invalid_union: "Invalid value",
             custom: "Validation failed",
           },
         },

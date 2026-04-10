@@ -4,45 +4,70 @@
     :description="page.subtitle"
     :show-available-biobanks="false"
   >
-    <div v-if="loading" class="flex justify-center items-center h-64">
-      <Spinner class="size-8" />
+    <div
+      v-if="loading"
+      class="flex w-full min-w-0 flex-col py-6"
+    >
+      <div
+        class="mx-auto flex h-64 w-full max-w-[calc(840px+16px)] items-center justify-center px-8"
+      >
+        <Spinner class="size-8" />
+      </div>
     </div>
-    <div v-else-if="!formReady" class="text-center py-10">
-      <p>{{ t("status.item_not_found") }}</p>
-      <Button class="mt-4" @click="goBackToCatalog">
-        {{ t("action.back_to_catalog") }}
-      </Button>
+    <div
+      v-else-if="!formReady"
+      class="flex w-full min-w-0 flex-col py-10"
+    >
+      <div
+        class="mx-auto w-full max-w-[calc(840px+16px)] px-8 text-center"
+      >
+        <p>{{ t("status.item_not_found") }}</p>
+        <Button class="mt-4" @click="goBackToCatalog">
+          {{ t("action.back_to_catalog") }}
+        </Button>
+      </div>
     </div>
-    <div v-else class="px-14 py-6">
-      <AppForm
-        :id="datasetId"
-        ref="formRef"
-        :title="t('title.edit_catalog_item')"
-        :description="t('subtitle.edit_catalog_item_desc')"
-        :fields="fields"
-        :form-schema="formSchema"
-        :initial-values="initialValues!"
-        @submit="onSubmit"
-      />
+    <div v-else class="flex w-full min-w-0 flex-col py-6">
+      <div
+        class="mx-auto w-full max-w-[calc(840px+16px)] min-w-0 px-8"
+      >
+        <AppForm
+          :id="datasetId"
+          :key="datasetId"
+          ref="formRef"
+          :title="t('title.edit_catalog_item')"
+          :description="t('subtitle.edit_catalog_item_desc')"
+          :fields="fields"
+          :form-schema="formSchema"
+          :initial-values="initialValues!"
+          :server-errors="serverErrors"
+          @submit="onSubmit"
+          @clear-server-errors="serverErrors = null"
+        />
+      </div>
     </div>
   </AppContent>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
 import type { FormFieldDefinition } from "@/components/app/Form.vue";
+import type { ApiErrorDetail } from "~/types/api.types";
 import type { JsonLdObject } from "~/types/jsonld.types";
 import {
   findDatasetInJsonLd,
   convertJsonLdDatasetToJson,
   createDatasetJsonLd,
 } from "~/utils/jsonld";
+import { hasMetadataItemTypeMismatch } from "~/utils/metadataItemTypeConsistency";
 import { Spinner } from "@/components/ui/spinner";
 
 const { t } = useI18n();
-const { saveDataset, getDataset, getDataproducts } = useApi();
+const { saveDataset, getDataset } = useApi();
+const serverErrors = ref<ApiErrorDetail[] | null>(null);
+const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
 
 const route = useRoute();
@@ -62,12 +87,23 @@ const initialValues = ref<Record<string, unknown> | null>(null);
 const formRef = ref();
 const existingMetadataFilename = ref<string | null>(null);
 
-const formSchema = z.object({
-  item_type: z.string().min(1),
-  related_data_product: z.string().optional().nullable(),
-  file: z.any().optional().nullable(),
-  metadata_content: z.string().min(1),
-});
+const formSchema = computed(() =>
+  z
+    .object({
+      item_type: z.string().min(1),
+      related_data_product: z.string().optional().nullable(),
+      file: z.any().optional().nullable(),
+      metadata_content: z.union([z.string().min(1), z.record(z.unknown())]),
+    })
+    .refine(
+      (data) =>
+        !hasMetadataItemTypeMismatch(data.metadata_content, data.item_type),
+      {
+        message: t("jsonld.editor.validation.item_type_mismatch"),
+        path: ["item_type"],
+      }
+    )
+);
 
 const fields = computed<FormFieldDefinition[]>(() => [
   {
@@ -86,10 +122,13 @@ const fields = computed<FormFieldDefinition[]>(() => [
     label: t("label.related_data_product"),
     type: "select",
     placeholder: t("placeholder.select_data_product"),
-    dataSource: getDataproducts,
+    // No connector list on edit — value comes from metadata; Form adds a synthetic option.
+    dataSource: async () => ({ dataproducts: [] as string[] }),
     fieldOptions: {
       dataPath: "dataproducts",
     },
+    hint: null,
+    disabled: true,
     conditions: [
       {
         field: "item_type",
@@ -104,15 +143,13 @@ const fields = computed<FormFieldDefinition[]>(() => [
     placeholder: t("placeholder.select_file"),
     hint: t("hint.accepted_file_types_json_jar"),
     accept: "application/json, application/x-tar",
+    disabled: true,
   },
   {
     name: "metadata_content",
     label: t("label.metadata_content"),
-    type: "textarea",
+    type: "jsonld-editor",
     placeholder: t("placeholder.enter_metadata_content"),
-    props: {
-      rows: 18,
-    },
   },
 ]);
 
@@ -123,6 +160,40 @@ const formReady = computed(
 const goBackToCatalog = () => {
   router.push("/my_catalog");
 };
+
+/** Resolve related data product directory from dcat:inSeries (title or file:// @id). */
+function relatedProductFromInSeries(inSeries: unknown): string | null {
+  if (!inSeries || typeof inSeries !== "object") return null;
+  const o = inSeries as Record<string, unknown>;
+
+  const literalTitle = (title: unknown): string | null => {
+    if (typeof title === "string" && title.trim()) return title.trim();
+    if (Array.isArray(title)) {
+      for (const item of title) {
+        const s = literalTitle(item);
+        if (s) return s;
+      }
+      return null;
+    }
+    if (title && typeof title === "object" && "@value" in title) {
+      const v = (title as { "@value": unknown })["@value"];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (v != null && String(v).trim()) return String(v).trim();
+    }
+    return null;
+  };
+
+  const fromTitle = literalTitle(o["dcterms:title"]);
+  if (fromTitle) return fromTitle;
+
+  const id = o["@id"];
+  if (typeof id === "string" && id.startsWith("file://")) {
+    const path = id.replace(/^file:\/\//, "").replace(/^\/*/, "");
+    const parts = path.split("/").filter(Boolean);
+    if (parts.length) return parts[parts.length - 1] ?? null;
+  }
+  return null;
+}
 
 onMounted(async () => {
   if (!datasetId.value) {
@@ -192,23 +263,15 @@ onMounted(async () => {
     }
 
     // Extract related_data_product from dcat:inSeries or dcat:distribution
-    // Priority: dcat:inSeries > dcat:distribution[0].dcat:accessURL
+    // Priority: dcat:inSeries (title or file:// @id) > dcat:distribution[0].dcat:accessURL
     let relatedDataProductValue: string | null = null;
     const inSeries = dataset["dcat:inSeries"];
 
     if (inSeries && typeof inSeries === "object" && inSeries !== null) {
-      const inSeriesObj = inSeries as Record<string, unknown>;
-      const dctermsTitle = inSeriesObj["dcterms:title"] as
-        | { "@value": string }
-        | undefined;
-      if (
-        dctermsTitle &&
-        typeof dctermsTitle === "object" &&
-        "@value" in dctermsTitle
-      ) {
-        relatedDataProductValue = dctermsTitle["@value"];
-      }
-    } else {
+      relatedDataProductValue = relatedProductFromInSeries(inSeries);
+    }
+
+    if (!relatedDataProductValue) {
       // Fallback: extract from dcat:distribution[0].dcat:accessURL
       // Format: file://disease_xyz/filename.ext -> extract "disease_xyz"
       const distributions = dataset["dcat:distribution"];
@@ -296,10 +359,34 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
         ? formValues.related_data_product.trim() || null
         : null;
 
+    serverErrors.value = null;
     const result = await saveDataset(targetFilename, datasetJsonLd, {
       relatedDataProduct,
       isApplication,
     });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resultAny = result as any;
+    if (resultAny && resultAny.error === true) {
+      const data = resultAny.data as Record<string, unknown> | undefined;
+      const detail = data?.detail;
+      let errors: Array<{ code?: string; message?: string; details?: unknown[] }> = [];
+      if (Array.isArray(detail) && detail.length > 0) {
+        errors = detail as Array<{ code?: string; message?: string; details?: unknown[] }>;
+      } else if (typeof detail === "string" && detail) {
+        errors = [{ message: detail }];
+      } else if (data?.message) {
+        errors = [{ message: String(data.message) }];
+      } else {
+        errors = [{ message: "Server error occurred" }];
+      }
+      serverErrors.value = errors as ApiErrorDetail[];
+      nextTick(() => {
+        serverErrorsRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      });
+      return;
+    }
+
     if (result) {
       goBackToCatalog();
     }

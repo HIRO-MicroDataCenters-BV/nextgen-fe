@@ -6,11 +6,30 @@ import type {
   CatalogDataset,
   CatalogResponse,
   ApiError,
+  ApiErrorDetail,
+  ApiFilterGroup,
 } from "~/types/api.types";
+import { sanitizeDatasetDctermsTitleInPlace } from "~/utils/jsonld";
+import {
+  catalogDatasetSchema,
+  catalogSearchResponseSchema,
+} from "~/schemas/catalog.schema";
+
+type RequestError = { error: true; data: unknown };
 
 export const useApi = () => {
   const config = useRuntimeConfig();
   const { t } = useI18n();
+
+  const formatApiErrorMessage = (error: ApiError): string => {
+    const d = error.detail;
+    if (typeof d === "string") return d;
+    if (Array.isArray(d) && d.length > 0) {
+      const first = d[0] as ApiErrorDetail;
+      return first.message ?? first.code ?? t("app.error.occurred");
+    }
+    return t("app.error.occurred");
+  };
 
   const serviceUrls = {
     search: config.public.apiSearchServiceUrl,
@@ -21,6 +40,35 @@ export const useApi = () => {
   const accessTokenKey = "access_token";
   const token = useLocalStorage(accessTokenKey, null);
   const toaster = useToaster();
+  const isRequestError = (value: unknown): value is RequestError =>
+    !!value &&
+    typeof value === "object" &&
+    "error" in value &&
+    (value as { error?: unknown }).error === true;
+
+  const validateCatalogPayload = <T extends Record<string, unknown>>(
+    payload: unknown,
+    kind: "dataset" | "catalog"
+  ): T | null => {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return null;
+    }
+
+    const parsed =
+      kind === "dataset"
+        ? catalogDatasetSchema.safeParse(payload)
+        : catalogSearchResponseSchema.safeParse(payload);
+
+    if (parsed.success) {
+      return parsed.data as T;
+    }
+
+    if (import.meta.dev) {
+      console.warn(`[useApi] Invalid ${kind} payload`, parsed.error.flatten());
+    }
+    toaster.show("error", t("app.error.fetch"));
+    return null;
+  };
 
   const getHeaders = (isFormData: boolean = false) => {
     const headers: {
@@ -48,6 +96,7 @@ export const useApi = () => {
       timeout?: number;
       hasRawData?: boolean;
       returnResponse?: boolean;
+      returnErrorDetails?: boolean;
     }
   ) => {
     const baseUrl = serviceUrls[service];
@@ -65,12 +114,12 @@ export const useApi = () => {
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {
-          body: isFormData
-            ? (body as BodyInit)
-            : hasRawData
+        body: isFormData
+          ? (body as BodyInit)
+          : hasRawData
             ? (body as BodyInit)
             : JSON.stringify(body),
-        }),
+      }),
     };
 
     try {
@@ -85,19 +134,23 @@ export const useApi = () => {
 
       if (!res.ok) {
         const error = data as ApiError;
-        const errorMessage = error.detail || t("app.error.occurred");
+        const errorMessage = formatApiErrorMessage(error);
         switch (res.status) {
           case 401:
             token.value = null;
             if (showToast) {
               toaster.show("error", t("app.error.unauthorized"));
             }
-            return null;
+            return options?.returnErrorDetails
+              ? ({ error: true as const, data } satisfies RequestError)
+              : null;
           default:
             if (showToast) {
               toaster.show("error", errorMessage);
             }
-            return null;
+            return options?.returnErrorDetails
+              ? ({ error: true as const, data } satisfies RequestError)
+              : null;
         }
       }
 
@@ -162,12 +215,12 @@ export const useApi = () => {
       "@type": "Filters",
       filters: Array.isArray(compacted.filters)
         ? (compacted.filters as Array<{
-            "@type": string;
-            [key: string]: unknown;
-          }>)
+          "@type": string;
+          [key: string]: unknown;
+        }>)
         : compacted.filters
-        ? [compacted.filters as { "@type": string; [key: string]: unknown }]
-        : [],
+          ? [compacted.filters as { "@type": string;[key: string]: unknown }]
+          : [],
     };
 
     return result;
@@ -176,6 +229,18 @@ export const useApi = () => {
   return {
     healthCheck: async () => {
       return request<{ status: string }>("search", `/health-check`);
+    },
+
+    getConnectorMetadata: async () => {
+      const response = await request<{
+        connector_id: string;
+        region: string;
+        supported_interfaces: string[];
+        status: string;
+        version: string;
+      }>("connector", `/connector-metadata`, "GET", undefined, { showToast: false });
+      if (!response || isRequestError(response)) return null;
+      return response;
     },
 
     getMetrics: async () => {
@@ -226,6 +291,18 @@ export const useApi = () => {
       };
     },
 
+    getFilters: async () => {
+      const response = await request<{ groups: ApiFilterGroup[] }>(
+        "catalog",
+        "/catalog/filters/",
+        "GET",
+        undefined,
+        { showToast: false }
+      );
+      if (!response || isRequestError(response)) return [];
+      return response?.groups ?? [];
+    },
+
     getLocalCatalog: async (
       filter: SearchFilter
     ): Promise<CatalogResponse | null> => {
@@ -236,7 +313,8 @@ export const useApi = () => {
         "POST",
         preparedFilter
       );
-      return response || null;
+      if (!response || isRequestError(response)) return null;
+      return validateCatalogPayload<CatalogResponse>(response, "catalog");
     },
 
     getDataset: async (id: string): Promise<CatalogDataset | null> => {
@@ -245,7 +323,14 @@ export const useApi = () => {
         `/datasets/${id}/`,
         "GET"
       );
-      return response || null;
+      if (!response || isRequestError(response)) return null;
+      const dataset = validateCatalogPayload<CatalogDataset>(
+        response,
+        "dataset"
+      );
+      if (!dataset) return null;
+      sanitizeDatasetDctermsTitleInPlace(dataset);
+      return dataset;
     },
 
     saveDataset: async (
@@ -255,7 +340,7 @@ export const useApi = () => {
         relatedDataProduct?: string | null;
         isApplication?: boolean;
       }
-    ): Promise<CatalogDataset | null> => {
+    ): Promise<CatalogDataset | { error: true; data: unknown } | null> => {
       let url = `/datasets/${filename}/`;
 
       // Only add related_data_product if it has a value (for datasets only)
@@ -268,14 +353,24 @@ export const useApi = () => {
         url += `?related_data_product=${encodedParam}`;
       }
 
-      const response = await request<CatalogDataset>(
+      const response = await request<CatalogDataset | RequestError>(
         "catalog",
         url,
         "POST",
         dataset,
-        { showToast: true, hasRawData: true }
+        { showToast: true, hasRawData: true, returnErrorDetails: true }
       );
-      return response || null;
+      if (response && !isRequestError(response)) {
+        const dataset = validateCatalogPayload<CatalogDataset>(
+          response,
+          "dataset"
+        );
+        if (!dataset) return null;
+        sanitizeDatasetDctermsTitleInPlace(dataset);
+        return dataset;
+      }
+      if (isRequestError(response)) return response;
+      return response ?? null;
     },
 
     deleteDataset: async (id: string): Promise<boolean> => {
@@ -321,7 +416,7 @@ export const useApi = () => {
           showToast: options?.showToast,
         }
       );
-
+      if (isRequestError(result)) return null;
       return result ?? null;
     },
 
@@ -333,6 +428,7 @@ export const useApi = () => {
         undefined,
         { showToast: true }
       );
+      if (isRequestError(response)) return null;
       return response || null;
     },
 
@@ -345,12 +441,14 @@ export const useApi = () => {
       return response !== null;
     },
 
-    getDataproducts: async (): Promise<{ dataproducts: string[] } | null> => {
+    getDataproducts: async (interfaceId?: string): Promise<{ dataproducts: string[] } | null> => {
+      const id = interfaceId || "local";
       const response = await request<{ dataproducts: string[] }>(
         "connector",
-        "/file",
+        `/dataproducts/${id}`,
         "GET"
       );
+      if (isRequestError(response)) return null;
       return response || null;
     },
 

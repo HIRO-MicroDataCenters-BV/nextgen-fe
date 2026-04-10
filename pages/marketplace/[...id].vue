@@ -4,8 +4,15 @@
     :description="page.subtitle"
     :show-available-biobanks="false"
   >
-    <div v-if="loading" class="flex justify-center items-center h-64">
-      <Spinner class="size-8" />
+    <div
+      v-if="loading"
+      class="flex w-full min-w-0 flex-col py-6"
+    >
+      <div
+        class="mx-auto flex h-64 w-full max-w-[calc(840px+16px)] items-center justify-center px-8"
+      >
+        <Spinner class="size-8" />
+      </div>
     </div>
     <AppDetails v-else :data="datasetData" />
   </AppContent>

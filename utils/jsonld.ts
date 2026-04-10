@@ -11,19 +11,152 @@ import type {
   SearchFilter,
 } from "~/types/jsonld.types";
 
+const JSONLD_PLAIN_MAX_DEPTH = 12;
+
+const JSONLD_BOGUS_OBJECT_PLACEHOLDER = /^\[object object\]$/i;
+
+/** True when the string is the JS coercion artifact from serializing a plain object. */
+export function isBogusJsonLdObjectPlaceholder(text: string): boolean {
+  return JSONLD_BOGUS_OBJECT_PLACEHOLDER.test(text.trim());
+}
+
+/**
+ * Flatten a JSON-LD literal / nested @value tree to a display or API-safe string.
+ * Avoids "[object Object]" when @value is an object or array.
+ */
+export function jsonLdValueToPlainString(
+  input: unknown,
+  depth = 0
+): string {
+  if (input == null || depth > JSONLD_PLAIN_MAX_DEPTH) return "";
+  if (typeof input === "string") return input;
+  if (typeof input === "number" || typeof input === "boolean") {
+    return String(input);
+  }
+  if (Array.isArray(input)) {
+    return input
+      .map((x) => jsonLdValueToPlainString(x, depth + 1))
+      .filter((s) => s.trim().length > 0)
+      .join(", ");
+  }
+  if (typeof input === "object") {
+    const o = input as Record<string, unknown>;
+    if ("@value" in o) {
+      return jsonLdValueToPlainString(o["@value"], depth + 1);
+    }
+    if ("@id" in o && Object.keys(o).length <= 3) {
+      const id = o["@id"];
+      if (typeof id === "string") return id;
+    }
+  }
+  return "";
+}
+
+/**
+ * Collapse dcterms:title-style language maps to one { @language, @value } with a plain string @value.
+ * Prefers preferredLanguage; handles arrays of literals and typed { @type, @value }.
+ */
+export function normalizeDctermsLanguageLiteral(
+  value: unknown,
+  preferredLanguage = "en"
+): { "@language": string; "@value": string } {
+  const leaf = (v: unknown) => jsonLdValueToPlainString(v);
+
+  if (Array.isArray(value)) {
+    const picks: { lang: string; text: string }[] = [];
+    for (const item of value) {
+      if (typeof item === "string") {
+        const t = item.trim();
+        if (t && !isBogusJsonLdObjectPlaceholder(t)) {
+          picks.push({ lang: preferredLanguage, text: t });
+        }
+        continue;
+      }
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const lang =
+        typeof o["@language"] === "string" ? o["@language"] : preferredLanguage;
+      const text = leaf(
+        o["@value"] !== undefined ? o["@value"] : o
+      ).trim();
+      if (text && !isBogusJsonLdObjectPlaceholder(text)) {
+        picks.push({ lang, text });
+      }
+    }
+    // Same language repeated (invalid but common after merges): use the **last** entry —
+    // usually the newest edit; the first match was wrongly shown in catalog lists.
+    const preferredMatches = picks.filter(
+      (p) => p.lang === preferredLanguage
+    );
+    const best =
+      preferredMatches.length > 0
+        ? preferredMatches[preferredMatches.length - 1]
+        : picks.length > 0
+          ? picks[picks.length - 1]
+          : undefined;
+    return {
+      "@language": best?.lang ?? preferredLanguage,
+      "@value": best?.text ?? "",
+    };
+  }
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const o = value as Record<string, unknown>;
+    const lang =
+      typeof o["@language"] === "string" ? o["@language"] : preferredLanguage;
+    if ("@value" in o) {
+      const plain = leaf(o["@value"]);
+      if (isBogusJsonLdObjectPlaceholder(plain)) {
+        return { "@language": preferredLanguage, "@value": "" };
+      }
+      return { "@language": lang, "@value": plain };
+    }
+  }
+
+  if (typeof value === "string") {
+    if (isBogusJsonLdObjectPlaceholder(value)) {
+      return { "@language": preferredLanguage, "@value": "" };
+    }
+    return { "@language": preferredLanguage, "@value": value };
+  }
+
+  const fallback = leaf(value);
+  if (isBogusJsonLdObjectPlaceholder(fallback)) {
+    return { "@language": preferredLanguage, "@value": "" };
+  }
+  return { "@language": preferredLanguage, "@value": fallback };
+}
+
 /**
  * Extract value from JSON-LD value object
  */
 export function getJsonLdValue(
   value: JsonLdValue | JsonLdValue[] | undefined
 ): string {
-  if (!value) return "";
-
-  if (Array.isArray(value)) {
-    return value[0]?.["@value"] || "";
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
   }
 
-  return value["@value"] || "";
+  if (Array.isArray(value)) {
+    const first = value[0];
+    if (!first) return "";
+    if (typeof first === "object" && first !== null && "@value" in first) {
+      return jsonLdValueToPlainString(
+        (first as unknown as Record<string, unknown>)["@value"]
+      );
+    }
+    return jsonLdValueToPlainString(first);
+  }
+
+  if (typeof value === "object" && value !== null && "@value" in value) {
+    return jsonLdValueToPlainString(
+      (value as unknown as Record<string, unknown>)["@value"]
+    );
+  }
+
+  return "";
 }
 
 /**
@@ -54,14 +187,59 @@ function getLanguageValue(
   preferredLanguage: string = "en"
 ): string {
   if (!value) return "";
+  return normalizeDctermsLanguageLiteral(
+    value as unknown,
+    preferredLanguage
+  )["@value"];
+}
 
-  if (Array.isArray(value)) {
-    const preferred = value.find((v) => v["@language"] === preferredLanguage);
-    if (preferred) return preferred["@value"];
-    return value[0]?.["@value"] || "";
+function extractTitleNodePlain(
+  node: unknown,
+  preferredLanguage: string
+): string {
+  if (typeof node === "string") return node.trim();
+  if (!node) return "";
+  if (Array.isArray(node)) {
+    return normalizeDctermsLanguageLiteral(node, preferredLanguage)[
+      "@value"
+    ].trim();
   }
+  if (typeof node === "object" && node !== null && "@value" in node) {
+    return jsonLdValueToPlainString(
+      (node as { "@value": unknown })["@value"]
+    ).trim();
+  }
+  return "";
+}
 
-  return value["@value"] || "";
+/**
+ * Human-readable string from dataset metadata `dcterms:title` (for UI display / name field).
+ * Accepts a metadata object or a JSON string of it.
+ */
+export function extractDctermsTitlePlainText(
+  metadata: unknown,
+  preferredLanguage: string = "en"
+): string {
+  let obj: Record<string, unknown> | null = null;
+  if (!metadata) return "";
+  if (typeof metadata === "string") {
+    try {
+      const p = JSON.parse(metadata) as unknown;
+      if (p && typeof p === "object" && !Array.isArray(p)) {
+        obj = p as Record<string, unknown>;
+      }
+    } catch {
+      return "";
+    }
+  } else if (
+    typeof metadata === "object" &&
+    metadata !== null &&
+    !Array.isArray(metadata)
+  ) {
+    obj = metadata as Record<string, unknown>;
+  }
+  if (!obj) return "";
+  return extractTitleNodePlain(obj["dcterms:title"], preferredLanguage);
 }
 
 /**
@@ -133,18 +311,12 @@ export function transformDatasetToTableRow(
     | JsonLdDistribution[]
     | undefined
   );
-  // Extract dcterms:type to distinguish datasets vs applications
-  // Note: @type is always "dcat:Dataset" for both (per DF-207 fix)
-  // Applications have dcterms:type with @id = "http://purl.org/dc/dcmitype/Software"
-  // Datasets have dcterms:type with @id = "http://purl.org/dc/dcmitype/Dataset" or no dcterms:type (defaults to Dataset)
-  // dcterms:type can be object with @id, array of objects, or string @id
   let datasetType: string | undefined;
   if (dataset["dcterms:type"]) {
     const typeValue = dataset["dcterms:type"];
     if (typeof typeValue === "string") {
       datasetType = typeValue;
     } else if (Array.isArray(typeValue)) {
-      // If it's an array, get the first one
       const firstType = typeValue[0];
       if (firstType && typeof firstType === "object" && "@id" in firstType) {
         datasetType = firstType["@id"] as string;
@@ -153,13 +325,7 @@ export function transformDatasetToTableRow(
       datasetType = (typeValue as JsonLdObject)["@id"] as string;
     }
   }
-  // If dcterms:type is not present, datasetType remains undefined, which defaults to Dataset
 
-  // Extract identifier with fallback logic
-  // The identifier should match what the backend API expects for /datasets/{identifier}/
-  // Priority: dcterms:identifier > metadataFilename (full filename) > metadataFilename (without extension) > @id
-  // Note: When saving via saveDataset(), the backend uses the full filename in the URL: /datasets/{filename}/
-  // So we should prioritize metadataFilename to match what was used during save
   const identifier = getJsonLdValue(
     dataset["dcterms:identifier"] as JsonLdStringValue
   );
@@ -173,9 +339,6 @@ export function transformDatasetToTableRow(
     ? String(dataset["@id"]).split("/").pop() || String(dataset["@id"])
     : "";
 
-  // Use dcterms:identifier if available and non-empty, otherwise fallback to metadataFilename (full),
-  // then metadataFilename (without extension), then @id (last part of URL)
-  // This ensures we use the same identifier format that was used when saving
   const finalId =
     (identifier && identifier.trim() !== "" ? identifier : null) ||
     metadataFilename ||
@@ -307,88 +470,106 @@ export function transformSearchResponseToTableData(
 }
 
 /**
- * Create filters object for API requests
+ * Filter conversion aligns with DCAT-AP 3.0 notation (dcat, dcterms, med, xsd).
+ * @see https://semiceu.github.io/DCAT-AP/releases/3.0.0/
+ */
+const LEGACY_DISTRIBUTION_KEYS = [
+  "distribution_csv", "distribution_dicom", "distribution_mmio", "distribution_nifti",
+  "distribution_xml", "distribution_vcf", "distribution_plink",
+  "distribution_jpg/png", "distribution_jpg_png",
+];
+
+/**
+ * Map API filter ID to backend property key per DCAT-AP 3.0 and domain context.
+ * - distribution.*, distribution_xxx → dcat:Distribution with dcterms:format (DCAT-AP 3.0)
+ * - identifiers.*, identifier → dcterms:identifier
+ * - sociodemographics.*, comorbidities.*, etc. → med:xxx in extraMetadata (domain extension)
+ */
+function mapApiFilterIdToBackendKey(apiId: string): { key: string; type: "distribution" | "identifier" | "extraMetadata" | "isShared" } {
+  if (apiId.startsWith("distribution.") || LEGACY_DISTRIBUTION_KEYS.includes(apiId)) {
+    return { key: apiId, type: "distribution" };
+  }
+  if (apiId === "identifier" || apiId.startsWith("identifiers.")) {
+    return { key: apiId, type: "identifier" };
+  }
+  if (apiId === "isShared") {
+    return { key: apiId, type: "isShared" };
+  }
+  return { key: apiId, type: "extraMetadata" };
+}
+
+/**
+ * Create filters object for API requests.
+ * Converts UI/API filter keys to DCAT-AP 3.0 compliant structure with proper notation.
  */
 export function createFiltersObject(
   filters: Record<string, unknown>
 ): Array<Record<string, unknown>> {
-  // If no filters provided, return empty array
   if (!filters || Object.keys(filters).length === 0) {
     return [];
   }
 
-  // Initialize the dcat:dataset object WITHOUT @type initially
   const dcatDataset: Record<string, unknown> = {};
-
-  // Separate filters by type
   const extraMetadataFields: Record<string, unknown> = {};
   let distributionFilter: Record<string, unknown> | null = null;
   let identifierFilter: string | null = null;
   let isSharedFilter: Record<string, unknown> | null = null;
 
+  const getFormatValue = (key: string): string => {
+    if (key.startsWith("distribution.")) {
+      return key.replace("distribution.", "").replace("_", "/").toLowerCase();
+    }
+    if (key === "distribution_jpg/png" || key === "distribution_jpg_png") return "jpg/png";
+    return key.replace("distribution_", "").replace("_", "/").toLowerCase();
+  };
+
   Object.keys(filters).forEach((key) => {
-    switch (key) {
-      case "distribution_csv":
-      case "distribution_dicom":
-      case "distribution_mmio":
+    const value = filters[key] === true || filters[key] === "true";
+    const { type } = mapApiFilterIdToBackendKey(key);
+
+    switch (type) {
+      case "distribution": {
+        const format = getFormatValue(key);
         distributionFilter = {
           "@type": "dcat:Distribution",
-          "dcat:format": key.replace("distribution_", "").toLowerCase(),
+          "dcat:format": format,
         };
         break;
-      case "isShared":
-        isSharedFilter = {
-          "@value": true,
-          "@type": "xsd:boolean",
-        };
-        break;
+      }
       case "identifier":
         identifierFilter = String(filters[key]);
         break;
-      default:
-        // All other keys are treated as extraMetadata fields
-        // Use boolean shorthand instead of RDF typed literals
-        extraMetadataFields[key] = filters[key] === true || filters[key] === "true";
+      case "isShared":
+        isSharedFilter = { "@value": true, "@type": "xsd:boolean" };
         break;
+      case "extraMetadata": {
+        const itemId = key.includes(".") ? key.split(".").slice(1).join(".") : key;
+        extraMetadataFields[`med:${itemId}`] = value;
+        break;
+      }
     }
   });
 
-  // Build extraMetadata object if we have any fields
   if (Object.keys(extraMetadataFields).length > 0) {
     dcatDataset["extraMetadata"] = {
       "@type": "med:Record",
       ...extraMetadataFields,
     };
   }
-
-  // Add distribution filter if present
   if (distributionFilter) {
     dcatDataset["dcat:distribution"] = distributionFilter;
   }
-
-  // Add identifier filter if present
   if (identifierFilter) {
     dcatDataset["dcterms:identifier"] = identifierFilter;
   }
-
-  // Add isShared filter if present
   if (isSharedFilter) {
     dcatDataset["isShared"] = isSharedFilter;
   }
-
-  // Only add @type if we have distribution or isShared filters
-  // When using only identifier or extraMetadata, @type should NOT be present
-  // This matches the working curl example from requestfix.md
   if (distributionFilter || isSharedFilter) {
     dcatDataset["@type"] = "dcat:Dataset";
   }
 
-  // Return array with single filter object
-  return [
-    {
-      "dcat:dataset": dcatDataset,
-    },
-  ];
+  return [{ "dcat:dataset": dcatDataset }];
 }
 
 /**
@@ -421,32 +602,26 @@ export function createTableSearchFilter(params: {
 
   const filtersArray: Array<Record<string, unknown>> = [];
 
-  // If custom filters are provided, use minimal context matching CURL example
   const hasCustomFilters =
     params.filters && Array.isArray(params.filters) && params.filters.length > 0;
 
   if (hasCustomFilters) {
-    // Build minimal context based on what filters are actually used
-    // Start with base namespaces
     const minimalContext: Record<string, string> = {
       "@vocab": "http://data-space.org/",
       dcat: "http://www.w3.org/ns/dcat#",
     };
 
-    // Check if any filter uses extraMetadata (needs 'med' namespace)
     const hasExtraMetadata = params.filters?.some((f: Record<string, unknown>) => {
       const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
       return dataset && "extraMetadata" in dataset;
     });
 
-    // Check if any filter uses dcterms properties (needs 'dcterms' namespace)
     const hasDcterms = params.filters?.some((f: Record<string, unknown>) => {
       const dataset = f["dcat:dataset"] as Record<string, unknown> | undefined;
       if (!dataset) return false;
       return Object.keys(dataset).some(key => key.startsWith("dcterms:"));
     });
 
-    // Add namespaces based on filter content
     if (hasExtraMetadata) {
       minimalContext.med = "http://oca.example.org/123/";
     }
@@ -456,7 +631,6 @@ export function createTableSearchFilter(params: {
 
     filter["@context"] = minimalContext as typeof filter["@context"];
   } else {
-    // Add type filter (datasets vs applications) only when no custom filters
     if (params.type === "applications") {
       filtersArray.push({
         "dcat:dataset": {
@@ -480,7 +654,6 @@ export function createTableSearchFilter(params: {
     }
   }
 
-  // Add search filters - format according to API docs: dcat:dataset with nested filters
   if (params.all) {
     filtersArray.push({
       "dcat:dataset": {
@@ -523,21 +696,18 @@ export function createTableSearchFilter(params: {
     });
   }
 
-  // Add custom filters first (before other filters) if provided
   if (
     params.filters &&
     Array.isArray(params.filters) &&
     params.filters.length > 0
   ) {
     filtersArray.push(...params.filters);
-    // If custom filters are provided, skip other filters
     filter.filters = filtersArray;
     return filter;
   }
 
   filter.filters = filtersArray;
 
-  // TEMPORARY: Disable pagination
   const DISABLE_PAGINATION = true;
 
   if (!DISABLE_PAGINATION) {
@@ -580,6 +750,21 @@ export function findDatasetInJsonLd(jsonLdData: unknown): JsonLdObject | null {
   }
 
   return null;
+}
+
+/**
+ * Collapse invalid multi-title arrays and strip `[object Object]` artifacts on the dataset
+ * actually used in the payload (in-place). Safe to call on GET responses before editing.
+ */
+export function sanitizeDatasetDctermsTitleInPlace(root: unknown): void {
+  if (!root || typeof root !== "object") return;
+  const dataset = findDatasetInJsonLd(root);
+  const target = (dataset ?? root) as Record<string, unknown>;
+  if (target["dcterms:title"] == null) return;
+  target["dcterms:title"] = normalizeDctermsLanguageLiteral(
+    target["dcterms:title"],
+    "en"
+  );
 }
 
 /**
@@ -641,6 +826,15 @@ function flattenObject(
 
     if (Array.isArray(value)) {
       if (value.length === 0) continue;
+
+      if (key === "dspace:extraMetadata") {
+        value.forEach((item) => {
+          if (typeof item === "object" && item !== null) {
+            flattenObject(item, preferredLanguage, currentPath, result);
+          }
+        });
+        continue;
+      }
 
       const firstItem = value[0];
       if (typeof firstItem === "object" && firstItem !== null) {
@@ -850,7 +1044,6 @@ function processJsonLdValue(
 export function convertJsonLdForTraining(input: unknown): {
   dataset: Array<Record<string, unknown>>;
 } {
-  // If input already looks normalized (ts-json.json shape), return as-is
   const asObj = (input || {}) as Record<string, unknown>;
   if (Array.isArray(asObj.dataset)) {
     return { dataset: asObj.dataset as Array<Record<string, unknown>> };
@@ -859,11 +1052,9 @@ export function convertJsonLdForTraining(input: unknown): {
   const result: Array<Record<string, unknown>> = [];
 
   const datasets: unknown[] = (() => {
-    // tb-jsonld shape: top-level has "dcat:dataset": []
     if (Array.isArray((asObj as Record<string, unknown>)["dcat:dataset"])) {
       return (asObj as Record<string, unknown>)["dcat:dataset"] as unknown[];
     }
-    // Fallback: if it's a single dataset object
     if ((asObj as Record<string, unknown>)["@type"] === "dcat:Dataset") {
       return [asObj];
     }
@@ -910,7 +1101,6 @@ export function convertJsonLdForTraining(input: unknown): {
           obj["skos:prefLabel"] as unknown as JsonLdLanguageValue
         );
       if ("prefLabel" in obj) return extractScalar(obj["prefLabel"]);
-      // Fallback: try common fields
       for (const key of ["value", "name", "title"]) {
         if (key in obj) {
           const s = extractScalar(obj[key]);
@@ -923,7 +1113,7 @@ export function convertJsonLdForTraining(input: unknown): {
 
   const keyFromIri = (iri: string): string => {
     const bySlash = iri.split("/");
-    const last = bySlash[bySlash.length - 1];
+    const last = bySlash[bySlash.length - 1] ?? "";
     return last.replace(/[^A-Za-z0-9_-]/g, "_");
   };
 
@@ -931,7 +1121,6 @@ export function convertJsonLdForTraining(input: unknown): {
     const out: Record<string, boolean> = {};
     if (!extra || typeof extra !== "object") return out;
     const obj = extra as Record<string, unknown>;
-    // JSON-LD style: IRIs as keys → { "@type": ..., "@value": true }
     Object.entries(obj).forEach(([k, v]) => {
       if (k.startsWith("@")) return;
       const key = keyFromIri(k);
@@ -1078,49 +1267,126 @@ export function convertJsonLdForTraining(input: unknown): {
   return { dataset: result };
 }
 
+/** @context for registration API (no vcard prefix — vcard:* keys are expanded to full IRIs). */
+const REGISTRATION_JSONLD_CONTEXT: Record<string, string> = {
+  dspace: "http://data-space.org/",
+  xsd: "http://www.w3.org/2001/XMLSchema#",
+  dcat: "http://www.w3.org/ns/dcat#",
+  dcatap: "http://data.europa.eu/r5r/",
+  dcterms: "http://purl.org/dc/terms/",
+  spdx: "http://spdx.org/rdf/terms#",
+  foaf: "http://xmlns.com/foaf/0.1/",
+  skos: "http://www.w3.org/2004/02/skos/core#",
+};
+
+const VCARD_PREFIX = "vcard:";
+const VCARD_NS = "http://www.w3.org/2006/vcard/ns#";
+
+/** Expand compact vcard:* keys so @context does not need the vcard prefix. */
+function expandVcardPrefixedKeys<T>(node: T): T {
+  if (!node || typeof node !== "object") return node;
+  if (Array.isArray(node)) {
+    return node.map((item) => expandVcardPrefixedKeys(item)) as unknown as T;
+  }
+  const o = node as Record<string, unknown>;
+  const next: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(o)) {
+    const keyOut = k.startsWith(VCARD_PREFIX)
+      ? `${VCARD_NS}${k.slice(VCARD_PREFIX.length)}`
+      : k;
+    next[keyOut] =
+      v && typeof v === "object" ? expandVcardPrefixedKeys(v) : v;
+  }
+  return next as unknown as T;
+}
+
+const SPDX_ALGO_LEGACY_TO_CANONICAL: Record<string, string> = {
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha256":
+    "http://spdx.org/rdf/terms#SHA256",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha512":
+    "http://spdx.org/rdf/terms#SHA512",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_sha1":
+    "http://spdx.org/rdf/terms#SHA1",
+  "http://spdx.org/rdf/terms#checksumAlgorithm_md5":
+    "http://spdx.org/rdf/terms#MD5",
+};
+
+/** Normalize SPDX checksum algorithm @id to canonical fragment form (e.g. #SHA256). */
+function normalizeSpdxAlgorithmIds(node: unknown): void {
+  if (!node || typeof node !== "object") return;
+  if (Array.isArray(node)) {
+    for (const item of node) normalizeSpdxAlgorithmIds(item);
+    return;
+  }
+  const o = node as Record<string, unknown>;
+  const checksum = o["spdx:checksum"];
+  if (checksum && typeof checksum === "object" && !Array.isArray(checksum)) {
+    const c = checksum as Record<string, unknown>;
+    const algo = c["spdx:algorithm"];
+    if (typeof algo === "string") {
+      const canon = SPDX_ALGO_LEGACY_TO_CANONICAL[algo] ?? algo;
+      c["spdx:algorithm"] = {
+        "@id": canon,
+        "@type": "spdx:ChecksumAlgorithm",
+      };
+    } else if (algo && typeof algo === "object" && "@id" in algo) {
+      const id = String((algo as Record<string, unknown>)["@id"]);
+      const canon = SPDX_ALGO_LEGACY_TO_CANONICAL[id] ?? id;
+      c["spdx:algorithm"] = {
+        ...(algo as Record<string, unknown>),
+        "@id": canon,
+        "@type":
+          (algo as Record<string, unknown>)["@type"] ?? "spdx:ChecksumAlgorithm",
+      };
+    }
+  }
+  for (const v of Object.values(o)) {
+    if (v && typeof v === "object") normalizeSpdxAlgorithmIds(v);
+  }
+}
+
 /**
  * Create JSON-LD dataset structure for saveDataset API
  * @param formData - Form values
  * @param filename - Filename of uploaded file
  * @returns JSON-LD dataset object as string
  */
+/** Deep-clone to plain JSON data (strips Vue proxies / non-JSON values) for stable API payloads. */
+function jsonLdMetadataToPlainObject(
+  value: Record<string, unknown>
+): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+}
+
 export function createDatasetJsonLd(
   formData: Record<string, unknown>,
   filename: string
 ): string {
-  const context = {
-    dspace: "http://data-space.org/",
-    xsd: "http://www.w3.org/2001/XMLSchema#",
-    dcat: "http://www.w3.org/ns/dcat#",
-    dcatap: "http://data.europa.eu/r5r/",
-    dcterms: "http://purl.org/dc/terms/",
-    spdx: "http://spdx.org/rdf/terms#",
-    foaf: "http://xmlns.com/foaf/0.1/",
-    skos: "http://www.w3.org/2004/02/skos/core#",
-  };
+  const context = REGISTRATION_JSONLD_CONTEXT;
 
   const datasetId = `https://example.com/dataset/${filename.replace(
     /[^A-Za-z0-9_-]/g,
     "-"
   )}`;
 
-  // Parse metadata_content if provided
   let parsedMetadataContent: Record<string, unknown> | null = null;
-  if (
-    formData.metadata_content &&
-    typeof formData.metadata_content === "string"
-  ) {
-    try {
-      const parsed = JSON.parse(formData.metadata_content);
-      if (parsed && typeof parsed === "object") {
-        parsedMetadataContent = parsed;
+  if (formData.metadata_content) {
+    if (typeof formData.metadata_content === "object") {
+      parsedMetadataContent = jsonLdMetadataToPlainObject(
+        formData.metadata_content as Record<string, unknown>
+      );
+    } else if (typeof formData.metadata_content === "string") {
+      try {
+        const parsed = JSON.parse(formData.metadata_content);
+        if (parsed && typeof parsed === "object") {
+          parsedMetadataContent = parsed as Record<string, unknown>;
+        }
+      } catch {
+        void 0;
       }
-    } catch {
-      // Failed to parse metadata_content
     }
   }
 
-  // Start with metadata_content as base if available, otherwise create new structure
   const baseDataset: Record<string, unknown> = parsedMetadataContent
     ? { ...parsedMetadataContent }
     : {
@@ -1129,14 +1395,14 @@ export function createDatasetJsonLd(
       "@type": "dcat:Dataset",
     };
 
-  // Ensure context is set (use from metadata or default)
   if (!baseDataset["@context"]) {
-    baseDataset["@context"] = context;
+    baseDataset["@context"] = { ...context };
   } else if (parsedMetadataContent && parsedMetadataContent["@context"]) {
-    baseDataset["@context"] = parsedMetadataContent["@context"];
+    baseDataset["@context"] = {
+      ...(parsedMetadataContent["@context"] as Record<string, string>),
+    };
   }
 
-  // Ensure @id is set
   if (!baseDataset["@id"]) {
     baseDataset["@id"] = datasetId;
   }
@@ -1149,35 +1415,52 @@ export function createDatasetJsonLd(
     if (Array.isArray(value)) {
       const normalized = value.map((item) => {
         if (typeof item === "object" && item !== null) {
-          if ("@language" in item && "@value" in item) {
+          const o = item as Record<string, unknown>;
+          if ("@language" in o && "@value" in o) {
             return {
-              "@language": String(item["@language"]),
-              "@value": String(item["@value"]),
+              "@language": String(o["@language"]),
+              "@value": jsonLdValueToPlainString(o["@value"]),
+            };
+          }
+          if ("@value" in o) {
+            return {
+              "@language": "en",
+              "@value": jsonLdValueToPlainString(o["@value"]),
             };
           }
         }
+        if (typeof item === "string") {
+          return { "@language": "en", "@value": item };
+        }
         return {
           "@language": "en",
-          "@value": String(item),
+          "@value": jsonLdValueToPlainString(item),
         };
       });
       if (normalized.length === 1) {
-        return normalized[0];
+        return normalized[0] ?? { "@language": "en", "@value": "" };
       }
       return normalized;
     }
     if (typeof value === "object" && value !== null) {
-      if ("@language" in value && "@value" in value) {
+      const o = value as Record<string, unknown>;
+      if ("@language" in o && "@value" in o) {
         return {
-          "@language": String(value["@language"]),
-          "@value": String(value["@value"]),
+          "@language": String(o["@language"]),
+          "@value": jsonLdValueToPlainString(o["@value"]),
+        };
+      }
+      if ("@value" in o) {
+        return {
+          "@language": "en",
+          "@value": jsonLdValueToPlainString(o["@value"]),
         };
       }
     }
     if (value) {
       return {
         "@language": "en",
-        "@value": String(value),
+        "@value": jsonLdValueToPlainString(value),
       };
     }
     return {
@@ -1186,7 +1469,6 @@ export function createDatasetJsonLd(
     };
   };
 
-  // Update or set title from form data (form data takes precedence)
   if (
     formData.name &&
     typeof formData.name === "string" &&
@@ -1197,38 +1479,32 @@ export function createDatasetJsonLd(
       "@value": formData.name.trim(),
     };
   } else if (!baseDataset["dcterms:title"]) {
-    // If no title in form and no title in metadata, use filename
     baseDataset["dcterms:title"] = {
       "@language": "en",
       "@value": filename.replace(/[^A-Za-z0-9_-]/g, "-"),
     };
   } else if (baseDataset["dcterms:title"]) {
-    // Normalize existing title from metadata
-    const normalizedTitle = normalizeLanguageValue(
-      baseDataset["dcterms:title"]
+    baseDataset["dcterms:title"] = normalizeDctermsLanguageLiteral(
+      baseDataset["dcterms:title"],
+      "en"
     );
-    if (Array.isArray(normalizedTitle)) {
-      baseDataset["dcterms:title"] =
-        normalizedTitle.length > 0 ? normalizedTitle[0] : normalizedTitle;
-    } else {
-      baseDataset["dcterms:title"] = normalizedTitle;
-    }
   }
 
-  // Update or set description (form data takes precedence, but if metadata_content is just a string, use it)
+  // Only when metadata is plain text (not failed JSON parse of an object string).
   if (
     formData.metadata_content &&
     typeof formData.metadata_content === "string" &&
     formData.metadata_content.trim() &&
     !parsedMetadataContent
   ) {
-    // If metadata_content is a plain string (not JSON), use it as description
-    baseDataset["dcterms:description"] = {
-      "@language": "en",
-      "@value": formData.metadata_content.trim(),
-    };
+    const rawMeta = formData.metadata_content.trim();
+    if (!rawMeta.startsWith("{") && !rawMeta.startsWith("[")) {
+      baseDataset["dcterms:description"] = {
+        "@language": "en",
+        "@value": rawMeta,
+      };
+    }
   } else if (baseDataset["dcterms:description"]) {
-    // Normalize existing description from metadata
     const normalizedDesc = normalizeLanguageValue(
       baseDataset["dcterms:description"]
     );
@@ -1257,19 +1533,14 @@ export function createDatasetJsonLd(
       }
     }
   } else {
-    // No description in metadata, set default
     baseDataset["dcterms:description"] = {
       "@language": "en",
       "@value": "No description provided",
     };
   }
 
-  // Update @type - always use "dcat:Dataset" for both datasets and applications
-  // Applications are distinguished by dcterms:type instead
-  // Backend expects all items to have @type: "dcat:Dataset" (not an array)
   baseDataset["@type"] = "dcat:Dataset";
 
-  // Set dcterms:type for applications (form data takes precedence over metadata_content)
   if (formData.item_type && formData.item_type === "application") {
     baseDataset["dcterms:type"] = {
       "@id": "http://purl.org/dc/dcmitype/Software",
@@ -1279,102 +1550,18 @@ export function createDatasetJsonLd(
         "@value": "Software",
       },
     };
-  }
-  // For datasets, dcterms:type is optional (defaults to Dataset)
-  // If it exists in metadata_content and item_type is dataset, keep it as is (don't overwrite)
-
-  // Helper function to build accessURL from related_data_product and filename
-  // Combines data product path with uploaded filename in file:// URL format
-  const buildAccessURL = (
-    dataProductPath: string,
-    uploadedFilename: string
-  ): string => {
-    const trimmedPath = dataProductPath.trim();
-    const trimmedFilename = uploadedFilename.trim();
-
-    // Normalize path separators
-    const normalizePath = (path: string): string => {
-      return path.replace(/\\/g, "/").replace(/\/+/g, "/");
-    };
-
-    // Combine data product path with filename
-    let combinedPath: string;
-    if (trimmedPath.endsWith("/")) {
-      combinedPath = `${trimmedPath}${trimmedFilename}`;
-    } else {
-      combinedPath = `${trimmedPath}/${trimmedFilename}`;
-    }
-
-    combinedPath = normalizePath(combinedPath);
-
-    // If already a file:// URL, extract path and combine with filename
-    if (trimmedPath.startsWith("file://")) {
-      const pathWithoutProtocol = trimmedPath.replace(/^file:\/\//, "");
-      combinedPath = normalizePath(`${pathWithoutProtocol}/${trimmedFilename}`);
-      return `file://${combinedPath}`;
-    }
-
-    // If it's an absolute Windows path (C:/, D:/, etc.)
-    if (/^[A-Za-z]:/.test(trimmedPath)) {
-      return `file:///${combinedPath}`;
-    }
-
-    // If it's an absolute Unix path (starts with /)
-    if (trimmedPath.startsWith("/")) {
-      return `file://${combinedPath}`;
-    }
-
-    // If it's a relative path (starts with ./ or just a path)
-    if (trimmedPath.startsWith("./")) {
-      return `file://${combinedPath}`;
-    }
-
-    // Default: treat as relative path (no leading slash in file://)
-    return `file://${combinedPath}`;
-  };
-
-  // Determine if this is a dataset type
-  const isDataset = formData.item_type === "dataset";
-
-  // Process related_data_product for dataset type
-  let relatedDataProductPath: string | null = null;
-  if (
-    isDataset &&
-    formData.related_data_product &&
-    typeof formData.related_data_product === "string" &&
-    formData.related_data_product.trim()
-  ) {
-    relatedDataProductPath = formData.related_data_product.trim();
-    const seriesId = relatedDataProductPath;
-    const seriesName =
-      seriesId.split("/").pop() ||
-      seriesId.split(":").pop() ||
-      "Data Product Series";
-
-    baseDataset["dcat:inSeries"] = {
-      "@id": seriesId,
-      "@type": "dcat:DatasetSeries",
-      "dcterms:title": {
+  } else if (!baseDataset["dcterms:type"]) {
+    // DCAT-AP 3: explicit dcmitype:Dataset + skos:Concept (aligns with catalogue / SHACL examples)
+    baseDataset["dcterms:type"] = {
+      "@id": "http://purl.org/dc/dcmitype/Dataset",
+      "@type": "skos:Concept",
+      "skos:prefLabel": {
         "@language": "en",
-        "@value": seriesName,
-      },
-      "dcterms:description": {
-        "@language": "en",
-        "@value": `Data product series: ${seriesName}`,
+        "@value": "Dataset",
       },
     };
   }
 
-  // Set metadataFilename if file is uploaded
-  if (filename) {
-    baseDataset["dspace:metadataFilename"] = {
-      "@type": "xsd:string",
-      "@value": filename,
-    };
-  }
-
-  // Preserve existing dcterms:identifier from metadata_content
-  // Only set identifier if it doesn't exist in metadata
   if (!baseDataset["dcterms:identifier"]) {
     if (filename) {
       baseDataset["dcterms:identifier"] = {
@@ -1389,35 +1576,27 @@ export function createDatasetJsonLd(
     }
   }
 
-  // Handle dcat:distribution with special logic:
-  // - If it exists in metadata_content, keep it as is
-  // - Otherwise, create new one for dataset with related_data_product
-  const hasDistributionInMetadata =
-    baseDataset["dcat:distribution"] !== undefined &&
-    baseDataset["dcat:distribution"] !== null;
+  const { "dspace:extraMetadata": _, ...payloadWithoutExtra } =
+    baseDataset as Record<string, unknown> & { "dspace:extraMetadata"?: unknown };
+  const finalPayload = payloadWithoutExtra as Record<string, unknown>;
 
-  if (
-    !hasDistributionInMetadata &&
-    filename &&
-    isDataset &&
-    relatedDataProductPath
-  ) {
-    // Create new distribution for dataset with related_data_product
-    const distributionId = `${baseDataset["@id"]}/distribution`;
+  delete finalPayload["dcat:inSeries"];
+  delete finalPayload["dspace:metadataFilename"];
 
-    // Build accessURL by combining related_data_product path with uploaded filename
-    const accessURL = buildAccessURL(relatedDataProductPath, filename);
+  const vcardExpanded = expandVcardPrefixedKeys(finalPayload);
+  normalizeSpdxAlgorithmIds(vcardExpanded);
 
-    // Minimal distribution format matching ok_request.json
-    baseDataset["dcat:distribution"] = {
-      "@id": distributionId,
-      "@type": "dcat:Distribution",
-      "dcat:accessURL": {
-        "@id": accessURL,
-      },
-    };
-  }
-  // If distribution exists in metadata, it's already in baseDataset, so we keep it
+  const existingCtx = vcardExpanded["@context"];
+  const userCtx =
+    existingCtx &&
+    typeof existingCtx === "object" &&
+    !Array.isArray(existingCtx)
+      ? (existingCtx as Record<string, string>)
+      : {};
+  vcardExpanded["@context"] = {
+    ...REGISTRATION_JSONLD_CONTEXT,
+    ...userCtx,
+  };
 
-  return JSON.stringify(baseDataset, null, 2);
+  return JSON.stringify(vcardExpanded, null, 2);
 }

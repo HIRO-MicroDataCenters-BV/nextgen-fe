@@ -75,11 +75,16 @@ definePageMeta({
 
 const { t } = useI18n();
 const router = useRouter();
+const { setAuthUser } = useAuthUser();
 
 const email = ref("");
 const password = ref("");
 
 const handleLogin = () => {
+  setAuthUser({
+    email: email.value,
+    name: email.value.split("@")[0]?.trim() || email.value,
+  });
   router.push("/marketplace");
 };
 </script>

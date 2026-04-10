@@ -1,5 +1,4 @@
-import { ref } from "vue";
-import { useI18n } from "vue-i18n";
+import { ref, onMounted } from "vue";
 
 export interface FilterItem {
   key: string;
@@ -15,221 +14,28 @@ export interface FilterGroup {
 }
 
 export const useFilters = () => {
-  const { t } = useI18n();
+  const filterGroups = ref<FilterGroup[]>([]);
+  const isLoading = ref(true);
 
-  const filterGroups = ref<FilterGroup[]>([
-    {
-      key: "sociodemographics",
-      label: t("filters.sociodemographics"),
-      items: [
-        {
-          key: "med:age",
-          label: t("filters.age"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:gender",
-          label: t("filters.gender"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:ethnicity",
-          label: t("filters.ethnicity"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:sex",
-          label: t("filters.sex"),
-          type: "checkbox",
-          value: null,
-        },
-      ],
-    },
-    {
-      key: "comorbidities",
-      label: t("filters.comorbidities"),
-      items: [
-        {
-          key: "med:previous_myocardial_infarction",
-          label: t("filters.previous_myocardial_infarction"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:stroke",
-          label: t("filters.stroke"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:chronic_obstructive_pulmonary_disease",
-          label: t("filters.chronic_obstructive_pulmonary_disease"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:atrial_fibrillation",
-          label: t("filters.atrial_fibrillation"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:peripheral_artery_disease",
-          label: t("filters.peripheral_artery_disease"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:hypertension",
-          label: t("filters.hypertension"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:diabetes",
-          label: t("filters.diabetes"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:hypercholesterolemia",
-          label: t("filters.hypercholesterolemia"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:chronic_kidney_disease",
-          label: t("filters.chronic_kidney_disease"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:asthma",
-          label: t("filters.asthma"),
-          type: "checkbox",
-          value: null,
-        },
-      ],
-    },
-    {
-      key: "physical_measurements",
-      label: t("filters.physical_measurements"),
-      items: [
-        {
-          key: "med:height",
-          label: t("filters.height"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:waist_hip_ratio",
-          label: t("filters.waist_hip_ratio"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:waist_height_ratio",
-          label: t("filters.waist_height_ratio"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:sbp",
-          label: t("filters.sbp"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "med:pulse_rate",
-          label: t("filters.pulse_rate"),
-          type: "checkbox",
-          value: null,
-        },
-      ],
-    },
-    {
-      key: "lifestyle_habits",
-      label: t("filters.lifestyle_habits"),
-      items: [
-        {
-          key: "med:smoking_history",
-          label: t("filters.smoking_history"),
-          type: "checkbox",
-          value: null,
-        },
-      ],
-    },
-    {
-      key: "distribution",
-      label: t("filters.distribution"),
-      items: [
-        {
-          key: "distribution_csv",
-          label: t("filters.distribution_csv"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_dicom",
-          label: t("filters.distribution_dicom"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_mmio",
-          label: t("filters.distribution_mmio"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_nifti",
-          label: t("filters.distribution_nifti"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_jpg/png",
-          label: t("filters.distribution_jpg/png"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_xml",
-          label: t("filters.distribution_xml"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_vcf",
-          label: t("filters.distribution_vcf"),
-          type: "checkbox",
-          value: null,
-        },
-        {
-          key: "distribution_plink",
-          label: t("filters.distribution_plink"),
-          type: "checkbox",
-          value: null,
-        },
-        
-      ],
-    },
-    {
-      key: "catalog",
-      label: t("filters.catalog"),
-      items: [
-        {
-          key: "isShared",
-          label: t("filters.is_shared"),
-          type: "checkbox",
-          value: null,
-        },
-      ],
-    }
-  ]);
+  const fetchFilters = async () => {
+    const api = useApi();
+    const groups = await api.getFilters();
+    filterGroups.value = groups.map((group) => ({
+      key: group.id,
+      label: group.label,
+      items: group.items.map((item) => ({
+        key: item.id,
+        label: item.label,
+        type: "checkbox" as const,
+        value: null as boolean | number | string | null,
+      })),
+    }));
+    isLoading.value = false;
+  };
+
+  onMounted(() => {
+    fetchFilters();
+  });
 
   const getActiveFilters = () => {
     const activeFilters: Record<string, unknown> = {};
@@ -255,7 +61,9 @@ export const useFilters = () => {
 
   return {
     filterGroups,
+    isLoading,
     getActiveFilters,
     resetFilters,
+    fetchFilters,
   };
 };

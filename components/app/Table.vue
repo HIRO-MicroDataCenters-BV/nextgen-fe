@@ -35,6 +35,7 @@ interface TableProps {
   pageSize?: number;
   selectionEnabled?: boolean;
   hasSourceHeader?: boolean;
+  selectionMode?: "single" | "multiple";
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -43,15 +44,17 @@ const props = withDefaults(defineProps<TableProps>(), {
   pageSize: 10,
   selectionEnabled: true,
   hasSourceHeader: false,
+  selectionMode: "multiple",
 });
 
-const { dataSource, columns, pageSize, title, hasSourceHeader } = props;
+const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
+  props;
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
   (
     e: "pass-to-training",
-    value: { dataset: Array<Record<string, unknown>> }
+    value: { dataset: Array<Record<string, unknown>> },
   ): void;
 }>();
 const serverData = shallowRef<TableRowData[]>([]); // Raw data from server
@@ -67,13 +70,14 @@ const { t } = useI18n();
 const { page } = useApp();
 const {
   filterGroups,
+  isLoading: _filtersLoading,
   getActiveFilters,
   resetFilters: _resetFilters,
 } = useFilters();
 
 // Sync selectedFilters with filterGroups UI state
 const syncFiltersToUI = (
-  filters: Record<string, boolean | string | number>
+  filters: Record<string, boolean | string | number>,
 ) => {
   filterGroups.value.forEach((group) => {
     group.items.forEach((item) => {
@@ -115,13 +119,13 @@ const selectedFilters = ref<Record<string, boolean | string | number>>(
       // Error parsing filters
     }
     return {} as Record<string, boolean | string | number>;
-  })()
+  })(),
 );
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 
 // Update URL query parameters from component state
-const updateURLQuery = () => {
-  if (isUpdatingFromState.value) return;
+const updateURLQuery = (force = false) => {
+  if (!force && isUpdatingFromState.value) return;
 
   const query: Record<string, string> = {};
 
@@ -162,19 +166,22 @@ const updateURLQuery = () => {
   router.replace({ query });
 };
 
+const resetUpdatingFlag = () => {
+  isUpdatingFromState.value = false;
+};
+
 const handleFilterChange = (
   key: string,
   value: boolean | string | number,
-  multiple: boolean
+  multiple: boolean,
 ) => {
+  isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   if (!multiple) {
     selectedFilters.value = {};
-    // Reset all filter values in UI when switching to single selection mode
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key !== key) {
-          item.value = null;
-        }
+        if (item.key !== key) item.value = null;
       });
     });
   }
@@ -183,9 +190,7 @@ const handleFilterChange = (
     selectedFilters.value[key] = value;
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key === key) {
-          item.value = value;
-        }
+        if (item.key === key) item.value = value;
       });
     });
   } else {
@@ -193,23 +198,25 @@ const handleFilterChange = (
     selectedFilters.value = rest;
     filterGroups.value.forEach((group) => {
       group.items.forEach((item) => {
-        if (item.key === key) {
-          item.value = null;
-        }
+        if (item.key === key) item.value = null;
       });
     });
   }
 
   filterGroups.value = [...filterGroups.value];
-
   searchValue.value = "";
-  clientSearchTerm.value = ""; // Clear client search
-  applyClientSearch(); // Reset to show all filtered data
-  updateURLQuery();
-  fetchData();
+  clientSearchTerm.value = "";
+  applyClientSearch();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
+    isUpdatingFromState.value = false;
+  });
 };
 
 const handleRemoveFilter = (key: string) => {
+  isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   const { [key]: _, ...rest } = selectedFilters.value;
   selectedFilters.value = rest;
   currentPage.value = 0;
@@ -224,11 +231,16 @@ const handleRemoveFilter = (key: string) => {
   });
   filterGroups.value = [...filterGroups.value];
 
-  updateURLQuery();
-  fetchData();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
+    isUpdatingFromState.value = false;
+  });
 };
 
 const handleClearAllFilters = () => {
+  isUpdatingFromState.value = true;
+  const safetyTimeout = setTimeout(resetUpdatingFlag, 10000);
   selectedFilters.value = {};
   searchValue.value = "";
   clientSearchTerm.value = ""; // Clear client search
@@ -244,70 +256,89 @@ const handleClearAllFilters = () => {
   filterGroups.value = [...filterGroups.value];
 
   applyClientSearch(); // Apply empty search (shows all data)
-  updateURLQuery();
-  fetchData();
+  updateURLQuery(true);
+  fetchData().finally(() => {
+    clearTimeout(safetyTimeout);
+    isUpdatingFromState.value = false;
+  });
 };
 
 const fetchData = async () => {
+  if (isFetching) {
+    pendingFetch = true;
+    return;
+  }
+  isFetching = true;
+  pendingFetch = false;
   rowSelection.value = {};
   isLoading.value = true;
-  
-  // Fetch data WITHOUT client search term (only server filters)
-  const resp = await dataSource({
-    page: table.getState().pagination.pageIndex + 1,
-    limit: table.getState().pagination.pageSize,
-    type: selectedType.value,
-    // Remove client search from server request
-    filters: {
-      ...selectedFilters.value,
-      ...getActiveFilters(),
-    },
-  });
-  isLoading.value = false;
+  try {
+    // Fetch data WITHOUT client search term (only server filters)
+    const resp = await dataSource({
+      page: table.getState().pagination.pageIndex + 1,
+      limit: table.getState().pagination.pageSize,
+      type: selectedType.value,
+      // Remove client search from server request
+      filters: {
+        ...selectedFilters.value,
+        ...getActiveFilters(),
+      },
+    });
 
-  // map originals by id if provided
-  rawById.value = {};
-  const respObj = resp as { originals?: unknown[]; data?: TableRowData[] };
-  if (respObj && Array.isArray(respObj.originals)) {
-    const originals = respObj.originals as unknown[];
-    const prepared = (respObj.data || []) as Array<TableRowData>;
-    prepared.forEach((row, idx) => {
+    // map originals by id if provided
+    rawById.value = {};
+    const respObj = resp as { originals?: unknown[]; data?: TableRowData[] };
+    if (respObj && Array.isArray(respObj.originals)) {
+      const originals = respObj.originals as unknown[];
+      const prepared = (respObj.data || []) as Array<TableRowData>;
+      prepared.forEach((row, idx) => {
+        const id = String(row.id);
+        rawById.value[id] = originals[idx];
+      });
+    }
+
+    let filteredData: TableRowData[] = respObj?.data ?? [];
+
+    // Filter by type using dcterms:type (not @type, which is always "dcat:Dataset")
+    if (selectedType.value === "datasets") {
+      filteredData = filteredData.filter((row: TableRowData) => {
+        const datasetType = row.datasetType as string | undefined;
+        return (
+          !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
+        );
+      });
+    } else if (selectedType.value === "applications") {
+      filteredData = filteredData.filter((row: TableRowData) => {
+        const datasetType = row.datasetType as string | undefined;
+        return datasetType === "http://purl.org/dc/dcmitype/Software";
+      });
+    }
+
+    // Attach original JSON-LD to each row for downstream converters
+    filteredData = filteredData.map((row: TableRowData) => {
       const id = String(row.id);
-      rawById.value[id] = originals[idx];
+      const original = rawById.value[id];
+      return {
+        ...row,
+        _raw: original,
+        _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
+      } as unknown as TableRowData;
     });
+
+    // Store server data and apply client search
+    serverData.value = filteredData;
+    applyClientSearch();
+  } catch {
+    serverData.value = [];
+    data.value = [];
+  } finally {
+    isFetching = false;
+    isLoading.value = false;
+    if (pendingFetch) {
+      pendingFetch = false;
+      nextTick(() => fetchData());
+    }
   }
-
-  let filteredData: TableRowData[] = respObj?.data ?? [];
-
-  // Filter by type using dcterms:type (not @type, which is always "dcat:Dataset")
-  if (selectedType.value === "datasets") {
-    filteredData = filteredData.filter((row: TableRowData) => {
-      const datasetType = row.datasetType as string | undefined;
-      return (
-        !datasetType || datasetType === "http://purl.org/dc/dcmitype/Dataset"
-      );
-    });
-  } else if (selectedType.value === "applications") {
-    filteredData = filteredData.filter((row: TableRowData) => {
-      const datasetType = row.datasetType as string | undefined;
-      return datasetType === "http://purl.org/dc/dcmitype/Software";
-    });
-  }
-
-  // Attach original JSON-LD to each row for downstream converters
-  filteredData = filteredData.map((row: TableRowData) => {
-    const id = String(row.id);
-    const original = rawById.value[id];
-    return {
-      ...row,
-      _raw: original,
-      _rawJson: original !== undefined ? JSON.stringify(original) : undefined,
-    } as unknown as TableRowData;
-  });
-  
-  // Store server data and apply client search
-  serverData.value = filteredData;
-  applyClientSearch();
 };
 
 // Client-side search filter
@@ -318,7 +349,7 @@ const applyClientSearch = () => {
   }
 
   const searchLower = clientSearchTerm.value.toLowerCase().trim();
-  
+
   data.value = serverData.value.filter((row: TableRowData) => {
     // Search across all column values
     return Object.values(row).some((value) => {
@@ -331,12 +362,12 @@ const applyClientSearch = () => {
 const columnFilters = ref<ColumnFiltersState>(
   route.query.filters && typeof route.query.filters === "string"
     ? JSON.parse(decodeURIComponent(route.query.filters))
-    : []
+    : [],
 );
 const columnVisibility = ref<VisibilityState>(
   route.query.visibility && typeof route.query.visibility === "string"
     ? JSON.parse(decodeURIComponent(route.query.visibility))
-    : {}
+    : {},
 );
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
@@ -344,7 +375,7 @@ const expanded = ref<ExpandedState>({});
 const currentPage = ref<number>(
   route.query.page && typeof route.query.page === "string"
     ? parseInt(route.query.page)
-    : 0
+    : 0,
 );
 
 const getColumns = (cols: TableColumn[] | undefined) => {
@@ -352,7 +383,8 @@ const getColumns = (cols: TableColumn[] | undefined) => {
   return cols.map((item) => ({
     id: item.id,
     accessorKey: item.id,
-    header: () => createColumnHeader(t(`column.${item.id}`), item.icon, item.iconOnly),
+    header: () =>
+      createColumnHeader(t(`column.${item.id}`), item.icon, item.iconOnly),
     cell: item.cell,
   }));
 };
@@ -361,7 +393,7 @@ const selectedRows = ref<Row<TableRowData>[]>([]);
 
 const mappedColumns = ref(getColumns(columns));
 const isSelectionVisible = computed(
-  () => props.selectionEnabled && selectedType.value === "datasets"
+  () => props.selectionEnabled && selectedType.value === "datasets",
 );
 const table = useVueTable({
   data,
@@ -373,7 +405,7 @@ const table = useVueTable({
   getExpandedRowModel: getExpandedRowModel(),
   getRowId: (row) => String((row as TableRowData).id),
   enableRowSelection: true,
-  enableMultiRowSelection: true,
+  enableMultiRowSelection: props.selectionMode === "multiple",
   onColumnFiltersChange: (updaterOrValue) =>
     valueUpdater(updaterOrValue, columnFilters),
   onColumnVisibilityChange: (updaterOrValue) =>
@@ -384,7 +416,7 @@ const table = useVueTable({
   manualPagination: true,
   globalFilterFn: (row, columnId) => {
     const searchFilter = columnFilters.value.find(
-      (filter) => filter.id === "search"
+      (filter) => filter.id === "search",
     ) as TableFilter | undefined;
     if (!searchFilter) return true;
     if (searchFilter.column !== "all" && searchFilter.column !== columnId) {
@@ -431,8 +463,10 @@ const table = useVueTable({
   },
 });
 
-const openAddDataset = ref(false);
 const isUpdatingFromState = ref(false);
+let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
+let isFetching = false;
+let pendingFetch = false;
 
 const applySearchFilter = () => {
   // Update client search term and apply filter
@@ -495,7 +529,7 @@ watch(
         const currentColumnFilters = columnFilters.value;
         if (currentColumnFilters.length > 0) {
           const searchFilter = currentColumnFilters.find(
-            (filter) => filter.id === "search"
+            (filter) => filter.id === "search",
           ) as TableFilter | undefined;
           if (searchFilter) {
             searchValue.value = searchFilter.value as string;
@@ -508,7 +542,7 @@ watch(
 
       if (newQuery.visibility && typeof newQuery.visibility === "string") {
         columnVisibility.value = JSON.parse(
-          decodeURIComponent(newQuery.visibility)
+          decodeURIComponent(newQuery.visibility),
         );
       } else {
         columnVisibility.value = {};
@@ -522,13 +556,30 @@ watch(
         table.setPageIndex(0);
       }
     } finally {
-      setTimeout(() => {
+      if (fetchDataTimeout) clearTimeout(fetchDataTimeout);
+      fetchDataTimeout = setTimeout(() => {
+        fetchDataTimeout = null;
         isUpdatingFromState.value = false;
         fetchData();
-      }, 100);
+      }, 50);
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
+);
+
+watch(
+  filterGroups,
+  (groups) => {
+    if (isUpdatingFromState.value) return;
+    if (groups.length > 0 && Object.keys(selectedFilters.value).length > 0) {
+      isUpdatingFromState.value = true;
+      syncFiltersToUI(selectedFilters.value);
+      nextTick(() => {
+        isUpdatingFromState.value = false;
+      });
+    }
+  },
+  { deep: true },
 );
 
 watch(
@@ -538,7 +589,7 @@ watch(
     currentPage.value = 0;
     updateURLQuery();
     fetchData();
-  }
+  },
 );
 
 let searchTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -569,11 +620,10 @@ watch([selectedFilterColumn, selectedType], () => {
 watch(
   selectedFilters,
   () => {
-    if (!isUpdatingFromState.value) {
-      updateURLQuery();
-    }
+    if (isUpdatingFromState.value) return;
+    updateURLQuery();
   },
-  { deep: true }
+  { deep: true },
 );
 
 onMounted(() => {
@@ -601,9 +651,8 @@ onMounted(() => {
   });
 
   if (!route.query.type && !route.query.search && !route.query.filters) {
-    updateURLQuery();
+    updateURLQuery(true);
   }
-  fetchData();
 });
 
 watch(
@@ -615,21 +664,31 @@ watch(
     selectedRows.value = table.getSelectedRowModel().rows;
     emit("selection-change", ids);
   },
-  { deep: true }
+  { deep: true },
 );
 
 const filterItems = computed<DropdownMenuItem[]>(() =>
   filterGroups.value.map((group) => ({
     key: group.key,
-    label: t(`filters.${group.key}`),
+    label: group.label,
     children: group.items.map((item) => ({
       key: item.key,
       type: item.type,
       value: item.key,
-      label: t(`filters.${item.key}`),
+      label: item.label,
     })),
-  }))
+  })),
 );
+
+const filterLabelByKey = computed(() => {
+  const map: Record<string, string> = {};
+  filterGroups.value.forEach((group) => {
+    group.items.forEach((item) => {
+      map[item.key] = item.label;
+    });
+  });
+  return map;
+});
 
 // Compute selected filter keys (UI state takes priority over URL state)
 const selectedFilterKeys = computed(() => {
@@ -681,12 +740,18 @@ const handlePassToTraining = () => {
 
   const looksJsonLdDataset =
     raws.length > 0 &&
-    ((typeof raws[0]["@type"] === "string" &&
-      String(raws[0]["@type"]).includes("dcat:Dataset")) ||
-      (Array.isArray(raws[0]["@type"]) &&
-        (raws[0]["@type"] as unknown[]).some((t) =>
-          String(t).includes("dcat:Dataset")
-        )));
+    (() => {
+      const firstRaw = raws[0];
+      if (!firstRaw) return false;
+      return (
+        (typeof firstRaw["@type"] === "string" &&
+          String(firstRaw["@type"]).includes("dcat:Dataset")) ||
+        (Array.isArray(firstRaw["@type"]) &&
+          (firstRaw["@type"] as unknown[]).some((t) =>
+          String(t).includes("dcat:Dataset"),
+          ))
+      );
+    })();
 
   const inputForConverter = looksJsonLdDataset
     ? ({ "dcat:dataset": raws } as unknown)
@@ -694,27 +759,31 @@ const handlePassToTraining = () => {
 
   // Convert to simplified format for training
   const payload = convertJsonLdForTraining(inputForConverter);
-  
+
   // Attach original JSON-LD data to each dataset for Checkout Service
   // This preserves dcat:distribution in JSON-LD format
   if (looksJsonLdDataset && raws.length > 0) {
-    payload.dataset = payload.dataset.map((converted: Record<string, unknown>, index: number) => {
-      const original = raws[index];
-      if (original && typeof original === "object") {
-        // Preserve original dcat:distribution if it exists
-        if (original["dcat:distribution"]) {
-          (converted as Record<string, unknown>)["_original_dcat_distribution"] = original["dcat:distribution"];
+    payload.dataset = payload.dataset.map(
+      (converted: Record<string, unknown>, index: number) => {
+        const original = raws[index];
+        if (original && typeof original === "object") {
+          // Preserve original dcat:distribution if it exists
+          if (original["dcat:distribution"]) {
+            (converted as Record<string, unknown>)[
+              "_original_dcat_distribution"
+            ] = original["dcat:distribution"];
+          }
+          // Preserve original region from catalog if available
+          // Region might be in the catalog's dcterms:title
         }
-        // Preserve original region from catalog if available
-        // Region might be in the catalog's dcterms:title
-      }
-      return converted;
-    });
+        return converted;
+      },
+    );
   }
-  
+
   emit(
     "pass-to-training",
-    payload as { dataset: Array<Record<string, unknown>> }
+    payload as { dataset: Array<Record<string, unknown>> },
   );
 };
 
@@ -737,194 +806,210 @@ defineExpose({ fetchData, getSelectedRaw });
 </script>
 
 <template>
-  <div class="w-full flex flex-col py-4 h-[calc(100vh-50px)] relative">
+  <div class="relative flex min-h-0 w-full flex-1 flex-col">
+    <!-- Sticks below layout header (h-16) while the main column scrolls -->
     <div
-      v-if="hasSourceHeader"
-      class="flex items-center justify-between gap-2 mb-4 flex-wrap"
+      class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
     >
-      <div class="flex items-center gap-2">
-        <AppHeaderSource />
-      </div>
-      <div class="flex items-center gap-2">
-        <Button class="cursor-pointer" @click="handleCreate">{{
-          t("action.add_new_item")
-        }}</Button>
-      </div>
-    </div>
-    <div class="mb-4 flex items-center justify-between gap-2">
-      <Tabs
-        :model-value="selectedType"
-        @update:model-value="handleTypeTabChange"
-      >
-        <TabsList class="flex mx-auto justify-center items-center mx-auto">
-          <TabsTrigger value="datasets">
-            <Icon name="lucide:table-2" />
-            {{ isMyCatalog ? $t("hint.your") : "" }} {{ $t("action.datasets") }}
-          </TabsTrigger>
-          <TabsTrigger value="applications">
-            <Icon name="lucide:box" />
-            {{ isMyCatalog ? $t("hint.your") : "" }}
-            {{ $t("action.applications") }}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div class="flex gap-2 items-center">
-        <div class="flex-auto flex flex-wrap gap-2">
-          <div class="flex gap-2 relative max-w-sm items-center">
-            <Input
-              v-model="searchValue"
-              class="w-64 pl-8"
-              type="search"
-              :placeholder="t('placeholder.search', { type: selectedType })"
-              @update:model-value="applySearchFilter"
-            />
-            <span
-              class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
-            >
-              <Icon name="lucide:search" />
-            </span>
+      <div class="mx-auto max-w-[calc(840px+16px)] w-full px-8 py-4">
+        <div
+          v-if="hasSourceHeader"
+          class="flex flex-wrap items-center justify-between gap-2"
+        >
+          <div class="flex items-center gap-2">
+            <AppHeaderSource />
           </div>
+          <div class="flex items-center gap-2">
+            <Button class="cursor-pointer" @click="handleCreate">{{
+              t("action.add_new_item")
+            }}</Button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <Tabs
+            :model-value="selectedType"
+            @update:model-value="handleTypeTabChange"
+          >
+            <TabsList class="mx-auto flex items-center justify-center">
+              <TabsTrigger value="datasets">
+                <Icon name="lucide:table-2" />
+                {{ isMyCatalog ? $t("hint.your") : "" }}
+                {{ $t("action.datasets") }}
+              </TabsTrigger>
+              <TabsTrigger value="applications">
+                <Icon name="lucide:box" />
+                {{ isMyCatalog ? $t("hint.your") : "" }}
+                {{ $t("action.applications") }}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          <AppTableDropdownFilter
-            id="filter"
-            label="filter"
-            :items="filterItems"
-            :selected-values="selectedFilterKeys"
-            @filter-change="handleFilterChange"
-          />
+          <div class="flex items-center gap-2">
+            <div class="flex flex-auto flex-wrap gap-2">
+              <div class="relative flex max-w-sm items-center gap-2">
+                <Input
+                  v-model="searchValue"
+                  class="w-64 pl-8"
+                  type="search"
+                  :placeholder="t('placeholder.search', { type: selectedType })"
+                  @update:model-value="applySearchFilter"
+                />
+                <span
+                  class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
+                >
+                  <Icon name="lucide:search" />
+                </span>
+              </div>
+
+              <AppTableDropdownFilter
+                id="filter"
+                label="filter"
+                :items="filterItems"
+                :selected-values="selectedFilterKeys"
+                @filter-change="handleFilterChange"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="filters-list mt-2">
+          <div
+            v-if="Object.keys(selectedFilters).length > 0"
+            class="flex flex-wrap items-center gap-2"
+          >
+            <Button
+              variant="default"
+              size="sm"
+              class="h-6 rounded-sm px-2 py-0 text-sm font-normal"
+              @click="handleClearAllFilters"
+            >
+              {{ t("action.clear_filters") }}
+            </Button>
+            <Badge
+              v-for="(value, key) in selectedFilters"
+              :key="key"
+              variant="secondary"
+              class="h-6 rounded-sm px-2 text-sm capitalize"
+            >
+              {{ filterLabelByKey[key] ?? key }}
+              <Button
+                variant="ghost"
+                size="icon"
+                class="ml-1 h-auto w-auto p-0"
+                @click.stop="handleRemoveFilter(key as string)"
+              >
+                <Icon name="lucide:x" class="h-3 w-3" />
+              </Button>
+            </Badge>
+          </div>
         </div>
       </div>
     </div>
-    <div class="filters-list">
+    <!-- end sticky table toolbar -->
+    <AppTablePreloader v-if="isLoading" class="mt-4" />
+    <div v-else class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden">
       <div
-        v-if="Object.keys(selectedFilters).length > 0"
-        class="flex gap-2 items-center flex-wrap my-4 mb-6"
+        class="min-h-0 flex-1 overflow-auto px-8 mx-auto max-w-[calc(840px+16px)] w-full mt-4"
       >
-        <Button
-          variant="default"
-          size="sm"
-          class="rounded-sm px-2 text-sm py-0 font-normal h-6"
-          @click="handleClearAllFilters"
+        <Table
+          :data-source="dataSource"
+          :columns="columns"
+          :page-size="pageSize"
+          :title="title"
+          class="outline outline-1 outline-gray-200 rounded-md overflow-hidden"
         >
-          {{ t("action.clear_filters") }}
-        </Button>
-        <Badge
-          v-for="(value, key) in selectedFilters"
-          :key="key"
-          variant="secondary"
-          class="rounded-sm px-2 text-sm capitalize h-6"
-        >
-          {{ t(`filter.${key}`) }}
-          <Button
-            variant="ghost"
-            size="icon"
-            class="p-0 h-auto w-auto ml-1"
-            @click.stop="handleRemoveFilter(key as string)"
-          >
-            <Icon name="lucide:x" class="h-3 w-3" />
-          </Button>
-        </Badge>
-      </div>
-    </div>
-    <!-- end table filters -->
-    <AppTablePreloader v-if="isLoading" />
-    <div
-      v-else
-      class="flex-grow overflow-auto flex flex-col border rounded-md mb-2"
-    >
-      <Table
-        :data-source="dataSource"
-        :columns="columns"
-        :page-size="pageSize"
-        :title="title"
-      >
-        <TableHeader
-          class="sticky top-0 bg-gray-50 z-10 outline outline-1 outline-gray-200"
-        >
-          <TableRow
-            v-for="headerGroup in table.getHeaderGroups()"
-            :key="headerGroup.id"
-          >
-            <TableHead v-if="isSelectionVisible">
-              <div class="flex items-center justify-center">
-                <Checkbox
-                  :model-value="
-                    table.getIsAllRowsSelected()
-                      ? true
-                      : table.getIsSomeRowsSelected()
-                      ? 'indeterminate'
-                      : false
-                  "
-                  aria-label="select all"
-                  class="cursor-pointer border-primary"
-                  @update:model-value="(v) => table.toggleAllRowsSelected(!!v)"
-                />
-              </div>
-            </TableHead>
-            <TableHead v-for="header in headerGroup.headers" :key="header.id">
-              <FlexRender
-                v-if="!header.isPlaceholder"
-                :render="header.column.columnDef.header"
-                :props="header.getContext()"
-              />
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <template v-if="table.getRowModel().rows?.length">
-            <template v-for="row in table.getRowModel().rows" :key="row.id">
-              <TableRow :data-state="row.getIsSelected() && 'selected'">
-                <TableCell v-if="isSelectionVisible">
-                  <div class="flex items-center justify-center">
-                    <Checkbox
-                      :model-value="row.getIsSelected()"
-                      :disabled="!row.getCanSelect()"
-                      aria-label="select row"
-                      class="cursor-pointer border-primary"
-                      @update:model-value="(v) => row.toggleSelected(!!v)"
-                    />
-                  </div>
-                </TableCell>
-                <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
-                  <FlexRender
-                    :render="cell.column.columnDef.cell"
-                    :props="cell.getContext()"
-                  />
-                </TableCell>
-              </TableRow>
-            </template>
-          </template>
-
-          <TableRow v-else>
-            <TableCell
-              :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
-              class="h-24 text-center"
+          <TableHeader class="bg-gray-50 outline outline-1 outline-gray-200">
+            <TableRow
+              v-for="headerGroup in table.getHeaderGroups()"
+              :key="headerGroup.id"
             >
-              {{ t("hint.no_results") }}
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
+              <TableHead
+                v-if="isSelectionVisible"
+                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50 border-t rounded-t-md overflow-hidden rounded-md"
+              >
+                <div
+                  v-if="selectionMode === 'multiple'"
+                  class="flex items-center justify-center"
+                >
+                  <Checkbox
+                    :model-value="
+                      table.getIsAllRowsSelected()
+                        ? true
+                        : table.getIsSomeRowsSelected()
+                          ? 'indeterminate'
+                          : false
+                    "
+                    aria-label="select all"
+                    class="cursor-pointer border-primary"
+                    @update:model-value="
+                      (v) => table.toggleAllRowsSelected(!!v)
+                    "
+                  />
+                </div>
+              </TableHead>
+              <TableHead
+                v-for="header in headerGroup.headers"
+                :key="header.id"
+                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50"
+              >
+                <FlexRender
+                  v-if="!header.isPlaceholder"
+                  :render="header.column.columnDef.header"
+                  :props="header.getContext()"
+                />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <template v-if="table.getRowModel().rows?.length">
+              <template v-for="row in table.getRowModel().rows" :key="row.id">
+                <TableRow :data-state="row.getIsSelected() && 'selected'">
+                  <TableCell v-if="isSelectionVisible">
+                    <div class="flex items-center justify-center">
+                      <Checkbox
+                        :model-value="row.getIsSelected()"
+                        :disabled="!row.getCanSelect()"
+                        aria-label="select row"
+                        :class="[
+                          'cursor-pointer border-primary',
+                          selectionMode === 'single' ? 'rounded-full' : '',
+                        ]"
+                        @update:model-value="(v) => row.toggleSelected(!!v)"
+                      >
+                        <template v-if="selectionMode === 'single'">
+                          <div class="h-2 w-2 rounded-full bg-current" />
+                        </template>
+                      </Checkbox>
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    v-for="cell in row.getVisibleCells()"
+                    :key="cell.id"
+                  >
+                    <FlexRender
+                      :render="cell.column.columnDef.cell"
+                      :props="cell.getContext()"
+                    />
+                  </TableCell>
+                </TableRow>
+              </template>
+            </template>
+
+            <TableRow v-else>
+              <TableCell
+                :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
+                class="h-24 text-center"
+              >
+                {{ t("hint.no_results") }}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
     </div>
     <AppTableRowMenu
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"
       @on-clear-all="handleClearAll"
-    />
-
-    <!-- <AppTablePagination
-      :current-page="currentPage"
-      :total-pages="Math.ceil(totalItems / pageSize)"
-      :total-items="totalItems"
-      :page-size="pageSize"
-      :can-previous-page="currentPage > 0"
-      :can-next-page="currentPage < Math.ceil(totalItems / pageSize) - 1"
-      @page-change="handlePageChange"
-    /> -->
-    <AppDialogDataset
-      :open="openAddDataset"
-      @on-close="() => (openAddDataset = false)"
     />
   </div>
 </template>
