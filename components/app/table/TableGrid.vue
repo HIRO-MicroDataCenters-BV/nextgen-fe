@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { FlexRender } from "@tanstack/vue-table";
 import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
-import type { TableColumn } from "~/types/table.types";
+import type { Table as TanstackTable } from "@tanstack/vue-table";
+import type { TableColumn, TableRowData } from "~/types/table.types";
 
 interface TableGridProps {
-  table: any;
+  table: TanstackTable<TableRowData>;
   isSelectionVisible: boolean;
   selectionMode: "single" | "multiple";
   mappedColumns: Array<{ id: string }>;

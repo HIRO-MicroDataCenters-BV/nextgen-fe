@@ -15,18 +15,15 @@ interface TableToolbarProps {
 defineProps<TableToolbarProps>();
 
 const emit = defineEmits<{
-  (e: "create"): void;
+  (e: "create" | "apply-search" | "clear-all-filters"): void;
   (e: "type-change", value: string | number): void;
-  (e: "search-update", value: string): void;
-  (e: "apply-search"): void;
+  (e: "search-update" | "remove-filter", value: string): void;
   (
     e: "filter-change",
     key: string,
     value: boolean | string | number,
     multiple: boolean,
   ): void;
-  (e: "clear-all-filters"): void;
-  (e: "remove-filter", key: string): void;
 }>();
 
 const { t } = useI18n();
