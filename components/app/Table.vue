@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import type {
-  ColumnFiltersState,
   ExpandedState,
   Row,
-  VisibilityState,
 } from "@tanstack/vue-table";
 import {
-  FlexRender,
   getCoreRowModel,
   getExpandedRowModel,
   getFilteredRowModel,
@@ -23,9 +20,11 @@ import type {
   DropdownMenuItem,
 } from "~/types/table.types";
 import { useFilters } from "~/composables/useFilters";
+import { useTableQueryState } from "~/composables/useTableQueryState";
 import { convertJsonLdForTraining } from "~/utils/jsonld";
 import { createColumnHeader } from "~/utils/tableHelpers";
-import Checkbox from "@/components/ui/checkbox/Checkbox.vue";
+import TableToolbar from "@/components/app/table/TableToolbar.vue";
+import TableGrid from "@/components/app/table/TableGrid.vue";
 import { nextTick } from "vue";
 
 interface TableProps {
@@ -61,7 +60,6 @@ const serverData = shallowRef<TableRowData[]>([]); // Raw data from server
 const data = shallowRef<TableRowData[]>([]); // Filtered data for display
 const rawById = ref<Record<string, unknown>>({});
 const isLoading = ref(true);
-const clientSearchTerm = ref(""); // Client-side search term
 
 const route = useRoute();
 const router = useRouter();
@@ -74,6 +72,23 @@ const {
   getActiveFilters,
   resetFilters: _resetFilters,
 } = useFilters();
+const {
+  clientSearchTerm,
+  columnFilters,
+  columnVisibility,
+  currentPage,
+  isUpdatingFromState,
+  searchValue,
+  selectedFilterColumn,
+  selectedFilters,
+  selectedType,
+  updateURLQuery,
+} = useTableQueryState({
+  routeQuery: route.query as Record<string, unknown>,
+  getActiveFilters: () =>
+    getActiveFilters() as Record<string, boolean | string | number>,
+  replaceQuery: (query) => router.replace({ query }),
+});
 
 // Sync selectedFilters with filterGroups UI state
 const syncFiltersToUI = (
@@ -98,73 +113,7 @@ const syncFiltersToUI = (
   filterGroups.value = [...filterGroups.value];
 };
 
-// Initialize from URL query parameters
-const selectedFilterColumn = ref((route.query.searchColumn as string) || "all");
-const searchValue = ref((route.query.search as string) || "");
-
-// Initialize client search from URL
-if (route.query.search && typeof route.query.search === "string") {
-  clientSearchTerm.value = route.query.search;
-}
-const selectedType = ref((route.query.type as string) || "datasets");
-const selectedFilters = ref<Record<string, boolean | string | number>>(
-  (() => {
-    try {
-      if (route.query.filters && typeof route.query.filters === "string") {
-        const decoded = decodeURIComponent(route.query.filters);
-        const parsed = JSON.parse(decoded);
-        return parsed as Record<string, boolean | string | number>;
-      }
-    } catch {
-      // Error parsing filters
-    }
-    return {} as Record<string, boolean | string | number>;
-  })(),
-);
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
-
-// Update URL query parameters from component state
-const updateURLQuery = (force = false) => {
-  if (!force && isUpdatingFromState.value) return;
-
-  const query: Record<string, string> = {};
-
-  if (selectedType.value && selectedType.value !== "datasets") {
-    query.type = selectedType.value;
-  }
-
-  if (searchValue.value && searchValue.value.trim()) {
-    query.search = searchValue.value;
-    query.searchColumn = selectedFilterColumn.value;
-  }
-
-  const activeFilters = {
-    ...selectedFilters.value,
-    ...getActiveFilters(),
-  };
-  const cleanedFilters: Record<string, boolean | string | number> = {};
-  Object.keys(activeFilters).forEach((key) => {
-    const value = activeFilters[key];
-    if (
-      value !== null &&
-      value !== undefined &&
-      value !== false &&
-      typeof value !== "object"
-    ) {
-      cleanedFilters[key] = value as boolean | string | number;
-    }
-  });
-
-  if (Object.keys(cleanedFilters).length > 0) {
-    query.filters = encodeURIComponent(JSON.stringify(cleanedFilters));
-  }
-
-  if (currentPage.value > 0) {
-    query.page = String(currentPage.value);
-  }
-
-  router.replace({ query });
-};
 
 const resetUpdatingFlag = () => {
   isUpdatingFromState.value = false;
@@ -359,24 +308,8 @@ const applyClientSearch = () => {
   });
 };
 
-const columnFilters = ref<ColumnFiltersState>(
-  route.query.filters && typeof route.query.filters === "string"
-    ? JSON.parse(decodeURIComponent(route.query.filters))
-    : [],
-);
-const columnVisibility = ref<VisibilityState>(
-  route.query.visibility && typeof route.query.visibility === "string"
-    ? JSON.parse(decodeURIComponent(route.query.visibility))
-    : {},
-);
 const rowSelection = ref<Record<string, boolean>>({});
 const expanded = ref<ExpandedState>({});
-
-const currentPage = ref<number>(
-  route.query.page && typeof route.query.page === "string"
-    ? parseInt(route.query.page)
-    : 0,
-);
 
 const getColumns = (cols: TableColumn[] | undefined) => {
   if (!cols) return [];
@@ -463,7 +396,6 @@ const table = useVueTable({
   },
 });
 
-const isUpdatingFromState = ref(false);
 let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
 let isFetching = false;
 let pendingFetch = false;
@@ -473,6 +405,10 @@ const applySearchFilter = () => {
   clientSearchTerm.value = searchValue.value;
   applyClientSearch();
   updateURLQuery();
+};
+
+const handleSearchUpdate = (value: string) => {
+  searchValue.value = value;
 };
 
 watch(
@@ -807,205 +743,35 @@ defineExpose({ fetchData, getSelectedRaw });
 
 <template>
   <div class="relative flex min-h-0 w-full flex-1 flex-col">
-    <!-- Sticks below layout header (h-16) while the main column scrolls -->
-    <div
-      class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
-    >
-      <div class="mx-auto max-w-[calc(840px+16px)] w-full px-8 py-4">
-        <div
-          v-if="hasSourceHeader"
-          class="flex flex-wrap items-center justify-between gap-2"
-        >
-          <div class="flex items-center gap-2">
-            <AppHeaderSource />
-          </div>
-          <div class="flex items-center gap-2">
-            <Button class="cursor-pointer" @click="handleCreate">{{
-              t("action.add_new_item")
-            }}</Button>
-          </div>
-        </div>
-        <div class="flex items-center justify-between gap-2">
-          <Tabs
-            :model-value="selectedType"
-            @update:model-value="handleTypeTabChange"
-          >
-            <TabsList class="mx-auto flex items-center justify-center">
-              <TabsTrigger value="datasets">
-                <Icon name="lucide:table-2" />
-                {{ isMyCatalog ? $t("hint.your") : "" }}
-                {{ $t("action.datasets") }}
-              </TabsTrigger>
-              <TabsTrigger value="applications">
-                <Icon name="lucide:box" />
-                {{ isMyCatalog ? $t("hint.your") : "" }}
-                {{ $t("action.applications") }}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div class="flex items-center gap-2">
-            <div class="flex flex-auto flex-wrap gap-2">
-              <div class="relative flex max-w-sm items-center gap-2">
-                <Input
-                  v-model="searchValue"
-                  class="w-64 pl-8"
-                  type="search"
-                  :placeholder="t('placeholder.search', { type: selectedType })"
-                  @update:model-value="applySearchFilter"
-                />
-                <span
-                  class="absolute start-0 inset-y-0 flex items-center justify-center px-2"
-                >
-                  <Icon name="lucide:search" />
-                </span>
-              </div>
-
-              <AppTableDropdownFilter
-                id="filter"
-                label="filter"
-                :items="filterItems"
-                :selected-values="selectedFilterKeys"
-                @filter-change="handleFilterChange"
-              />
-            </div>
-          </div>
-        </div>
-        <div class="filters-list mt-2">
-          <div
-            v-if="Object.keys(selectedFilters).length > 0"
-            class="flex flex-wrap items-center gap-2"
-          >
-            <Button
-              variant="default"
-              size="sm"
-              class="h-6 rounded-sm px-2 py-0 text-sm font-normal"
-              @click="handleClearAllFilters"
-            >
-              {{ t("action.clear_filters") }}
-            </Button>
-            <Badge
-              v-for="(value, key) in selectedFilters"
-              :key="key"
-              variant="secondary"
-              class="h-6 rounded-sm px-2 text-sm capitalize"
-            >
-              {{ filterLabelByKey[key] ?? key }}
-              <Button
-                variant="ghost"
-                size="icon"
-                class="ml-1 h-auto w-auto p-0"
-                @click.stop="handleRemoveFilter(key as string)"
-              >
-                <Icon name="lucide:x" class="h-3 w-3" />
-              </Button>
-            </Badge>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- end sticky table toolbar -->
+    <TableToolbar
+      :has-source-header="hasSourceHeader"
+      :selected-type="selectedType"
+      :is-my-catalog="isMyCatalog"
+      :search-value="searchValue"
+      :filter-items="filterItems"
+      :selected-filter-keys="selectedFilterKeys"
+      :selected-filters="selectedFilters"
+      :filter-label-by-key="filterLabelByKey"
+      @create="handleCreate"
+      @type-change="handleTypeTabChange"
+      @search-update="handleSearchUpdate"
+      @apply-search="applySearchFilter"
+      @filter-change="handleFilterChange"
+      @clear-all-filters="handleClearAllFilters"
+      @remove-filter="handleRemoveFilter"
+    />
     <AppTablePreloader v-if="isLoading" class="mt-4" />
-    <div v-else class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div
-        class="min-h-0 flex-1 overflow-auto px-8 mx-auto max-w-[calc(840px+16px)] w-full mt-4"
-      >
-        <Table
-          :data-source="dataSource"
-          :columns="columns"
-          :page-size="pageSize"
-          :title="title"
-          class="outline outline-1 outline-gray-200 rounded-md overflow-hidden"
-        >
-          <TableHeader class="bg-gray-50 outline outline-1 outline-gray-200">
-            <TableRow
-              v-for="headerGroup in table.getHeaderGroups()"
-              :key="headerGroup.id"
-            >
-              <TableHead
-                v-if="isSelectionVisible"
-                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50 border-t rounded-t-md overflow-hidden rounded-md"
-              >
-                <div
-                  v-if="selectionMode === 'multiple'"
-                  class="flex items-center justify-center"
-                >
-                  <Checkbox
-                    :model-value="
-                      table.getIsAllRowsSelected()
-                        ? true
-                        : table.getIsSomeRowsSelected()
-                          ? 'indeterminate'
-                          : false
-                    "
-                    aria-label="select all"
-                    class="cursor-pointer border-primary"
-                    @update:model-value="
-                      (v) => table.toggleAllRowsSelected(!!v)
-                    "
-                  />
-                </div>
-              </TableHead>
-              <TableHead
-                v-for="header in headerGroup.headers"
-                :key="header.id"
-                class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50"
-              >
-                <FlexRender
-                  v-if="!header.isPlaceholder"
-                  :render="header.column.columnDef.header"
-                  :props="header.getContext()"
-                />
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <template v-if="table.getRowModel().rows?.length">
-              <template v-for="row in table.getRowModel().rows" :key="row.id">
-                <TableRow :data-state="row.getIsSelected() && 'selected'">
-                  <TableCell v-if="isSelectionVisible">
-                    <div class="flex items-center justify-center">
-                      <Checkbox
-                        :model-value="row.getIsSelected()"
-                        :disabled="!row.getCanSelect()"
-                        aria-label="select row"
-                        :class="[
-                          'cursor-pointer border-primary',
-                          selectionMode === 'single' ? 'rounded-full' : '',
-                        ]"
-                        @update:model-value="(v) => row.toggleSelected(!!v)"
-                      >
-                        <template v-if="selectionMode === 'single'">
-                          <div class="h-2 w-2 rounded-full bg-current" />
-                        </template>
-                      </Checkbox>
-                    </div>
-                  </TableCell>
-                  <TableCell
-                    v-for="cell in row.getVisibleCells()"
-                    :key="cell.id"
-                  >
-                    <FlexRender
-                      :render="cell.column.columnDef.cell"
-                      :props="cell.getContext()"
-                    />
-                  </TableCell>
-                </TableRow>
-              </template>
-            </template>
-
-            <TableRow v-else>
-              <TableCell
-                :colspan="mappedColumns.length + (isSelectionVisible ? 1 : 0)"
-                class="h-24 text-center"
-              >
-                {{ t("hint.no_results") }}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <TableGrid
+      v-else
+      :table="table"
+      :is-selection-visible="isSelectionVisible"
+      :selection-mode="selectionMode"
+      :mapped-columns="mappedColumns"
+      :data-source="dataSource"
+      :columns="columns"
+      :page-size="pageSize"
+      :title="title"
+    />
     <AppTableRowMenu
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"

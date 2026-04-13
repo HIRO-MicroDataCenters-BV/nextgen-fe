@@ -24,36 +24,103 @@
             >
               <!-- String/Text -->
               <template v-if="item.type === 'string'">
-                <span class="text-gray-900">{{ item.value }}</span>
+                <a
+                  v-if="isUrl(item.value)"
+                  :href="String(item.value)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                >
+                  <span>{{ getDisplayValue(item.value) }}</span>
+                  <Icon name="lucide:external-link" class="size-3" />
+                </a>
+                <span
+                  v-else
+                  :class="isEmptyValue(item.value) ? 'text-muted-foreground italic' : 'text-gray-900'"
+                >
+                  {{ getDisplayValue(item.value) }}
+                </span>
               </template>
 
               <!-- Date -->
-              <template v-if="item.type === 'date'">
-                <span class="text-gray-900">
-                  {{ dayjs(String(item.value ?? "")).format("YYYY-MM-DD HH:mm:ss") }}
+              <template v-else-if="item.type === 'date'">
+                <span
+                  :class="formatDateValue(item.value) === '—' ? 'text-muted-foreground italic' : 'text-gray-900'"
+                >
+                  {{ formatDateValue(item.value) }}
                 </span>
               </template>
 
               <!-- Boolean -->
-              <template v-if="item.type === 'boolean'">
-                <Icon name="lucide:check" />
+              <template v-else-if="item.type === 'boolean'">
+                <TooltipProvider :delay-duration="200">
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span
+                        class="inline-flex items-center rounded-full p-1"
+                        :class="toBoolean(item.value) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
+                      >
+                        <Icon
+                          :name="toBoolean(item.value) ? 'lucide:check' : 'lucide:x'"
+                          class="size-3"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {{ booleanLabel(item.value) }}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </template>
 
               <!-- Array -->
-              <template v-if="item.type === 'array'">
+              <template v-else-if="item.type === 'array'">
                 <div class="flex flex-wrap gap-2">
                   <Badge
                     v-for="(arrayItem, arrayIndex) in item.value"
                     :key="arrayIndex"
                     variant="secondary"
+                    class="inline-flex items-center gap-1"
                   >
-                    {{ getDisplayValue(arrayItem) }}
+                    <template v-if="isBooleanLike(arrayItem)">
+                      <TooltipProvider :delay-duration="200">
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <span
+                              class="inline-flex items-center rounded-full p-1"
+                              :class="toBoolean(arrayItem) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
+                            >
+                              <Icon
+                                :name="toBoolean(arrayItem) ? 'lucide:check' : 'lucide:x'"
+                                class="size-3"
+                              />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{ booleanLabel(arrayItem) }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </template>
+                    <template v-else>
+                      <a
+                        v-if="isUrl(arrayItem)"
+                        :href="String(arrayItem)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                      >
+                        <span>{{ getDisplayValue(arrayItem) }}</span>
+                        <Icon name="lucide:external-link" class="size-3" />
+                      </a>
+                      <span v-else>{{ getDisplayValue(arrayItem) }}</span>
+                    </template>
                   </Badge>
                 </div>
               </template>
 
               <!-- Object -->
-              <template v-if="item.type === 'object'">
+              <template v-else-if="item.type === 'object'">
                 <div class="space-y-2">
                   <div
                     v-for="(objValue, objKey) in item.value"
@@ -63,7 +130,36 @@
                     <span class="text-sm text-gray-500 min-w-20 overflow-hidden"
                       >{{ objKey }}:</span
                     >
-                    <span class="text-gray-900">{{
+                    <span
+                      v-if="isBooleanLike(objValue)"
+                      class="inline-flex items-center rounded-full p-1"
+                      :class="toBoolean(objValue) ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'"
+                    >
+                      <TooltipProvider :delay-duration="200">
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <Icon
+                              :name="toBoolean(objValue) ? 'lucide:check' : 'lucide:x'"
+                              class="size-3"
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {{ booleanLabel(objValue) }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </span>
+                    <a
+                      v-else-if="isUrl(objValue)"
+                      :href="String(objValue)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1 text-primary underline-offset-2 hover:underline"
+                    >
+                      <span>{{ getDisplayValue(objValue) }}</span>
+                      <Icon name="lucide:external-link" class="size-3" />
+                    </a>
+                    <span v-else class="text-gray-900">{{
                       getDisplayValue(objValue)
                     }}</span>
                   </div>
@@ -71,8 +167,10 @@
               </template>
 
               <!-- Number -->
-              <template v-if="item.type === 'number'">
-                <span class="text-gray-900 font-mono">{{ item.value }}</span>
+              <template v-else-if="item.type === 'number'">
+                <span class="text-gray-900 font-mono">{{
+                  formatNumberValue(item.value)
+                }}</span>
               </template>
             </TableCell>
           </TableRow>
@@ -85,6 +183,12 @@
 <script lang="ts" setup>
 import { Badge } from "~/components/ui/badge";
 import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 
 interface Props {
   data: unknown;
@@ -107,7 +211,7 @@ const flattenedData = computed(() => {
 // Helper function to determine data type
 function getDataType(value: unknown): FlatItem["type"] {
   if (value === null || value === undefined) return "string";
-  if (typeof value === "boolean") return "boolean";
+  if (isBooleanLike(value)) return "boolean";
   if (typeof value === "number") return "number";
   if (Array.isArray(value)) return "array";
   if (typeof value === "object") return "object";
@@ -142,14 +246,20 @@ function formatLabel(key: string): string {
 
 // Helper function to get display value for complex objects
 function getDisplayValue(value: unknown): string {
-  if (value === null || value === undefined) return "";
+  if (value === null || value === undefined || value === "") return "—";
+  if (isBooleanLike(value)) return toBoolean(value) ? "True" : "False";
+  if (typeof value === "string" && looksLikeDate(value)) {
+    return formatDateValue(value);
+  }
+  if (typeof value === "number") return formatNumberValue(value);
+  if (Array.isArray(value)) return value.length === 0 ? "—" : `${value.length} items`;
   if (typeof value === "object") {
     const v = value as Record<string, unknown>;
     if (typeof v.label === "string") return v.label;
     if (typeof v.name === "string") return v.name;
     if (typeof v.title === "string") return v.title;
     if (typeof v.id === "string") return v.id;
-    return JSON.stringify(value);
+    return JSON.stringify(value, null, 0);
   }
   
   const stringValue = String(value);
@@ -161,6 +271,53 @@ function getDisplayValue(value: unknown): string {
   }
   
   return stringValue;
+}
+
+function formatDateValue(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "—";
+  const parsed = dayjs(value);
+  if (!parsed.isValid()) return "—";
+  return parsed.format("DD MMM YYYY, HH:mm");
+}
+
+function formatNumberValue(value: unknown): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 6,
+  }).format(value);
+}
+
+function isUrl(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  return /^https?:\/\//.test(value);
+}
+
+function looksLikeDate(value: string): boolean {
+  if (!value.trim()) return false;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return true;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return true;
+  return dayjs(value).isValid();
+}
+
+function isBooleanLike(value: unknown): boolean {
+  if (typeof value === "boolean") return true;
+  if (typeof value !== "string") return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "false";
+}
+
+function toBoolean(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.trim().toLowerCase() === "true";
+  return Boolean(value);
+}
+
+function booleanLabel(value: unknown): string {
+  return toBoolean(value) ? "True" : "False";
+}
+
+function isEmptyValue(value: unknown): boolean {
+  return value === null || value === undefined || value === "";
 }
 
 // Function to flatten nested data into a flat structure

@@ -2,36 +2,6 @@
 import { watch } from "vue";
 import { useForm } from "vee-validate";
 import { toTypedSchema } from "@vee-validate/zod";
-import type { z } from "zod";
-import { cn } from "@/lib/utils";
-import {
-  FormControl,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  TagsInput,
-  TagsInputItem,
-  TagsInputItemText,
-  TagsInputItemDelete,
-  TagsInputInput,
-} from "@/components/ui/tags-input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,56 +13,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import Button from "@/components/ui/button/Button.vue";
-import Input from "@/components/ui/input/Input.vue";
-import Textarea from "@/components/ui/textarea/Textarea.vue";
-import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
 import ServerErrorsBlock from "@/components/app/ServerErrorsBlock.vue";
-import MmioUploadZone from "@/components/app/MmioUploadZone.vue";
+import FormFieldsRenderer from "@/components/app/form/FormFieldsRenderer.vue";
 import { useApi } from "@/composables/useApi";
 import { useMmioProcessor } from "@/composables/useMmioProcessor";
 import { extractDctermsTitlePlainText } from "~/utils/jsonld";
-import type { ApiErrorDetail } from "~/types/api.types";
+import type {
+  AppFormProps,
+  FormFieldDefinition,
+  FormFieldOption,
+} from "~/types/app-form.types";
 
-export interface FormFieldOption {
-  value: string;
-  label: string;
-}
-
-export interface FormFieldDefinition {
-  name: string;
-  label: string;
-  type: "text" | "select" | "date" | "textarea" | "checkbox" | "tags" | "file" | "jsonld-editor" | "client-selector";
-  placeholder?: string;
-  hint?: string | null;
-  options?: FormFieldOption[];
-  dataSource?: () => Promise<unknown>;
-  fieldOptions?: {
-    dataPath?: string;
-    valueKey?: string;
-    labelKey?: string;
-  };
-  validation?: z.ZodTypeAny;
-  disabled?: boolean;
-  accept?: string;
-  props?: Record<string, unknown>;
-  conditions?: Array<{
-    field: string;
-    value: unknown;
-  }>;
-}
-
-export interface AppFormProps {
-  fields: FormFieldDefinition[];
-  initialValues?: Record<string, unknown>;
-  formSchema: z.ZodTypeAny;
-  title?: string;
-  description?: string;
-  disabled?: boolean;
-  id?: string | null;
-  serverErrors?: ApiErrorDetail[] | null;
-  /** Create flow: keep `name` in sync with `dcterms:title` in metadata (name field should be disabled). */
-  syncNameFromMetadata?: boolean;
-}
+export type {
+  AppFormProps,
+  FormFieldDefinition,
+  FormFieldOption,
+} from "~/types/app-form.types";
 
 const props = withDefaults(defineProps<AppFormProps>(), {
   syncNameFromMetadata: false,
@@ -449,201 +385,23 @@ defineExpose({
         {{ props.description }}
       </p>
     </div>
-    <template v-for="field in fields" :key="field.name">
-      <!-- Client selector is rendered outside the FormField wrapper -->
-      <div v-if="field.type === 'client-selector' && isFieldVisible(field)">
-        <AppClientSelector />
-      </div>
-      <FormField
-        v-else-if="isFieldVisible(field)"
-        v-slot="{ componentField, value: fieldValue }"
-        :name="field.name"
-      >
-        <FormItem>
-          <FormLabel v-if="field.type !== 'checkbox'" :for="field.name">{{
-            field.label
-          }}</FormLabel>
-          <template v-if="field.type === 'text'">
-            <FormControl>
-              <Input
-                :id="field.name"
-                type="text"
-                :placeholder="field.placeholder"
-                v-bind="componentField"
-                :disabled="field.disabled || props.disabled"
-              />
-            </FormControl>
-          </template>
-          <template v-else-if="field.type === 'textarea'">
-            <FormControl>
-              <Textarea
-                :id="field.name"
-                :placeholder="field.placeholder"
-                v-bind="componentField"
-                :disabled="field.disabled || props.disabled"
-                :rows="field.props?.rows || 3"
-              />
-            </FormControl>
-          </template>
-          <template v-else-if="field.type === 'select'">
-            <Select
-              v-bind="componentField"
-              :disabled="
-                field.disabled ||
-                props.disabled ||
-                loadingOptions[field.name] ||
-                (isEditMode && field.name === 'item_type')
-              "
-              class="w-full"
-            >
-              <FormControl>
-                <SelectTrigger class="w-full">
-                  <SelectValue
-                    :placeholder="
-                      loadingOptions[field.name]
-                        ? t('placeholder.loading')
-                        : field.placeholder || t('placeholder.select_option')
-                    "
-                  />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem
-                    v-for="option in fieldOptions[field.name] ||
-                    field.options ||
-                    []"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </template>
-          <template v-else-if="field.type === 'date'">
-            <Popover>
-              <PopoverTrigger as-child>
-                <Button
-                  :id="field.name"
-                  variant="outline"
-                  :class="
-                    cn(
-                      'w-full justify-start text-left font-normal',
-                      !fieldValue && 'text-muted-foreground',
-                      (field.disabled || props.disabled) &&
-                        'cursor-not-allowed opacity-50'
-                    )
-                  "
-                  type="button"
-                  :disabled="field.disabled || props.disabled"
-                >
-                  <Icon name="lucide:calendar" class="mr-2 h-4 w-4" />
-                  <span>{{
-                    fieldValue
-                      ? getFormattedDate(fieldValue)
-                      : field.placeholder || t("placeholder.pick_date")
-                  }}</span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                v-if="!(field.disabled || props.disabled)"
-                class="w-auto p-0"
-              >
-                <FormControl>
-                  <Calendar
-                    initial-focus
-                    :v-model="fieldValue instanceof Date ? fieldValue : null"
-                    @update:model-value="
-                      (v) => {
-                        if (v) {
-                          setFieldValue(field.name, v.toString());
-                        } else {
-                          setFieldValue(field.name, undefined);
-                        }
-                      }
-                    "
-                  />
-                </FormControl>
-              </PopoverContent>
-            </Popover>
-          </template>
-          <template v-else-if="field.type === 'checkbox'">
-            <FormControl>
-              <label
-                class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center"
-              >
-                <Checkbox
-                  :id="field.name"
-                  v-bind="componentField"
-                  :disabled="field.disabled || props.disabled"
-                  :checked="fieldValue"
-                />
-                <span class="ml-2">{{ field.label }}</span>
-              </label>
-            </FormControl>
-          </template>
-          <template v-else-if="field.type === 'tags'">
-            <FormControl>
-              <TagsInput
-                :id="field.name"
-                :model-value="componentField.modelValue"
-                :disabled="field.disabled || props.disabled"
-                :placeholder="field.placeholder"
-                :delimiter="/[\n,]+/"
-                @update:model-value="componentField['onUpdate:modelValue']"
-              >
-                <TagsInputItem
-                  v-for="tag in componentField.modelValue || []"
-                  :key="tag"
-                  :value="tag"
-                >
-                  <TagsInputItemText />
-                  <TagsInputItemDelete />
-                </TagsInputItem>
-                <TagsInputInput
-                  :placeholder="
-                    field.placeholder || t('placeholder.tags_input')
-                  "
-                />
-              </TagsInput>
-            </FormControl>
-          </template>
-          <template v-else-if="field.type === 'jsonld-editor'">
-            <FormControl>
-              <JsonLdEditor
-                :id="field.name"
-                :model-value="componentField.modelValue"
-                :readonly="field.disabled || props.disabled"
-                :title="field.label"
-                :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
-                :item-type="field.name === 'metadata_content' ? values.item_type : undefined"
-                :enforce-client-access-url="field.name === 'metadata_content' ? !isEditMode : true"
-                @update:model-value="componentField['onUpdate:modelValue']"
-              />
-            </FormControl>
-          </template>
-          <template v-else-if="field.type === 'file'">
-            <FormControl>
-              <MmioUploadZone
-                :mmio-file="displayedMmioFileName"
-                :uploading="uploadingFiles[field.name]"
-                :disabled="field.disabled || props.disabled"
-                :readonly="field.disabled || props.disabled"
-                :input-key="fileInputKeys[field.name] || 0"
-                @change-mmio="(file) => handleFileChange(field.name, fileToFileList(file))"
-                @remove-mmio="handleFileDelete(field.name)"
-              />
-            </FormControl>
-          </template>
-          <FormMessage />
-          <p v-if="field.hint && !(field.disabled || props.disabled)" class="text-sm text-muted-foreground mt-1">
-            {{ field.hint }}
-          </p>
-        </FormItem>
-      </FormField>
-    </template>
+    <FormFieldsRenderer
+      :fields="fields"
+      :values="values as Record<string, unknown>"
+      :disabled="props.disabled"
+      :is-edit-mode="isEditMode"
+      :field-options="fieldOptions"
+      :loading-options="loadingOptions"
+      :displayed-mmio-file-name="displayedMmioFileName"
+      :uploading-files="uploadingFiles"
+      :file-input-keys="fileInputKeys"
+      :mmio-extra-metadata="mmioExtraMetadata"
+      :is-field-visible="isFieldVisible"
+      :get-formatted-date="getFormattedDate"
+      @set-field-value="(name, value) => setFieldValue(name, value)"
+      @file-change="(name, file) => handleFileChange(name, fileToFileList(file))"
+      @file-delete="handleFileDelete"
+    />
 
     <ServerErrorsBlock
       v-if="props.serverErrors && props.serverErrors.length > 0"
