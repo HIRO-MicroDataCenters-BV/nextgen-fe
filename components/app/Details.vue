@@ -172,6 +172,11 @@
                   formatNumberValue(item.value)
                 }}</span>
               </template>
+              <template v-else-if="item.type === 'bytes'">
+                <span class="text-gray-900 font-mono">{{
+                  formatByteSize(item.value)
+                }}</span>
+              </template>
             </TableCell>
           </TableRow>
         </TableBody>
@@ -197,7 +202,7 @@ interface Props {
 type FlatItem = {
   key: string;
   value: unknown;
-  type: "string" | "date" | "boolean" | "array" | "object" | "number";
+  type: "string" | "date" | "boolean" | "array" | "object" | "number" | "bytes";
 };
 
 const props = defineProps<Props>();
@@ -209,16 +214,20 @@ const flattenedData = computed(() => {
 });
 
 // Helper function to determine data type
-function getDataType(value: unknown): FlatItem["type"] {
+function getDataType(key: string, value: unknown): FlatItem["type"] {
   if (value === null || value === undefined) return "string";
+  if (isLikelyDateKey(key) && (typeof value === "string" || value instanceof Date)) {
+    return "date";
+  }
+  if (isLikelyByteSizeKey(key) && (typeof value === "number" || isNumericString(value))) {
+    return "bytes";
+  }
   if (isBooleanLike(value)) return "boolean";
   if (typeof value === "number") return "number";
   if (Array.isArray(value)) return "array";
   if (typeof value === "object") return "object";
   if (typeof value === "string") {
-    // Check if it's a date string
-    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-    if (dateRegex.test(value)) return "date";
+    if (looksLikeDate(value)) return "date";
     return "string";
   }
   return "string";
@@ -226,22 +235,32 @@ function getDataType(value: unknown): FlatItem["type"] {
 
 // Helper function to format labels
 function formatLabel(key: string): string {
-  if (key.includes(".")) {
-    const parts = key.split(".");
-    const end = parts[parts.length - 1] ?? "";
+  const dictionary: Record<string, string> = {
+    dctermsIssued: "Issued",
+    dctermsModified: "Modified",
+    dctermsIdentifier: "Identifier",
+    dctermsLicense: "License",
+    dctermsPublisherFoafName: "Publisher",
+    dcatDistributionDcatAccessURL: "Access URL",
+    dcatDistributionDcatDownloadURL: "Download URL",
+    dcatDistributionDcatByteSize: "File size",
+    dcatDistributionDcatFormat: "Format",
+    dcatKeyword: "Keywords",
+    dcatThemeSkosPrefLabel: "Theme",
+    dctermsTypeSkosPrefLabel: "Type",
+    isShared: "Shared",
+    isDeleted: "Deleted",
+  };
 
-    let result = parts[0] ?? "";
-    if (end.includes("/")) {
-      const endParts = end.split("/");
-      if (endParts.length > 1) {
-        result += ` / ${endParts[endParts.length - 1]}`;
-      }
-    } else {
-      result += ` / ${end}`;
-    }
-    return result;
+  if (dictionary[key]) {
+    return dictionary[key] as string;
   }
-  return key;
+  return key
+    .replaceAll("/", " / ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replaceAll("_", " ")
+    .replaceAll(":", " ")
+    .trim();
 }
 
 // Helper function to get display value for complex objects
@@ -277,14 +296,31 @@ function formatDateValue(value: unknown): string {
   if (typeof value !== "string" || !value.trim()) return "—";
   const parsed = dayjs(value);
   if (!parsed.isValid()) return "—";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return parsed.format("DD MMM YYYY");
+  }
   return parsed.format("DD MMM YYYY, HH:mm");
 }
 
 function formatNumberValue(value: unknown): string {
-  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  const num = toNumber(value);
+  if (num === null || Number.isNaN(num)) return "—";
   return new Intl.NumberFormat(undefined, {
     maximumFractionDigits: 6,
-  }).format(value);
+  }).format(num);
+}
+
+function formatByteSize(value: unknown): string {
+  const size = toNumber(value);
+  if (size === null || Number.isNaN(size) || size < 0) return "—";
+  if (size === 0) return "0B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const exp = Math.min(
+    Math.floor(Math.log(size) / Math.log(1024)),
+    units.length - 1,
+  );
+  const normalized = size / 1024 ** exp;
+  return `${normalized.toFixed(normalized >= 10 ? 0 : 1)}${units[exp]}`;
 }
 
 function isUrl(value: unknown): boolean {
@@ -297,6 +333,26 @@ function looksLikeDate(value: string): boolean {
   if (/^\d{4}-\d{2}-\d{2}T/.test(value)) return true;
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return true;
   return dayjs(value).isValid();
+}
+
+function isLikelyDateKey(key: string): boolean {
+  return /(issued|modified|created|updated|date|temporal|start|end)/i.test(key);
+}
+
+function isLikelyByteSizeKey(key: string): boolean {
+  return /(bytesize|byte_size|size|filesize)/i.test(key);
+}
+
+function isNumericString(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !Number.isNaN(Number(trimmed));
+}
+
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number") return value;
+  if (isNumericString(value)) return Number(value.trim());
+  return null;
 }
 
 function isBooleanLike(value: unknown): boolean {
@@ -328,7 +384,7 @@ function flattenData(data: unknown, prefix = ""): FlatItem[] {
 
   for (const [key, value] of Object.entries(dataObj)) {
     const fullKey = prefix ? `${prefix}.${key}` : key;
-    const type = getDataType(value);
+    const type = getDataType(fullKey, value);
 
     // Skip certain system keys
     if (key.startsWith("@") || key === "type") continue;
