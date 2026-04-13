@@ -53,7 +53,7 @@ interface Props {
   getFormattedDate: (date: unknown) => string | null;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
   (e: "set-field-value", fieldName: string, value: unknown): void;
@@ -62,6 +62,11 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+
+const getItemType = (): string | undefined => {
+  const raw = props.values.item_type;
+  return typeof raw === "string" ? raw : undefined;
+};
 </script>
 
 <template>
@@ -230,7 +235,7 @@ const { t } = useI18n();
               :readonly="field.disabled || disabled"
               :title="field.label"
               :extra-metadata="field.name === 'metadata_content' ? mmioExtraMetadata : null"
-              :item-type="field.name === 'metadata_content' ? values.item_type : undefined"
+              :item-type="field.name === 'metadata_content' ? getItemType() : undefined"
               :enforce-client-access-url="field.name === 'metadata_content' ? !isEditMode : true"
               @update:model-value="componentField['onUpdate:modelValue']"
             />
