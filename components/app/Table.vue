@@ -71,6 +71,8 @@ const {
   isLoading: _filtersLoading,
   getActiveFilters,
   resetFilters: _resetFilters,
+  fetchFilters,
+  syncSelectedFilters,
 } = useFilters();
 const {
   clientSearchTerm,
@@ -89,29 +91,6 @@ const {
     getActiveFilters() as Record<string, boolean | string | number>,
   replaceQuery: (query) => router.replace({ query }),
 });
-
-// Sync selectedFilters with filterGroups UI state
-const syncFiltersToUI = (
-  filters: Record<string, boolean | string | number>,
-) => {
-  filterGroups.value.forEach((group) => {
-    group.items.forEach((item) => {
-      const filterValue = filters[item.key];
-
-      if (
-        filterValue !== undefined &&
-        filterValue !== false &&
-        filterValue !== null
-      ) {
-        item.value = filterValue;
-      } else if (!(item.key in filters)) {
-        item.value = null;
-      }
-    });
-  });
-
-  filterGroups.value = [...filterGroups.value];
-};
 
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 
@@ -440,14 +419,14 @@ watch(
           selectedFilters.value = parsedFilters;
           nextTick(() => {
             nextTick(() => {
-              syncFiltersToUI(parsedFilters);
+              syncSelectedFilters(parsedFilters);
             });
           });
         } catch {
           selectedFilters.value = {};
           nextTick(() => {
             nextTick(() => {
-              syncFiltersToUI({});
+              syncSelectedFilters({});
             });
           });
         }
@@ -455,7 +434,7 @@ watch(
         selectedFilters.value = {};
         nextTick(() => {
           nextTick(() => {
-            syncFiltersToUI({});
+            syncSelectedFilters({});
           });
         });
       }
@@ -509,7 +488,7 @@ watch(
     if (isUpdatingFromState.value) return;
     if (groups.length > 0 && Object.keys(selectedFilters.value).length > 0) {
       isUpdatingFromState.value = true;
-      syncFiltersToUI(selectedFilters.value);
+      syncSelectedFilters(selectedFilters.value);
       nextTick(() => {
         isUpdatingFromState.value = false;
       });
@@ -563,13 +542,14 @@ watch(
 );
 
 onMounted(() => {
+  fetchFilters();
   nextTick(() => {
     nextTick(() => {
       if (
         selectedFilters.value &&
         Object.keys(selectedFilters.value).length > 0
       ) {
-        syncFiltersToUI(selectedFilters.value);
+        syncSelectedFilters(selectedFilters.value);
       } else if (
         route.query.filters &&
         typeof route.query.filters === "string"
@@ -578,7 +558,7 @@ onMounted(() => {
           const decoded = decodeURIComponent(route.query.filters);
           const parsed = JSON.parse(decoded);
           selectedFilters.value = parsed;
-          syncFiltersToUI(parsed);
+          syncSelectedFilters(parsed);
         } catch {
           // Error parsing filters
         }

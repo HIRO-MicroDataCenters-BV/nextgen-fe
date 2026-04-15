@@ -4,6 +4,17 @@ import type { ColumnFiltersState, VisibilityState } from "@tanstack/vue-table";
 type QueryValue = boolean | string | number;
 type QueryFilters = Record<string, QueryValue>;
 
+export interface TableQueryStateSnapshot {
+  selectedFilterColumn: string;
+  searchValue: string;
+  clientSearchTerm: string;
+  selectedType: string;
+  selectedFilters: QueryFilters;
+  currentPage: number;
+  columnFilters: ColumnFiltersState;
+  columnVisibility: VisibilityState;
+}
+
 interface UseTableQueryStateParams {
   routeQuery: Record<string, unknown>;
   getActiveFilters: () => Record<string, QueryValue>;
@@ -19,77 +30,109 @@ const parseJsonQuery = <T>(value: unknown, fallback: T): T => {
   }
 };
 
+export const deriveStateFromQuery = (
+  routeQuery: Record<string, unknown>,
+): TableQueryStateSnapshot => ({
+  selectedFilterColumn:
+    (routeQuery.searchColumn as string | undefined) || "all",
+  searchValue: (routeQuery.search as string | undefined) || "",
+  clientSearchTerm: (routeQuery.search as string | undefined) || "",
+  selectedType: (routeQuery.type as string | undefined) || "datasets",
+  selectedFilters: parseJsonQuery<QueryFilters>(routeQuery.filters, {}),
+  currentPage:
+    routeQuery.page && typeof routeQuery.page === "string"
+      ? parseInt(routeQuery.page)
+      : 0,
+  columnFilters: parseJsonQuery<ColumnFiltersState>(routeQuery.filters, []),
+  columnVisibility: parseJsonQuery<VisibilityState>(routeQuery.visibility, {}),
+});
+
+export const sanitizeFilters = (
+  selectedFilters: QueryFilters,
+  activeFilters: Record<string, QueryValue>,
+): QueryFilters => {
+  const combined = { ...selectedFilters, ...activeFilters };
+  const cleaned: QueryFilters = {};
+  Object.keys(combined).forEach((key) => {
+    const value = combined[key];
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== false &&
+      typeof value !== "object"
+    ) {
+      cleaned[key] = value;
+    }
+  });
+  return cleaned;
+};
+
+export const buildQueryFromState = (state: {
+  selectedType: string;
+  searchValue: string;
+  selectedFilterColumn: string;
+  currentPage: number;
+  selectedFilters: QueryFilters;
+  activeFilters: Record<string, QueryValue>;
+}): Record<string, string> => {
+  const query: Record<string, string> = {};
+  const cleanedFilters = sanitizeFilters(
+    state.selectedFilters,
+    state.activeFilters,
+  );
+
+  if (state.selectedType && state.selectedType !== "datasets") {
+    query.type = state.selectedType;
+  }
+  if (state.searchValue && state.searchValue.trim()) {
+    query.search = state.searchValue;
+    query.searchColumn = state.selectedFilterColumn;
+  }
+  if (Object.keys(cleanedFilters).length > 0) {
+    query.filters = encodeURIComponent(JSON.stringify(cleanedFilters));
+  }
+  if (state.currentPage > 0) {
+    query.page = String(state.currentPage);
+  }
+
+  return query;
+};
+
 export const useTableQueryState = ({
   routeQuery,
   getActiveFilters,
   replaceQuery,
 }: UseTableQueryStateParams) => {
-  const selectedFilterColumn = ref(
-    (routeQuery.searchColumn as string | undefined) || "all",
-  );
-  const searchValue = ref((routeQuery.search as string | undefined) || "");
-  const clientSearchTerm = ref((routeQuery.search as string | undefined) || "");
-  const selectedType = ref((routeQuery.type as string | undefined) || "datasets");
-  const selectedFilters = ref<QueryFilters>(parseJsonQuery<QueryFilters>(
-    routeQuery.filters,
-    {},
-  ));
-  const currentPage = ref<number>(
-    routeQuery.page && typeof routeQuery.page === "string"
-      ? parseInt(routeQuery.page)
-      : 0,
-  );
-  const columnFilters = ref<ColumnFiltersState>(
-    parseJsonQuery<ColumnFiltersState>(routeQuery.filters, []),
-  );
-  const columnVisibility = ref<VisibilityState>(
-    parseJsonQuery<VisibilityState>(routeQuery.visibility, {}),
-  );
+  const initialState = deriveStateFromQuery(routeQuery);
+  const selectedFilterColumn = ref(initialState.selectedFilterColumn);
+  const searchValue = ref(initialState.searchValue);
+  const clientSearchTerm = ref(initialState.clientSearchTerm);
+  const selectedType = ref(initialState.selectedType);
+  const selectedFilters = ref<QueryFilters>(initialState.selectedFilters);
+  const currentPage = ref<number>(initialState.currentPage);
+  const columnFilters = ref<ColumnFiltersState>(initialState.columnFilters);
+  const columnVisibility = ref<VisibilityState>(initialState.columnVisibility);
   const isUpdatingFromState = ref(false);
 
   const cleanedFilters = computed<QueryFilters>(() => {
-    const activeFilters = {
-      ...selectedFilters.value,
-      ...getActiveFilters(),
-    };
-    const cleaned: QueryFilters = {};
-    Object.keys(activeFilters).forEach((key) => {
-      const value = activeFilters[key];
-      if (
-        value !== null &&
-        value !== undefined &&
-        value !== false &&
-        typeof value !== "object"
-      ) {
-        cleaned[key] = value;
-      }
-    });
-    return cleaned;
+    return sanitizeFilters(
+      selectedFilters.value,
+      getActiveFilters() as Record<string, QueryValue>,
+    );
   });
 
   const updateURLQuery = (force = false) => {
     if (!force && isUpdatingFromState.value) return;
-
-    const query: Record<string, string> = {};
-
-    if (selectedType.value && selectedType.value !== "datasets") {
-      query.type = selectedType.value;
-    }
-
-    if (searchValue.value && searchValue.value.trim()) {
-      query.search = searchValue.value;
-      query.searchColumn = selectedFilterColumn.value;
-    }
-
-    if (Object.keys(cleanedFilters.value).length > 0) {
-      query.filters = encodeURIComponent(JSON.stringify(cleanedFilters.value));
-    }
-
-    if (currentPage.value > 0) {
-      query.page = String(currentPage.value);
-    }
-
-    replaceQuery(query);
+    replaceQuery(
+      buildQueryFromState({
+        selectedType: selectedType.value,
+        searchValue: searchValue.value,
+        selectedFilterColumn: selectedFilterColumn.value,
+        currentPage: currentPage.value,
+        selectedFilters: selectedFilters.value,
+        activeFilters: getActiveFilters() as Record<string, QueryValue>,
+      }),
+    );
   };
 
   return {

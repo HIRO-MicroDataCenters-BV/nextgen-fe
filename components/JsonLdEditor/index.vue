@@ -105,8 +105,14 @@ const emit = defineEmits<{
 }>();
 
 const { saveStatus, triggerSaveIndicator } = useSaveIndicator();
+const nodeIdCounter = ref(0);
+const makeNodeId = () => {
+  nodeIdCounter.value += 1;
+  return `node_${nodeIdCounter.value}`;
+};
 
-const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } = useJsonLdTransform();
+const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } =
+  useJsonLdTransform({ idFactory: makeNodeId });
 const { validateTree } = useJsonLdValidation();
 const { buildDefaultDatasetTree, isEmptyDataset, mergeDatasetTreeWithDefaults } = useDefaultDataset();
 const { distributionSchema } = useJsonLdSchema();
@@ -224,7 +230,6 @@ watch(() => props.contentFromFile, () => {
 // add/replace the dspace:extraMetadata node directly in the current tree
 // WITHOUT triggering a full re-parse (which would reset DCAT fields).
 watch(() => props.extraMetadata, (newExtra) => {
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
 
   if (!newExtra || newExtra.length === 0) {
@@ -246,7 +251,7 @@ watch(() => props.extraMetadata, (newExtra) => {
     const parsed = parseJsonLdToTree(item as Record<string, unknown>);
     setReadonlyFromMmioRecursive(parsed);
     return {
-      id: makeId(),
+      id: makeNodeId(),
       key: `[${index}]`,
       type: 'object' as const,
       children: parsed,
@@ -261,7 +266,7 @@ watch(() => props.extraMetadata, (newExtra) => {
     };
   });
   const extraNode = {
-    id: makeId(),
+    id: makeNodeId(),
     key: 'dspace:extraMetadata',
     type: 'array' as const,
     children: extraChildren,
@@ -389,8 +394,6 @@ const handleCodeUpdate = (newCode: string) => {
   }
 };
 const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
   const isObject = fieldDef.type === 'object';
   const isArray  = fieldDef.type === 'array';
 
@@ -406,7 +409,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
       : (fieldDef.children ?? {});
     const children = Object.values(childSchema).map(childDef => createDefaultNode(childDef));
     return {
-      id: makeId(),
+      id: makeNodeId(),
       key: '[0]',
       type: 'object',
       children,
@@ -415,7 +418,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   };
 
   const newNode: JsonLdNode = {
-    id: makeId(),
+    id: makeNodeId(),
     key: fieldDef.key,
     type: fieldDef.type,
     value: (isObject || isArray) ? undefined : '',

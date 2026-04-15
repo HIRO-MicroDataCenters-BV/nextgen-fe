@@ -63,9 +63,11 @@ import {
 } from "~/utils/jsonld";
 import { hasMetadataItemTypeMismatch } from "~/utils/metadataItemTypeConsistency";
 import { Spinner } from "@/components/ui/spinner";
+import { useCatalogSubmit } from "~/composables/catalog/useCatalogSubmit";
 
 const { t } = useI18n();
 const { saveDataset, getDataset } = useApi();
+const { saveCatalogItem } = useCatalogSubmit({ saveDataset });
 const serverErrors = ref<ApiErrorDetail[] | null>(null);
 const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
@@ -360,36 +362,22 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
         : null;
 
     serverErrors.value = null;
-    const result = await saveDataset(targetFilename, datasetJsonLd, {
+    const result = await saveCatalogItem({
+      filename: targetFilename,
+      datasetJsonLd,
       relatedDataProduct,
       isApplication,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resultAny = result as any;
-    if (resultAny && resultAny.error === true) {
-      const data = resultAny.data as Record<string, unknown> | undefined;
-      const detail = data?.detail;
-      let errors: Array<{ code?: string; message?: string; details?: unknown[] }> = [];
-      if (Array.isArray(detail) && detail.length > 0) {
-        errors = detail as Array<{ code?: string; message?: string; details?: unknown[] }>;
-      } else if (typeof detail === "string" && detail) {
-        errors = [{ message: detail }];
-      } else if (data?.message) {
-        errors = [{ message: String(data.message) }];
-      } else {
-        errors = [{ message: "Server error occurred" }];
-      }
-      serverErrors.value = errors as ApiErrorDetail[];
+    if (!result.ok) {
+      serverErrors.value = result.errors as ApiErrorDetail[];
       nextTick(() => {
         serverErrorsRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
       });
       return;
     }
 
-    if (result) {
-      goBackToCatalog();
-    }
+    goBackToCatalog();
   } catch {
     // Error handling
   }

@@ -9,13 +9,24 @@ import type {
   ApiErrorDetail,
   ApiFilterGroup,
 } from "~/types/api.types";
-import { sanitizeDatasetDctermsTitleInPlace } from "~/utils/jsonld";
+import {
+  findDatasetInJsonLd,
+  normalizeDctermsLanguageLiteral,
+} from "~/utils/jsonld";
 import {
   catalogDatasetSchema,
   catalogSearchResponseSchema,
 } from "~/schemas/catalog.schema";
 
 type RequestError = { error: true; data: unknown };
+type ApiService = "search" | "catalog" | "connector";
+type RequestOptions = {
+  showToast?: boolean;
+  timeout?: number;
+  hasRawData?: boolean;
+  returnResponse?: boolean;
+  returnErrorDetails?: boolean;
+};
 
 export const useApi = () => {
   const config = useRuntimeConfig();
@@ -45,6 +56,20 @@ export const useApi = () => {
     typeof value === "object" &&
     "error" in value &&
     (value as { error?: unknown }).error === true;
+
+  const cloneAndSanitizeDataset = <T extends Record<string, unknown>>(
+    payload: T,
+  ): T => {
+    const cloned = structuredClone(payload);
+    const dataset = findDatasetInJsonLd(cloned) ?? (cloned as Record<string, unknown>);
+    if (dataset["dcterms:title"] != null) {
+      dataset["dcterms:title"] = normalizeDctermsLanguageLiteral(
+        dataset["dcterms:title"],
+        "en",
+      );
+    }
+    return cloned as T;
+  };
 
   const validateCatalogPayload = <T extends Record<string, unknown>>(
     payload: unknown,
@@ -87,17 +112,11 @@ export const useApi = () => {
   };
 
   const request = async <T>(
-    service: "search" | "catalog" | "connector",
+    service: ApiService,
     url: string,
     method: string = "GET",
     body?: unknown,
-    options?: {
-      showToast?: boolean;
-      timeout?: number;
-      hasRawData?: boolean;
-      returnResponse?: boolean;
-      returnErrorDetails?: boolean;
-    }
+    options?: RequestOptions,
   ) => {
     const baseUrl = serviceUrls[service];
     const isFormData = body instanceof FormData;
@@ -329,8 +348,7 @@ export const useApi = () => {
         "dataset"
       );
       if (!dataset) return null;
-      sanitizeDatasetDctermsTitleInPlace(dataset);
-      return dataset;
+      return cloneAndSanitizeDataset(dataset);
     },
 
     saveDataset: async (
@@ -366,8 +384,7 @@ export const useApi = () => {
           "dataset"
         );
         if (!dataset) return null;
-        sanitizeDatasetDctermsTitleInPlace(dataset);
-        return dataset;
+        return cloneAndSanitizeDataset(dataset);
       }
       if (isRequestError(response)) return response;
       return response ?? null;
