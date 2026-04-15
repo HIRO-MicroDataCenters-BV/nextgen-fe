@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import type { ColumnFiltersState, VisibilityState } from "@tanstack/vue-table";
 
 type QueryValue = boolean | string | number;
@@ -113,13 +113,6 @@ export const useTableQueryState = ({
   const columnFilters = ref<ColumnFiltersState>(initialState.columnFilters);
   const columnVisibility = ref<VisibilityState>(initialState.columnVisibility);
   const isUpdatingFromState = ref(false);
-
-  const cleanedFilters = computed<QueryFilters>(() => {
-    return sanitizeFilters(
-      selectedFilters.value,
-      getActiveFilters() as Record<string, QueryValue>,
-    );
-  });
 
   const updateURLQuery = (force = false) => {
     if (!force && isUpdatingFromState.value) return;
