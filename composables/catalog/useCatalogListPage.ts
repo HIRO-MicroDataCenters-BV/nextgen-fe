@@ -1,6 +1,5 @@
 import { ref } from "vue";
 import type {
-  CatalogItem,
   TableDataResponse,
   TableFetchParams,
 } from "~/types/catalog.types";
@@ -89,7 +88,7 @@ export const useCatalogListPage = ({ source, api }: UseCatalogListPageOptions) =
       );
       const totalPages = Math.ceil(tableData.pagination.total_items / limit);
       return {
-        data: tableData.data as CatalogItem[],
+        data: tableData.data,
         pagination: {
           ...tableData.pagination,
           total_pages: totalPages,
