@@ -8,6 +8,7 @@ import type {
 import { useFilters } from "~/composables/useFilters";
 import { useTableQueryState } from "~/composables/useTableQueryState";
 import { useTableDataSource } from "~/composables/table/useTableDataSource";
+import { useTableActions } from "~/composables/table/useTableActions";
 import { useTableFilterControls } from "~/composables/table/useTableFilterControls";
 import { useTableInstance } from "~/composables/table/useTableInstance";
 import { useTableStateSync } from "~/composables/table/useTableStateSync";
@@ -52,9 +53,7 @@ const { t } = useI18n();
 const { page } = useApp();
 const {
   filterGroups,
-  isLoading: _filtersLoading,
   getActiveFilters,
-  resetFilters: _resetFilters,
   fetchFilters,
   syncSelectedFilters,
 } = useFilters();
@@ -144,17 +143,6 @@ const {
   resetPageIndex: () => table.setPageIndex(0),
 });
 
-const applySearchFilter = () => {
-  // Update client search term and apply filter
-  clientSearchTerm.value = searchValue.value;
-  applyClientSearch();
-  updateURLQuery();
-};
-
-const handleSearchUpdate = (value: string) => {
-  searchValue.value = value;
-};
-
 watch(
   () => pageSize,
   (newPageSize) => {
@@ -185,30 +173,31 @@ useTableStateSync({
   setPageIndex: (value: number) => table.setPageIndex(value),
 });
 
-const handleTypeTabChange = (type: string | number) => {
-  selectedType.value = String(type);
-  updateURLQuery();
-  fetchData();
-};
-
-const handlePassToTraining = () => {
-  emit("pass-to-training", buildTrainingPayload(selectedRows.value));
-};
-
-const handleClearAll = () => {
-  clearSelection();
-};
-
-const handleCreate = () => {
-  navigateTo("/my_catalog/create");
-};
-
-const getSelectedRaw = () => {
-  const ids = table
-    .getSelectedRowModel()
-    .rows.map((r) => String((r.original as TableRowData).id));
-  return ids.map((id) => rawById.value[id]).filter((v) => v !== undefined);
-};
+const {
+  applySearchFilter,
+  handleSearchUpdate,
+  handleTypeTabChange,
+  handlePassToTraining,
+  handleClearAll,
+  handleCreate,
+  getSelectedRaw,
+} = useTableActions({
+  searchValue,
+  clientSearchTerm,
+  selectedType,
+  applyClientSearch,
+  updateURLQuery,
+  fetchData,
+  clearSelection,
+  buildTrainingPayload,
+  emitPassToTraining: (payload) => emit("pass-to-training", payload),
+  selectedRows,
+  getSelectedRowIds: () =>
+    table
+      .getSelectedRowModel()
+      .rows.map((row) => String((row.original as TableRowData).id)),
+  rawById,
+});
 
 defineExpose({ fetchData, getSelectedRaw });
 </script>
