@@ -53,7 +53,6 @@
 import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
-import type { FormFieldDefinition } from "@/components/app/Form.vue";
 import type { ApiErrorDetail } from "~/types/api.types";
 import type { JsonLdObject } from "~/types/jsonld.types";
 import {
@@ -63,9 +62,12 @@ import {
 } from "~/utils/jsonld";
 import { hasMetadataItemTypeMismatch } from "~/utils/metadataItemTypeConsistency";
 import { Spinner } from "@/components/ui/spinner";
+import { useCatalogSubmit } from "~/composables/catalog/useCatalogSubmit";
+import { useCatalogFormFields } from "~/composables/catalog/useCatalogFormFields";
 
 const { t } = useI18n();
 const { saveDataset, getDataset } = useApi();
+const { saveCatalogItem } = useCatalogSubmit({ saveDataset });
 const serverErrors = ref<ApiErrorDetail[] | null>(null);
 const serverErrorsRef = ref<HTMLElement | null>(null);
 const { setPage, page } = useApp();
@@ -105,53 +107,12 @@ const formSchema = computed(() =>
     )
 );
 
-const fields = computed<FormFieldDefinition[]>(() => [
-  {
-    name: "item_type",
-    label: t("label.item_type"),
-    type: "select",
-    placeholder: t("placeholder.select_data_product_directory"),
-    options: [
-      { label: t("label.dataset"), value: "dataset" },
-      { label: t("label.application"), value: "application" },
-    ],
-    disabled: true,
-  },
-  {
-    name: "related_data_product",
-    label: t("label.related_data_product"),
-    type: "select",
-    placeholder: t("placeholder.select_data_product"),
-    // No connector list on edit — value comes from metadata; Form adds a synthetic option.
-    dataSource: async () => ({ dataproducts: [] as string[] }),
-    fieldOptions: {
-      dataPath: "dataproducts",
-    },
-    hint: null,
-    disabled: true,
-    conditions: [
-      {
-        field: "item_type",
-        value: "dataset",
-      },
-    ],
-  },
-  {
-    name: "file",
-    label: t("label.file"),
-    type: "file",
-    placeholder: t("placeholder.select_file"),
-    hint: t("hint.accepted_file_types_json_jar"),
-    accept: "application/json, application/x-tar",
-    disabled: true,
-  },
-  {
-    name: "metadata_content",
-    label: t("label.metadata_content"),
-    type: "jsonld-editor",
-    placeholder: t("placeholder.enter_metadata_content"),
-  },
-]);
+const fields = computed(() =>
+  useCatalogFormFields({
+    t,
+    mode: "edit",
+  }),
+);
 
 const formReady = computed(
   () => !loading.value && initialValues.value !== null
@@ -360,36 +321,22 @@ const onSubmit = async (formValues: Record<string, unknown>) => {
         : null;
 
     serverErrors.value = null;
-    const result = await saveDataset(targetFilename, datasetJsonLd, {
+    const result = await saveCatalogItem({
+      filename: targetFilename,
+      datasetJsonLd,
       relatedDataProduct,
       isApplication,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resultAny = result as any;
-    if (resultAny && resultAny.error === true) {
-      const data = resultAny.data as Record<string, unknown> | undefined;
-      const detail = data?.detail;
-      let errors: Array<{ code?: string; message?: string; details?: unknown[] }> = [];
-      if (Array.isArray(detail) && detail.length > 0) {
-        errors = detail as Array<{ code?: string; message?: string; details?: unknown[] }>;
-      } else if (typeof detail === "string" && detail) {
-        errors = [{ message: detail }];
-      } else if (data?.message) {
-        errors = [{ message: String(data.message) }];
-      } else {
-        errors = [{ message: "Server error occurred" }];
-      }
-      serverErrors.value = errors as ApiErrorDetail[];
+    if (!result.ok) {
+      serverErrors.value = result.errors as ApiErrorDetail[];
       nextTick(() => {
         serverErrorsRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" });
       });
       return;
     }
 
-    if (result) {
-      goBackToCatalog();
-    }
+    goBackToCatalog();
   } catch {
     // Error handling
   }

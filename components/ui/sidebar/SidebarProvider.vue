@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { HTMLAttributes, Ref } from "vue"
-import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
+import { defaultDocument, useVModel } from "@vueuse/core"
 import { TooltipProvider } from "reka-ui"
-import { computed, ref } from "vue"
 import { cn } from "@/lib/utils"
-import { provideSidebarContext, SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME, SIDEBAR_KEYBOARD_SHORTCUT, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from "./utils"
+import { provideSidebarContext, SIDEBAR_COOKIE_NAME, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from "./utils"
+import { useSidebarStore } from "./composables/useSidebarStore"
+import { useSidebarEffects } from "./composables/useSidebarEffects"
 
 const props = withDefaults(defineProps<{
   defaultOpen?: boolean
@@ -20,49 +21,30 @@ const emits = defineEmits<{
   "update:open": [open: boolean]
 }>()
 
-const isMobile = useMediaQuery("(max-width: 768px)")
-const openMobile = ref(false)
-
 const open = useVModel(props, "open", emits, {
   defaultValue: props.defaultOpen ?? false,
   passive: (props.open === undefined) as false,
 }) as Ref<boolean>
 
-function setOpen(value: boolean) {
-  open.value = value // emits('update:open', value)
-
-  // This sets the cookie to keep the sidebar state.
-  document.cookie = `${SIDEBAR_COOKIE_NAME}=${open.value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
-}
-
-function setOpenMobile(value: boolean) {
-  openMobile.value = value
-}
-
-// Helper to toggle the sidebar.
-function toggleSidebar() {
-  return isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value)
-}
-
-useEventListener("keydown", (event: KeyboardEvent) => {
-  if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
-    event.preventDefault()
-    toggleSidebar()
-  }
+const store = useSidebarStore({
+  defaultOpen: props.defaultOpen ?? false,
+  controlledOpen: open,
+  onOpenChange: (value) => emits("update:open", value),
 })
-
-// We add a state so that we can do data-state="expanded" or "collapsed".
-// This makes it easier to style the sidebar with Tailwind classes.
-const state = computed(() => open.value ? "expanded" : "collapsed")
+const { registerKeyboardShortcut, setOpenWithEffects } = useSidebarEffects({
+  setOpen: store.setOpen,
+  toggleSidebar: store.toggleSidebar,
+})
+registerKeyboardShortcut()
 
 provideSidebarContext({
-  state,
-  open,
-  setOpen,
-  isMobile,
-  openMobile,
-  setOpenMobile,
-  toggleSidebar,
+  state: store.state,
+  open: store.open,
+  setOpen: setOpenWithEffects,
+  isMobile: store.isMobile,
+  openMobile: store.openMobile,
+  setOpenMobile: store.setOpenMobile,
+  toggleSidebar: store.toggleSidebar,
 })
 </script>
 

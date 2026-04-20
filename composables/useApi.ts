@@ -5,31 +5,24 @@ import type {
   JsonLdObject,
   CatalogDataset,
   CatalogResponse,
-  ApiError,
-  ApiErrorDetail,
   ApiFilterGroup,
 } from "~/types/api.types";
-import { sanitizeDatasetDctermsTitleInPlace } from "~/utils/jsonld";
+import {
+  findDatasetInJsonLd,
+  normalizeDctermsLanguageLiteral,
+} from "~/utils/jsonld";
 import {
   catalogDatasetSchema,
   catalogSearchResponseSchema,
 } from "~/schemas/catalog.schema";
-
-type RequestError = { error: true; data: unknown };
+import {
+  createApiRequest,
+  type RequestError,
+} from "~/composables/api/createApiRequest";
 
 export const useApi = () => {
   const config = useRuntimeConfig();
   const { t } = useI18n();
-
-  const formatApiErrorMessage = (error: ApiError): string => {
-    const d = error.detail;
-    if (typeof d === "string") return d;
-    if (Array.isArray(d) && d.length > 0) {
-      const first = d[0] as ApiErrorDetail;
-      return first.message ?? first.code ?? t("app.error.occurred");
-    }
-    return t("app.error.occurred");
-  };
 
   const serviceUrls = {
     search: config.public.apiSearchServiceUrl,
@@ -45,6 +38,20 @@ export const useApi = () => {
     typeof value === "object" &&
     "error" in value &&
     (value as { error?: unknown }).error === true;
+
+  const cloneAndSanitizeDataset = <T extends Record<string, unknown>>(
+    payload: T,
+  ): T => {
+    const cloned = structuredClone(payload);
+    const dataset = findDatasetInJsonLd(cloned) ?? (cloned as Record<string, unknown>);
+    if (dataset["dcterms:title"] != null) {
+      dataset["dcterms:title"] = normalizeDctermsLanguageLiteral(
+        dataset["dcterms:title"],
+        "en",
+      );
+    }
+    return cloned as T;
+  };
 
   const validateCatalogPayload = <T extends Record<string, unknown>>(
     payload: unknown,
@@ -70,133 +77,12 @@ export const useApi = () => {
     return null;
   };
 
-  const getHeaders = (isFormData: boolean = false) => {
-    const headers: {
-      "Content-Type"?: string;
-      Authorization?: string;
-      Accept?: string;
-    } = {
-      Accept: "application/ld+json",
-    };
-
-    if (!isFormData) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    return headers;
-  };
-
-  const request = async <T>(
-    service: "search" | "catalog" | "connector",
-    url: string,
-    method: string = "GET",
-    body?: unknown,
-    options?: {
-      showToast?: boolean;
-      timeout?: number;
-      hasRawData?: boolean;
-      returnResponse?: boolean;
-      returnErrorDetails?: boolean;
-    }
-  ) => {
-    const baseUrl = serviceUrls[service];
-    const isFormData = body instanceof FormData;
-    const hasRawData = options?.hasRawData || false;
-    const showToast = options?.showToast !== false;
-    const timeout = options?.timeout || 30000;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    const opts: RequestInit = {
-      method,
-      headers: getHeaders(isFormData),
-      signal: controller.signal,
-      ...(method !== "DELETE" &&
-        method !== "GET" && {
-        body: isFormData
-          ? (body as BodyInit)
-          : hasRawData
-            ? (body as BodyInit)
-            : JSON.stringify(body),
-      }),
-    };
-
-    try {
-      const res = await fetch(`${baseUrl}${url}`, opts);
-      clearTimeout(timeoutId);
-
-      let data = {};
-      const text = await res.text();
-      if (text != "") {
-        data = JSON.parse(text);
-      }
-
-      if (!res.ok) {
-        const error = data as ApiError;
-        const errorMessage = formatApiErrorMessage(error);
-        switch (res.status) {
-          case 401:
-            token.value = null;
-            if (showToast) {
-              toaster.show("error", t("app.error.unauthorized"));
-            }
-            return options?.returnErrorDetails
-              ? ({ error: true as const, data } satisfies RequestError)
-              : null;
-          default:
-            if (showToast) {
-              toaster.show("error", errorMessage);
-            }
-            return options?.returnErrorDetails
-              ? ({ error: true as const, data } satisfies RequestError)
-              : null;
-        }
-      }
-
-      if (isFormData && (res.status === 201 || res.status === 200)) {
-        const locationHeader = res.headers.get("Location");
-        if (locationHeader) {
-          return locationHeader as T;
-        }
-
-        if (data && typeof data === "object" && "Location" in data) {
-          return (data as { Location: string }).Location as T;
-        }
-
-        if (body instanceof FormData) {
-          const file = body.get("file") as File;
-          if (file) {
-            return file.name as T;
-          }
-        }
-      }
-
-      if (options?.returnResponse) {
-        return { data: data as T, response: res } as unknown as T & {
-          response: Response;
-        };
-      }
-
-      return data as T;
-    } catch (err) {
-      if (method === "DELETE") {
-        return;
-      }
-
-      if (err instanceof Error && err.name === "AbortError") {
-        if (showToast) {
-          toaster.show("error", t("app.error.timeout"));
-        }
-        return null;
-      }
-
-      if (showToast) {
-        toaster.show("error", t("app.error.fetch"));
-      }
-      return null;
-    }
-  };
+  const { request } = createApiRequest({
+    serviceUrls,
+    token,
+    toaster,
+    t,
+  });
 
   async function prepareSearchFilter(
     filter: SearchFilter
@@ -329,8 +215,7 @@ export const useApi = () => {
         "dataset"
       );
       if (!dataset) return null;
-      sanitizeDatasetDctermsTitleInPlace(dataset);
-      return dataset;
+      return cloneAndSanitizeDataset(dataset);
     },
 
     saveDataset: async (
@@ -366,8 +251,7 @@ export const useApi = () => {
           "dataset"
         );
         if (!dataset) return null;
-        sanitizeDatasetDctermsTitleInPlace(dataset);
-        return dataset;
+        return cloneAndSanitizeDataset(dataset);
       }
       if (isRequestError(response)) return response;
       return response ?? null;

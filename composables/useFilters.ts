@@ -1,4 +1,4 @@
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 
 export interface FilterItem {
   key: string;
@@ -17,6 +17,18 @@ export const useFilters = () => {
   const filterGroups = ref<FilterGroup[]>([]);
   const isLoading = ref(true);
 
+  const setFilterValue = (
+    groups: FilterGroup[],
+    targetKey: string,
+    value: boolean | number | string | null,
+  ): FilterGroup[] =>
+    groups.map((group) => ({
+      ...group,
+      items: group.items.map((item) =>
+        item.key === targetKey ? { ...item, value } : item,
+      ),
+    }));
+
   const fetchFilters = async () => {
     const api = useApi();
     const groups = await api.getFilters();
@@ -33,10 +45,6 @@ export const useFilters = () => {
     isLoading.value = false;
   };
 
-  onMounted(() => {
-    fetchFilters();
-  });
-
   const getActiveFilters = () => {
     const activeFilters: Record<string, unknown> = {};
 
@@ -52,11 +60,25 @@ export const useFilters = () => {
   };
 
   const resetFilters = () => {
-    filterGroups.value.forEach((group) => {
-      group.items.forEach((item) => {
-        item.value = null;
-      });
+    filterGroups.value = filterGroups.value.map((group) => ({
+      ...group,
+      items: group.items.map((item) => ({ ...item, value: null })),
+    }));
+  };
+
+  const syncSelectedFilters = (
+    filters: Record<string, boolean | string | number>,
+  ) => {
+    let nextGroups = filterGroups.value;
+    Object.keys(filters).forEach((key) => {
+      nextGroups = setFilterValue(nextGroups, key, filters[key] ?? null);
     });
+    filterGroups.value = nextGroups.map((group) => ({
+      ...group,
+      items: group.items.map((item) =>
+        item.key in filters ? item : { ...item, value: null },
+      ),
+    }));
   };
 
   return {
@@ -65,5 +87,6 @@ export const useFilters = () => {
     getActiveFilters,
     resetFilters,
     fetchFilters,
+    syncSelectedFilters,
   };
 };

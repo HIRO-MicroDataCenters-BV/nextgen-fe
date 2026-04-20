@@ -1,55 +1,14 @@
 <template>
   <TooltipProvider>
     <div class="jsonld-editor border rounded-lg">
-      <div class="editor-header">
-        <!-- Search Field -->
-        <div class="flex-1 max-w-md">
-          <div class="relative">
-            <Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              v-model="searchQuery"
-            :placeholder="currentMode === 'visual' ? t('jsonld.editor.searchPlaceholderVisual') : t('jsonld.editor.searchPlaceholderCode')"
-              class="pl-9 h-9"
-            />
-            <Button
-              v-if="searchQuery"
-              variant="ghost"
-              size="sm"
-              class="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-              @click="searchQuery = ''"
-            >
-              <Icon name="lucide:x" class="size-4" />
-            </Button>
-          </div>
-        </div>
-
-        <!-- Right: fixed-width save indicator slot -->
-        <div class="header-right">
-          <!-- Save indicator — always occupies space to prevent search jumping -->
-          <div class="save-slot">
-            <span v-if="saveStatus === 'saving'" class="save-indicator save-indicator--saving">
-              <Icon name="lucide:loader-circle" class="size-3 animate-spin" />
-              <span>{{ t('jsonld.editor.saving') }}</span>
-            </span>
-            <span v-else-if="saveStatus === 'saved'" class="save-indicator save-indicator--saved">
-              <Icon name="lucide:check" class="size-3" />
-              <span>{{ t('jsonld.editor.saved') }}</span>
-            </span>
-          </div>
-
-          <!-- Mode Toggle (compact) -->
-          <div class="mode-toggle-wrap" :title="t('jsonld.editor.modeToggleTitle')">
-            <Label for="mode-switch" class="text-xs text-muted-foreground">{{ t('jsonld.editor.modeVisual') }}</Label>
-            <Switch
-              id="mode-switch"
-              :model-value="currentMode === 'code'"
-              :disabled="readonly"
-              @update:model-value="toggleMode"
-            />
-            <Label for="mode-switch" class="text-xs text-muted-foreground">{{ t('jsonld.editor.modeJson') }}</Label>
-          </div>
-        </div>
-      </div>
+      <EditorHeader
+        :search-query="searchQuery"
+        :current-mode="currentMode"
+        :readonly="readonly"
+        :save-status="saveStatus"
+        @update:search-query="searchQuery = $event"
+        @toggle-mode="toggleMode"
+      />
 
     <div ref="editorContentRef" class="editor-content">
       <VisualEditor
@@ -73,131 +32,40 @@
       />
     </div>
 
-    <!-- ── Footer: Add Field + Validation errors ────────── -->
-    <div class="editor-footer border-t">
-      <!-- Add Field row (visual mode only) -->
-      <div v-if="currentMode === 'visual' && !readonly" class="add-field-row">
-        <!-- Left: completion progress -->
-        <div class="completion-block">
-          <div class="completion-label">
-            <span class="completion-text">
-              <template v-if="mandatoryProgress.total === 0">
-                {{ t('jsonld.editor.noRequiredFields') }}
-              </template>
-              <template v-else-if="mandatoryProgress.filled === mandatoryProgress.total">
-                <Icon name="lucide:circle-check" class="size-3 inline" />
-                {{ t('jsonld.editor.allRequiredComplete') }}
-              </template>
-              <template v-else>
-                {{ mandatoryProgress.filled }} {{ t('jsonld.editor.ofRequiredFields', { total: mandatoryProgress.total }) }}
-              </template>
-            </span>
-            <span class="completion-pct">
-              {{ mandatoryProgress.pct }}%
-            </span>
-          </div>
-          <div class="progress-track">
-            <div
-              class="progress-bar"
-              :class="progressColorClass"
-              :style="{ width: mandatoryProgress.pct + '%' }"
-            />
-          </div>
-        </div>
-
-        <!-- DCAT-AP compliance badge -->
-        <div class="footer-compliance">
-          <span v-if="complianceScore === 100" class="stat-badge stat-ok">
-            <Icon name="lucide:circle-check" class="size-3" /> DCAT-AP ✓
-          </span>
-          <span
-            v-else-if="validationResult.errors.filter(e => e.severity === 'error').length > 0"
-            class="stat-badge stat-error"
-          >
-            <Icon name="lucide:circle-x" class="size-3" />
-            {{ validationResult.errors.filter(e => e.severity === 'error').length }} {{ t('jsonld.editor.errors', 'errors') }}
-          </span>
-          <span
-            v-else-if="validationResult.errors.length > 0"
-            class="stat-badge stat-warn"
-          >
-            <Icon name="lucide:triangle-alert" class="size-3" />
-            {{ validationResult.errors.length }} {{ t('jsonld.editor.warnings', 'warnings') }}
-          </span>
-        </div>
-
-        <!-- Right: add button -->
-        <button type="button" class="add-btn-gradient" @click="showAddFieldDialog = true">
-          <Icon name="lucide:plus" class="add-btn-icon size-4" />
-          {{ t('jsonld.editor.addField') }}
-        </button>
-
-        <AddFieldDialog
-          v-model:open="showAddFieldDialog"
-          :existing-keys="treeData.map(n => n.key)"
-          context="dataset"
-          @confirm="handleAddFieldFromFooter"
-        />
-      </div>
-
-      <!-- Validation errors -->
-      <div v-if="validationResult.errors.length > 0" class="validation-block">
-        <div class="validation-header">
-          <Icon name="lucide:shield-alert" class="size-4 text-destructive" />
-          <span class="text-sm font-semibold">{{ t('jsonld.editor.validationErrors') }}</span>
-        </div>
-        <div class="validation-list">
-          <div
-            v-for="(error, index) in validationResult.errors"
-            :key="index"
-            class="validation-item"
-            :class="[
-              error.severity === 'error' ? 'validation-item--error' : 'validation-item--warn',
-              canScrollToError(error.path) ? 'validation-item--navigable' : '',
-            ]"
-            v-bind="canScrollToError(error.path) ? {
-              role: 'button',
-              tabindex: '0',
-              title: t('jsonld.editor.clickToNavigate', 'Click to navigate to field'),
-            } : {}"
-            @click="canScrollToError(error.path) ? scrollToError(error.path) : undefined"
-            @keydown.enter="canScrollToError(error.path) ? scrollToError(error.path) : undefined"
-          >
-            <Icon
-              :name="error.severity === 'error' ? 'lucide:circle-x' : 'lucide:triangle-alert'"
-              class="size-3.5 flex-shrink-0"
-            />
-            <span>{{ error.message }}</span>
-            <Icon
-              v-if="canScrollToError(error.path)"
-              name="lucide:arrow-up-right"
-              class="size-3 ml-auto flex-shrink-0 opacity-40"
-            />
-          </div>
-        </div>
-      </div>
-    </div>  <!-- /editor-footer -->
+      <EditorFooter
+        :current-mode="currentMode"
+        :readonly="readonly"
+        :mandatory-progress="mandatoryProgress"
+        :progress-color-class="progressColorClass"
+        :compliance-score="complianceScore"
+        :validation-errors="validationResult.errors"
+        :show-add-field-dialog="showAddFieldDialog"
+        :tree-data="treeData"
+        :can-scroll-to-error="canScrollToError"
+        @update:show-add-field-dialog="showAddFieldDialog = $event"
+        @confirm-add-field="handleAddFieldFromFooter"
+        @scroll-to-error="scrollToError"
+      />
     </div>  <!-- /jsonld-editor -->
   </TooltipProvider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { EditorMode, JsonLdNode, FieldDefinition } from './types/editor.types';
 import { useJsonLdTransform } from './composables/useJsonLdTransform';
 import { useJsonLdValidation } from './composables/useJsonLdValidation';
 import { useJsonLdSchema } from './composables/useJsonLdSchema';
 import { useDefaultDataset } from './composables/useDefaultDataset';
+import { useSaveIndicator } from './composables/useSaveIndicator';
+import { useErrorNavigation } from './composables/useErrorNavigation';
+import { useMandatoryProgress } from './composables/useMandatoryProgress';
 import { DCAT_AP_CONTEXT } from './dcatApContext';
 import VisualEditor from './VisualEditor.vue';
 import CodeEditor from './CodeEditor.vue';
-import AddFieldDialog from './components/AddFieldDialog.vue';
+import EditorHeader from './components/EditorHeader.vue';
+import EditorFooter from './components/EditorFooter.vue';
 
 interface Props {
   modelValue: string | Record<string, unknown>;
@@ -232,26 +100,19 @@ const props = withDefaults(defineProps<Props>(), {
   enforceClientAccessUrl: true,
 });
 
-const { t } = useI18n();
-
 const emit = defineEmits<{
   'update:modelValue': [value: string | Record<string, unknown>];
 }>();
 
-// ── Auto-save indicator ─────────────────────────────────────────
-const saveStatus = ref<'idle' | 'saving' | 'saved'>('idle');
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-const triggerSaveIndicator = () => {
-  saveStatus.value = 'saving';
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    saveStatus.value = 'saved';
-    saveTimer = setTimeout(() => { saveStatus.value = 'idle'; }, 2500);
-  }, 400);
+const { saveStatus, triggerSaveIndicator } = useSaveIndicator();
+const nodeIdCounter = ref(0);
+const makeNodeId = () => {
+  nodeIdCounter.value += 1;
+  return `node_${nodeIdCounter.value}`;
 };
-onUnmounted(() => { if (saveTimer) clearTimeout(saveTimer); });
 
-const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } = useJsonLdTransform();
+const { parseJsonLd, serializeJsonLd, parseJsonLdToTree, createDefaultNode } =
+  useJsonLdTransform({ idFactory: makeNodeId });
 const { validateTree } = useJsonLdValidation();
 const { buildDefaultDatasetTree, isEmptyDataset, mergeDatasetTreeWithDefaults } = useDefaultDataset();
 const { distributionSchema } = useJsonLdSchema();
@@ -266,6 +127,9 @@ const isInternalUpdate = ref(false);
 // Track last serialized value emitted internally so we can detect external vs internal updates
 let lastEmittedValue: string = '';
 const showAddFieldDialog = ref(false);
+const { canScrollToError, scrollToError } = useErrorNavigation(editorContentRef);
+const { mandatoryProgress, complianceScore, progressColorClass } =
+  useMandatoryProgress(treeData);
 
 // ── Keyboard shortcut: press 'A' to open Add Field dialog ──────
 const handleKeydown = (e: KeyboardEvent) => {
@@ -282,66 +146,6 @@ const handleKeydown = (e: KeyboardEvent) => {
 };
 onMounted(() => window.addEventListener('keydown', handleKeydown));
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
-
-const findErrorEl = (errorPath: string): Element | null => {
-  const root = editorContentRef.value;
-  if (!root) return null;
-  const candidates: string[] = [];
-  let path = errorPath;
-  while (path) {
-    candidates.push(path);
-    const dot = path.lastIndexOf('.');
-    path = dot > -1 ? path.slice(0, dot) : '';
-  }
-  const allNodes = Array.from(root.querySelectorAll('[data-node-path]'));
-  for (const candidate of candidates) {
-    const el = allNodes.find(n => n.getAttribute('data-node-path') === candidate);
-    if (el) return el;
-  }
-  return null;
-};
-
-const canScrollToError = (errorPath: string): boolean => !!findErrorEl(errorPath);
-
-const scrollToError = (errorPath: string) => {
-  const el = findErrorEl(errorPath);
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  el.dispatchEvent(new CustomEvent('flash-field', { bubbles: false }));
-};
-
-// ── Mandatory progress (replaces old complianceScore) ────────────────────
-const isNodeFilled = (n: JsonLdNode): boolean => {
-  if (n.value === undefined || n.value === null || n.value === '') {
-    return !!(n.children?.length);
-  }
-  if (typeof n.value === 'object' && !Array.isArray(n.value)) {
-    const v = n.value as Record<string, unknown>;
-    if ('@value' in v) return v['@value'] !== '' && v['@value'] !== undefined;
-  }
-  return true;
-};
-
-const mandatoryNodes = computed(() =>
-  treeData.value.filter(n => n.metadata.dcatApCompliance === 'mandatory' && !n.metadata.hidden && !n.metadata.readonly),
-);
-
-const mandatoryProgress = computed(() => {
-  const total = mandatoryNodes.value.length;
-  const filled = mandatoryNodes.value.filter(isNodeFilled).length;
-  const pct = total === 0 ? 100 : Math.round((filled / total) * 100);
-  return { total, filled, pct };
-});
-
-// Keep complianceScore for template badges
-const complianceScore = computed(() => mandatoryProgress.value.pct);
-
-const progressColorClass = computed(() => {
-  const pct = mandatoryProgress.value.pct;
-  if (pct === 100) return 'progress--green';
-  if (pct >= 60)  return 'progress--amber';
-  return 'progress--red';
-});
 
 const nodeHasValue = (n: JsonLdNode): boolean => {
   if (n.value !== undefined && n.value !== null && n.value !== '') return true;
@@ -426,7 +230,6 @@ watch(() => props.contentFromFile, () => {
 // add/replace the dspace:extraMetadata node directly in the current tree
 // WITHOUT triggering a full re-parse (which would reset DCAT fields).
 watch(() => props.extraMetadata, (newExtra) => {
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
 
   if (!newExtra || newExtra.length === 0) {
@@ -448,7 +251,7 @@ watch(() => props.extraMetadata, (newExtra) => {
     const parsed = parseJsonLdToTree(item as Record<string, unknown>);
     setReadonlyFromMmioRecursive(parsed);
     return {
-      id: makeId(),
+      id: makeNodeId(),
       key: `[${index}]`,
       type: 'object' as const,
       children: parsed,
@@ -463,7 +266,7 @@ watch(() => props.extraMetadata, (newExtra) => {
     };
   });
   const extraNode = {
-    id: makeId(),
+    id: makeNodeId(),
     key: 'dspace:extraMetadata',
     type: 'array' as const,
     children: extraChildren,
@@ -591,8 +394,6 @@ const handleCodeUpdate = (newCode: string) => {
   }
 };
 const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
   const isObject = fieldDef.type === 'object';
   const isArray  = fieldDef.type === 'array';
 
@@ -608,7 +409,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
       : (fieldDef.children ?? {});
     const children = Object.values(childSchema).map(childDef => createDefaultNode(childDef));
     return {
-      id: makeId(),
+      id: makeNodeId(),
       key: '[0]',
       type: 'object',
       children,
@@ -617,7 +418,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   };
 
   const newNode: JsonLdNode = {
-    id: makeId(),
+    id: makeNodeId(),
     key: fieldDef.key,
     type: fieldDef.type,
     value: (isObject || isArray) ? undefined : '',

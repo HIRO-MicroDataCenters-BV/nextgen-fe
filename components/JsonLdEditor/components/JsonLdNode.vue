@@ -140,14 +140,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { jsonldFieldsEn } from '../../../i18n/jsonld-fields';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useJsonLdTransform } from '../composables/useJsonLdTransform';
 import { useJsonLdSchema } from '../composables/useJsonLdSchema';
+import { useJsonLdNodeMeta } from '../composables/useJsonLdNodeMeta';
+import { useJsonLdNodeActions } from '../composables/useJsonLdNodeActions';
+import { useJsonLdNodeEffects } from '../composables/useJsonLdNodeEffects';
 
 
 interface Props {
@@ -174,234 +176,56 @@ const emit = defineEmits<{
 const { t } = useI18n();
 const { createDefaultNode } = useJsonLdTransform();
 const { getFieldDefinition, distributionSchema } = useJsonLdSchema();
-
-// Direct lookup from the i18n source — avoids te() issues with colon-containing keys
-type FieldKey = keyof typeof jsonldFieldsEn;
-const fieldI18n = computed(() => jsonldFieldsEn[props.node.key as FieldKey] ?? null);
-
-// ── Label, description, icon ───────────────────────────────────
-const fieldLabel = computed(() => {
-  if (fieldI18n.value?.label) return fieldI18n.value.label;
-  if (props.node.metadata.label) return props.node.metadata.label;
-  // Humanize raw key as last resort: "dcterms:title" → "Title"
-  const raw = props.node.key.split(':').pop() || props.node.key;
-  return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/([A-Z])/g, ' $1');
+const {
+  fieldLabel,
+  fieldDescription,
+  fieldIconName,
+  hasChildren,
+  visibleChildren,
+  currentPath,
+  isFromMmio,
+  isFromFile,
+  effectiveReadonly,
+  fieldErrors,
+  hasValue,
+  isDcatMandatory,
+  showCharCount,
+  charCount,
+  charCountMax,
+  charCountClass,
+  canRemoveNode,
+} = useJsonLdNodeMeta({
+  node: toRef(props, 'node'),
+  nodePath: toRef(props, 'nodePath'),
+  readonly: toRef(props, 'readonly'),
+  depth: toRef(props, 'depth'),
+  validationErrors: toRef(props, 'validationErrors'),
 });
-
-// Fallback descriptions for JSON-LD meta-keys that have no schema description
-const META_KEY_DESCRIPTIONS: Record<string, string> = {
-  '@value':    'The text value of this field',
-  '@id':       'Unique identifier (URI)',
-  '@language': 'Language code, e.g. en, nl, de',
-  '@type':     'The type of this resource',
-};
-
-const fieldDescription = computed(() =>
-  fieldI18n.value?.description ||
-  props.node.metadata.description ||
-  META_KEY_DESCRIPTIONS[props.node.key] ||
-  null,
-);
-
-// ── Icon (schema-driven, propagated via node.metadata.icon) ────
-const fieldIconName = computed(() =>
-  props.node.metadata.icon ?? 'lucide:circle-dot',
-);
-
-// ── Children ───────────────────────────────────────────────────
-const hasChildren = computed(() =>
-  Array.isArray(props.node.children) &&
-  (props.node.children.length > 0 || props.node.type === 'object' || props.node.type === 'array'),
-);
-
-const visibleChildren = computed(() =>
-  (props.node.children ?? []).filter(c => !c.metadata.hidden),
-);
+const {
+  handleFieldUpdate,
+  handleChildUpdate,
+  handleChildRemove,
+  handleRemove,
+  handleAddArrayItem,
+} = useJsonLdNodeActions({
+  node: toRef(props, 'node'),
+  emitUpdate: (node) => emit('update', node),
+  emitRemove: (nodeId) => emit('remove', nodeId),
+  getFieldDefinition,
+  distributionSchema,
+  createDefaultNode,
+});
+const { nodeRef, isFlashing, isNewlyAdded, flashHighlight } = useJsonLdNodeEffects({
+  node: toRef(props, 'node'),
+  emitUpdate: (node) => emit('update', node),
+});
 
 const isExpanded = ref(true);
 const toggleExpand = () => { isExpanded.value = !isExpanded.value; };
 
 // ── Validation ─────────────────────────────────────────────────
-const currentPath = computed(() =>
-  props.nodePath ? `${props.nodePath}.${props.node.key}` : props.node.key,
-);
-// Fields from MMIO extraMetadata section are always readonly
-const isFromMmio = computed(() =>
-  currentPath.value === 'dspace:extraMetadata' || currentPath.value.startsWith('dspace:extraMetadata.')
-);
-// Fields marked as loaded from a file (readonly until file is removed)
-const isFromFile = computed(() => (props.node.metadata as unknown as Record<string, unknown>).fromFile === true);
-// Effective readonly: either from MMIO section, or from file load, or prop
-const effectiveReadonly = computed(() => props.readonly || isFromMmio.value || isFromFile.value);
-const fieldErrors = computed(() =>
-  props.validationErrors.filter(e => e.path === currentPath.value),
-);
-const hasValue = computed(() => {
-  const v = props.node.value;
-  if (v === undefined || v === null || v === '') return false;
-  // language-string object: { '@value': '', '@language': 'en' }
-  if (typeof v === 'object' && !Array.isArray(v)) {
-    const obj = v as Record<string, unknown>;
-    if ('@value' in obj) return obj['@value'] !== '' && obj['@value'] !== undefined && obj['@value'] !== null;
-  }
-  return true;
-});
-
-const isDcatMandatory = computed(
-  () => props.node.metadata.dcatApCompliance === 'mandatory',
-);
-
-// ── Char counter ─────────────────────────────────────────────────────────────
-
-
-// Which types show a char counter?
-const TEXT_TYPES = new Set(['string', 'language-string', 'uri']);
-// These uri-type keys have dedicated format inputs — no char counter needed
-const NO_CHAR_COUNT_KEYS = new Set([
-  'vcard:hasEmail', 'vcard:hasTelephone', 'foaf:homepage',
-  'dcat:landingPage', 'foaf:page', 'schema:url', 'vcard:hasURL',
-]);
-const charCountMax = computed(() => {
-  if (props.node.key === 'dcterms:description') return 500;
-  if (props.node.key === 'dcterms:title') return 120;
-  return null;
-});
-const showCharCount = computed(() =>
-  charCountMax.value !== null &&
-  TEXT_TYPES.has(props.node.type) &&
-  !NO_CHAR_COUNT_KEYS.has(props.node.key) &&
-  !props.node.metadata.readonly,
-);
-
-const charCount = computed(() => {
-  const v = props.node.value;
-  if (!v) return 0;
-  if (typeof v === 'string') return v.length;
-  if (typeof v === 'object' && !Array.isArray(v)) {
-    const obj = v as Record<string, unknown>;
-    return typeof obj['@value'] === 'string' ? (obj['@value'] as string).length : 0;
-  }
-  return 0;
-});
-
-const charCountClass = computed(() => {
-  const max = charCountMax.value;
-  if (!max) return '';
-  if (charCount.value > max) return 'char-counter--danger';
-  if (charCount.value > max * 0.85) return 'char-counter--warn';
-  return '';
-});
-const canRemoveNode = computed(() =>
-  props.node.metadata.dcatApCompliance !== 'mandatory' && props.depth === 0,
-);
-
-// ── Flash highlight (triggered externally via scrollToError) ───
-const isFlashing = ref(false);
-
-const flashHighlight = () => {
-  isFlashing.value = true;
-  setTimeout(() => { isFlashing.value = false; }, 1400);
-};
-
 defineExpose({ flashHighlight, currentPath });
 
-// ── New-highlight ──────────────────────────────────────────────
-const nodeRef = ref<HTMLElement | null>(null);
-const isNewlyAdded = ref(false);
-
-// Listen for flash-field DOM event dispatched by scrollToError in index.vue
-onMounted(() => {
-  nodeRef.value?.addEventListener('flash-field', flashHighlight);
-});
-onUnmounted(() => {
-  nodeRef.value?.removeEventListener('flash-field', flashHighlight);
-});
-
-watch(
-  () => props.node.metadata.isNew,
-  (isNew) => {
-    if (!isNew) return;
-    isNewlyAdded.value = true;
-    setTimeout(() => nodeRef.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
-    setTimeout(() => {
-      isNewlyAdded.value = false;
-      emit('update', { ...props.node, metadata: { ...props.node.metadata, isNew: false } });
-    }, 2500);
-  },
-  { immediate: true },
-);
-
-// ── Handlers ───────────────────────────────────────────────────
-const handleFieldUpdate = (value: unknown) => emit('update', { ...props.node, value });
-
-const handleChildUpdate = (updatedChild: JsonLdNodeType) => {
-  if (!props.node.children) return;
-  emit('update', {
-    ...props.node,
-    children: props.node.children.map(c => c.id === updatedChild.id ? updatedChild : c),
-  });
-};
-
-const handleChildRemove = (childId: string) => {
-  if (!props.node.children) return;
-  emit('update', {
-    ...props.node,
-    children: props.node.children.filter(c => c.id !== childId),
-  });
-};
-
-const handleRemove = () => emit('remove', props.node.id);
-
-const handleAddArrayItem = () => {
-  if (props.node.type !== 'array') return;
-
-  const makeId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  // Deep-clone a node tree, resetting all values to empty
-  const deepCloneEmpty = (src: JsonLdNodeType): JsonLdNodeType => ({
-    ...src,
-    id: makeId(),
-    value: src.children ? undefined : (src.metadata.defaultValue ?? ''),
-    children: src.children?.map(deepCloneEmpty),
-    metadata: { ...src.metadata, isNew: false },
-  });
-
-  let newItem: JsonLdNodeType;
-  const existingItems = props.node.children ?? [];
-  const nextIndex = existingItems.length;
-
-  if (existingItems.length > 0) {
-    const firstItem = existingItems[0];
-    if (!firstItem) return;
-    // Clone structure of first item, reset values
-    newItem = deepCloneEmpty(firstItem);
-    newItem.key = `[${nextIndex}]`;
-    newItem.metadata = { ...newItem.metadata, isNew: true };
-  } else {
-    // No existing items — build children from the schema definition
-    const fieldDef = getFieldDefinition(props.node.key);
-
-    let schemaChildren: JsonLdNodeType[];
-    if (fieldDef?.distributionContext) {
-      // dcat:distribution uses the distributionSchema, not fieldDef.children
-      schemaChildren = Object.values(distributionSchema).map(childDef => createDefaultNode(childDef));
-    } else if (fieldDef?.children) {
-      schemaChildren = Object.values(fieldDef.children).map(childDef => createDefaultNode(childDef));
-    } else {
-      schemaChildren = [];
-    }
-
-    newItem = {
-      id: makeId(),
-      key: `[${nextIndex}]`,
-      type: 'object',
-      children: schemaChildren,
-      metadata: { required: false, readonly: false, repeatable: false, isNew: true },
-    };
-  }
-
-  emit('update', { ...props.node, children: [...existingItems, newItem] });
-};
 </script>
 
 <style scoped>

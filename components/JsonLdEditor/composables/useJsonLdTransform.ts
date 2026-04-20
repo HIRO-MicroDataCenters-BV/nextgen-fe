@@ -4,14 +4,15 @@ import { useIdGenerator } from '@/composables/useIdGenerator';
 import { normalizeDctermsLanguageLiteral } from '@/utils/jsonld';
 
 export type SerializeTreeOptions = { omitEmpty?: boolean };
+type IdFactory = () => string;
 
-export function useJsonLdTransform() {
+export function useJsonLdTransform(options?: { idFactory?: IdFactory }) {
     const { getFieldDefinition, distributionSchema } = useJsonLdSchema();
     const { generateDatasetId, generateDistributionId } = useIdGenerator();
 
-    const generateId = (): string => {
-        return `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    };
+    const generateId: IdFactory =
+        options?.idFactory ??
+        (() => `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
     // Create an empty default node for a FieldDefinition (for hydrating missing schema fields)
     const createDefaultNode = (def: FieldDefinition): JsonLdNode => ({
