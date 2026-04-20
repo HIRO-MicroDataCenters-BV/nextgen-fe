@@ -44,6 +44,7 @@ https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunit
 ### Marketplace & search
 
 - Browse and filter datasets from the **search** service, dataset detail views, and **checkout** flow (order id / status) via configured checkout API.
+- Table/search state is synced with URL query params. On reload, malformed or object-shaped `filters` params are now handled safely (no server crash on `.find()` for non-array values).
 
 ### Auth & shell
 
@@ -62,8 +63,6 @@ https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunit
 | JSON-LD | `jsonld` package + custom parse/serialize tree (`useJsonLdTransform`) |
 | HTTP | Native `fetch` via `useApi` (catalog / search / connector bases) |
 | Dates | Day.js (Nuxt module) |
-
----
 
 ## Configuration
 
@@ -112,6 +111,12 @@ See [Nuxt deployment](https://nuxt.com/docs/getting-started/deployment).
 ```bash
 pnpm lint
 pnpm lint:fix
+```
+
+## Typecheck
+
+```bash
+pnpm typecheck
 ```
 
 ---
