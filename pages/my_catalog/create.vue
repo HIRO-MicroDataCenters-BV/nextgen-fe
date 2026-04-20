@@ -30,12 +30,12 @@
 import { ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import * as z from "zod";
-import type { FormFieldDefinition } from "@/components/app/Form.vue";
 import { createDatasetJsonLd } from "@/utils/jsonld";
 import { hasMetadataItemTypeMismatch } from "@/utils/metadataItemTypeConsistency";
 import { useDefaultDataset } from "@/components/JsonLdEditor/composables/useDefaultDataset";
 import type { ApiErrorDetail } from "~/types/api.types";
 import { useCatalogSubmit } from "~/composables/catalog/useCatalogSubmit";
+import { useCatalogFormFields } from "~/composables/catalog/useCatalogFormFields";
 
 const { t } = useI18n();
 const { saveDataset, getDataproducts } = useApi();
@@ -95,72 +95,13 @@ const initialValues = {
   metadata_content: buildDefaultMetadataContentObject(),
 };
 
-const fields = computed<FormFieldDefinition[]>(() => [
-  {
-    name: "name",
-    label: t("label.name"),
-    type: "text",
-    placeholder: t("placeholder.name_from_metadata"),
-    disabled: true,
-  },
-  {
-    name: "item_type",
-    label: t("label.item_type"),
-    type: "select",
-    placeholder: t("placeholder.select_data_product_directory"),
-    options: [
-      { label: t("label.dataset"), value: "dataset" },
-      { label: t("label.application"), value: "application" },
-    ],
-    disabled: false,
-  },
-  {
-    name: "client_selector",
-    label: "",
-    type: "client-selector",
-    conditions: [
-      {
-        field: "item_type",
-        value: "dataset",
-      },
-    ],
-  },
-  {
-    name: "related_data_product",
-    label: t("label.related_data_product"),
-    type: "select",
-    placeholder: t("placeholder.select_data_product"),
-    dataSource: getDataproductsForClient,
-    fieldOptions: {
-      dataPath: "dataproducts",
-    },
-    hint: t("hint.related_data_product_required"),
-    disabled: false,
-    conditions: [
-      {
-        field: "item_type",
-        value: "dataset",
-      },
-    ],
-  },
-  {
-    name: "file",
-    label: t("label.file"),
-    type: "file",
-    placeholder: t("placeholder.select_file"),
-    hint: t("hint.accepted_file_types_json_jar"),
-    accept: "application/json, application/x-tar",
-    disabled: false,
-  },
-  {
-    name: "metadata_content",
-    label: t("label.metadata_content"),
-    type: "jsonld-editor",
-    placeholder: t("placeholder.enter_metadata_content"),
-    hint: null,
-    disabled: false,
-  },
-]);
+const fields = computed(() =>
+  useCatalogFormFields({
+    t,
+    mode: "create",
+    getDataproductsForClient,
+  }),
+);
 
 const onChangeFile = (_file: File) => {
   // File changed
