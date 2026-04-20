@@ -140,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef } from 'vue';
+import { ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';

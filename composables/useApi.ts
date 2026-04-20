@@ -17,7 +17,6 @@ import {
 } from "~/schemas/catalog.schema";
 import {
   createApiRequest,
-  type ApiService,
   type RequestError,
 } from "~/composables/api/createApiRequest";
 
