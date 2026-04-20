@@ -34,6 +34,13 @@ interface UseTableStateSyncOptions {
 export const useTableStateSync = (options: UseTableStateSyncOptions) => {
   let fetchDataTimeout: ReturnType<typeof setTimeout> | null = null;
   let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+  const parseQueryJson = (value: string) => {
+    try {
+      return JSON.parse(decodeURIComponent(value));
+    } catch {
+      return null;
+    }
+  };
 
   watch(
     () => options.route.query,
@@ -60,7 +67,10 @@ export const useTableStateSync = (options: UseTableStateSyncOptions) => {
 
         if (newQuery.filters && typeof newQuery.filters === "string") {
           try {
-            const parsedFilters = JSON.parse(decodeURIComponent(newQuery.filters));
+            const parsedFilters = parseQueryJson(newQuery.filters);
+            if (!parsedFilters || typeof parsedFilters !== "object") {
+              throw new Error("Invalid filters query payload");
+            }
             options.selectedFilters.value = parsedFilters;
             nextTick(() => {
               nextTick(() => {
@@ -85,9 +95,10 @@ export const useTableStateSync = (options: UseTableStateSyncOptions) => {
         }
 
         if (newQuery.filters && typeof newQuery.filters === "string") {
-          options.columnFilters.value = JSON.parse(
-            decodeURIComponent(newQuery.filters),
-          );
+          const parsedColumnFilters = parseQueryJson(newQuery.filters);
+          options.columnFilters.value = Array.isArray(parsedColumnFilters)
+            ? parsedColumnFilters
+            : [];
           const searchFilter = options.columnFilters.value.find(
             (filter) => filter.id === "search",
           );
