@@ -14,52 +14,60 @@ export const useCatalogFormFields = ({
   t,
   mode,
   getDataproductsForClient,
-}: UseCatalogFormFieldsOptions) => {
+}: UseCatalogFormFieldsOptions): FormFieldDefinition[] => {
   const isEdit = mode === "edit";
 
+  const itemTypeField: FormFieldDefinition = {
+    name: "item_type",
+    label: t("label.item_type"),
+    type: "select",
+    placeholder: t("placeholder.select_data_product_directory"),
+    options: [
+      { label: t("label.dataset"), value: "dataset" },
+      { label: t("label.application"), value: "application" },
+    ],
+    disabled: isEdit,
+  };
+
+  const relatedDataProductField: FormFieldDefinition = {
+    name: "related_data_product",
+    label: t("label.related_data_product"),
+    type: "select",
+    placeholder: t("placeholder.select_data_product"),
+    dataSource: isEdit
+      ? async () => ({ dataproducts: [] as string[] })
+      : getDataproductsForClient,
+    fieldOptions: {
+      dataPath: "dataproducts",
+    },
+    hint: isEdit ? null : t("hint.related_data_product_required"),
+    disabled: isEdit,
+    conditions: datasetCondition,
+  };
+
+  const fileField: FormFieldDefinition = {
+    name: "file",
+    label: t("label.file"),
+    type: "file",
+    placeholder: t("placeholder.select_file"),
+    hint: t("hint.accepted_file_types_json_jar"),
+    accept: "application/json, application/x-tar",
+    disabled: isEdit,
+  };
+
+  const metadataField: FormFieldDefinition = {
+    name: "metadata_content",
+    label: t("label.metadata_content"),
+    type: "jsonld-editor",
+    placeholder: t("placeholder.enter_metadata_content"),
+    hint: null,
+  };
+
   const baseFields: FormFieldDefinition[] = [
-    {
-      name: "item_type",
-      label: t("label.item_type"),
-      type: "select",
-      placeholder: t("placeholder.select_data_product_directory"),
-      options: [
-        { label: t("label.dataset"), value: "dataset" },
-        { label: t("label.application"), value: "application" },
-      ],
-      disabled: isEdit,
-    },
-    {
-      name: "related_data_product",
-      label: t("label.related_data_product"),
-      type: "select",
-      placeholder: t("placeholder.select_data_product"),
-      dataSource: isEdit
-        ? async () => ({ dataproducts: [] as string[] })
-        : getDataproductsForClient,
-      fieldOptions: {
-        dataPath: "dataproducts",
-      },
-      hint: isEdit ? null : t("hint.related_data_product_required"),
-      disabled: isEdit,
-      conditions: datasetCondition,
-    },
-    {
-      name: "file",
-      label: t("label.file"),
-      type: "file",
-      placeholder: t("placeholder.select_file"),
-      hint: t("hint.accepted_file_types_json_jar"),
-      accept: "application/json, application/x-tar",
-      disabled: isEdit,
-    },
-    {
-      name: "metadata_content",
-      label: t("label.metadata_content"),
-      type: "jsonld-editor",
-      placeholder: t("placeholder.enter_metadata_content"),
-      hint: null,
-    },
+    itemTypeField,
+    relatedDataProductField,
+    fileField,
+    metadataField,
   ];
 
   if (!isEdit) {
@@ -71,7 +79,7 @@ export const useCatalogFormFields = ({
         placeholder: t("placeholder.name_from_metadata"),
         disabled: true,
       },
-      baseFields[0],
+      itemTypeField,
       {
         name: "client_selector",
         label: "",
