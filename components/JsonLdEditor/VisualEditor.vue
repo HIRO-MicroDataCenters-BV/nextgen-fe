@@ -192,8 +192,37 @@ const categoryEmoji: Record<string, string> = {
 };
 
 // ── Node filtering & grouping ──────────────────────────────────
+const hasMeaningfulValue = (node: JsonLdNodeType): boolean => {
+  if (node.children && node.children.length > 0) {
+    return node.children.some(hasMeaningfulValue);
+  }
+
+  const value = node.value;
+  if (value === null || value === undefined || value === '') return false;
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    if ('@value' in obj) {
+      const v = obj['@value'];
+      return v !== null && v !== undefined && String(v).trim() !== '';
+    }
+    return Object.keys(obj).length > 0;
+  }
+
+  return true;
+};
+
 const visibleNodes = computed(() =>
-  props.modelValue.filter(n => !n.metadata.hidden && !n.metadata.readonly),
+  props.modelValue.filter((node) => {
+    if (node.metadata.hidden) return false;
+    // In read-only mode show only populated fields.
+    if (props.readonly) return hasMeaningfulValue(node);
+    return true;
+  }),
 );
 
 const groupedNodes = computed(() => {
