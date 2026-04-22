@@ -51,7 +51,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { EditorMode, JsonLdNode, FieldDefinition } from './types/editor.types';
 import { useJsonLdTransform } from './composables/useJsonLdTransform';
@@ -61,7 +61,9 @@ import { useDefaultDataset } from './composables/useDefaultDataset';
 import { useSaveIndicator } from './composables/useSaveIndicator';
 import { useErrorNavigation } from './composables/useErrorNavigation';
 import { useMandatoryProgress } from './composables/useMandatoryProgress';
-import { DCAT_AP_CONTEXT } from './dcatApContext';
+import { useJsonLdTreeInitialization } from './composables/useJsonLdTreeInitialization';
+import { useJsonLdExtraMetadata } from './composables/useJsonLdExtraMetadata';
+import { useJsonLdSynchronization } from './composables/useJsonLdSynchronization';
 import VisualEditor from './VisualEditor.vue';
 import CodeEditor from './CodeEditor.vue';
 import EditorHeader from './components/EditorHeader.vue';
@@ -124,12 +126,16 @@ const codeData = ref<string>('');
 const preservedContext = ref<Record<string, string>>();
 const editorContentRef = ref<HTMLElement | null>(null);
 const isInternalUpdate = ref(false);
-// Track last serialized value emitted internally so we can detect external vs internal updates
-let lastEmittedValue: string = '';
+// Track last serialized value emitted internally so we can detect external vs internal updates.
+const lastEmittedValueRef = ref('');
 const showAddFieldDialog = ref(false);
 const { canScrollToError, scrollToError } = useErrorNavigation(editorContentRef);
 const { mandatoryProgress, complianceScore, progressColorClass } =
   useMandatoryProgress(treeData);
+
+const modelValueRef = computed(() => props.modelValue);
+const contentFromFileRef = computed(() => Boolean(props.contentFromFile));
+const extraMetadataRef = computed(() => props.extraMetadata);
 
 // ── Keyboard shortcut: press 'A' to open Add Field dialog ──────
 const handleKeydown = (e: KeyboardEvent) => {
@@ -147,142 +153,25 @@ const handleKeydown = (e: KeyboardEvent) => {
 onMounted(() => window.addEventListener('keydown', handleKeydown));
 onUnmounted(() => window.removeEventListener('keydown', handleKeydown));
 
-const nodeHasValue = (n: JsonLdNode): boolean => {
-  if (n.value !== undefined && n.value !== null && n.value !== '') return true;
-  if (n.children?.length) return n.children.some(nodeHasValue);
-  return false;
-};
-
-const markFileNodesRecursive = (nodes: JsonLdNode[]): void => {
-  for (const n of nodes) {
-    if (nodeHasValue(n)) {
-      // Use a dedicated 'fromFile' flag — do NOT set readonly: true to avoid
-      // triggering the existing "hide readonly/system nodes" logic in the template
-      (n.metadata as unknown as Record<string, unknown>).fromFile = true;
-    }
-    if (n.children?.length) markFileNodesRecursive(n.children);
-  }
-};
-
-/**
- * After parseJsonLd: if the payload has no visible fields (e.g. only @context because
- * serializeTreeToJsonLd omits empty values), restore the DCAT default form — same as
- * initial load. Used from parseInitialData and when switching code → visual.
- */
-const applyParsedTree = (
-  tree: JsonLdNode[],
-  context: Record<string, string> | undefined,
-) => {
-  if (isEmptyDataset(tree)) {
-    const hiddenNodes = tree.filter(n => n.metadata.hidden || n.metadata.readonly);
-    const defaultTree = buildDefaultDatasetTree();
-    treeData.value = [...defaultTree, ...hiddenNodes];
-  } else {
-    let next = tree;
-    if (!props.contentFromFile) {
-      next = mergeDatasetTreeWithDefaults(tree);
-    }
-    if (props.contentFromFile) {
-      markFileNodesRecursive(next);
-    }
-    treeData.value = next;
-  }
-  preservedContext.value = context
-    ? { ...DCAT_AP_CONTEXT, ...context }
-    : { ...DCAT_AP_CONTEXT };
-};
-
-const parseInitialData = () => {
-  try {
-    const { tree, context } = parseJsonLd(props.modelValue);
-    applyParsedTree(tree, context);
-
-    if (typeof props.modelValue === 'string') {
-      codeData.value = props.modelValue;
-    } else {
-      codeData.value = JSON.stringify(props.modelValue, null, 2);
-    }
-  } catch (error) {
-    console.error('Failed to parse JSON-LD:', error);
-    treeData.value = buildDefaultDatasetTree();
-    preservedContext.value = { ...DCAT_AP_CONTEXT };
-    codeData.value = typeof props.modelValue === 'string' ? props.modelValue : '';
-  }
-};
-
-parseInitialData();
-
-watch(() => props.modelValue, (newVal) => {
-  // Skip if the incoming value matches what we last emitted internally (prevents loops)
-  const incomingStr = typeof newVal === 'string' ? newVal : JSON.stringify(newVal);
-  if (lastEmittedValue && incomingStr === lastEmittedValue) {
-    return;
-  }
-  parseInitialData();
-}, { deep: true });
-
-// When file is removed (contentFromFile goes false→true or true→false), re-parse
-watch(() => props.contentFromFile, () => {
-  parseInitialData();
+const { applyParsedTree } = useJsonLdTreeInitialization({
+  modelValue: modelValueRef,
+  contentFromFile: contentFromFileRef,
+  parseJsonLd,
+  buildDefaultDatasetTree,
+  isEmptyDataset,
+  mergeDatasetTreeWithDefaults,
+  treeData,
+  codeData,
+  preservedContext,
+  lastEmittedValueRef,
 });
 
-// When extraMetadata is injected from outside (e.g. after MMIO file upload),
-// add/replace the dspace:extraMetadata node directly in the current tree
-// WITHOUT triggering a full re-parse (which would reset DCAT fields).
-watch(() => props.extraMetadata, (newExtra) => {
-  const treeWithoutExtra = treeData.value.filter(n => n.key !== 'dspace:extraMetadata');
-
-  if (!newExtra || newExtra.length === 0) {
-    // New file / cleared — remove dspace:extraMetadata, all fields editable again
-    if (treeData.value.length !== treeWithoutExtra.length) {
-      treeData.value = treeWithoutExtra;
-    }
-    return;
-  }
-
-  const setReadonlyFromMmioRecursive = (nodes: JsonLdNode[]): void => {
-    for (const n of nodes) {
-      n.metadata.readonly = true;
-      (n.metadata as unknown as Record<string, unknown>).fromMmio = true;
-      if (n.children?.length) setReadonlyFromMmioRecursive(n.children);
-    }
-  };
-  const extraChildren = newExtra.map((item, index) => {
-    const parsed = parseJsonLdToTree(item as Record<string, unknown>);
-    setReadonlyFromMmioRecursive(parsed);
-    return {
-      id: makeNodeId(),
-      key: `[${index}]`,
-      type: 'object' as const,
-      children: parsed,
-      metadata: {
-        required: false,
-        readonly: true,
-        repeatable: false,
-        hidden: false,
-        label: undefined,
-        fromMmio: true,
-      },
-    };
-  });
-  const extraNode = {
-    id: makeNodeId(),
-    key: 'dspace:extraMetadata',
-    type: 'array' as const,
-    children: extraChildren,
-    metadata: {
-      required: false,
-      readonly: true,
-      repeatable: false,
-      hidden: false,
-      label: 'Extra Metadata (from MMIO)',
-      fromMmio: true,
-    },
-  };
-
-  const mergedTree = [...treeWithoutExtra, extraNode];
-  treeData.value = mergedTree;
-}, { deep: true });
+useJsonLdExtraMetadata({
+  extraMetadata: extraMetadataRef,
+  treeData,
+  parseJsonLdToTree,
+  makeNodeId,
+});
 
 
 const validationResult = computed(() => {
@@ -307,92 +196,20 @@ const validationResult = computed(() => {
   return validateTree(treeData.value, props.itemType, opts);
 });
 
-const toggleMode = (checked: boolean) => {
-  const newMode: EditorMode = checked ? 'code' : 'visual';
-  
-  if (newMode === 'code' && currentMode.value === 'visual') {
-    try {
-      codeData.value = serializeJsonLd(treeData.value, preservedContext.value, 'string') as string;
-    } catch (error) {
-      console.error('Failed to serialize to code:', error);
-    }
-  } else if (newMode === 'visual' && currentMode.value === 'code') {
-    try {
-      const { tree, context } = parseJsonLd(codeData.value);
-      applyParsedTree(tree, context);
-    } catch (error) {
-      console.error('Failed to parse code:', error);
-    }
-  }
-  
-  currentMode.value = newMode;
-};
-
-const updateArrayIndices = (nodes: JsonLdNode[]): JsonLdNode[] => {
-  return nodes.map(node => {
-    if (node.type === 'array' && node.children) {
-      // Update indices for array children
-      const updatedChildren = node.children.map((child, index) => ({
-        ...child,
-        key: `[${index}]`,
-        children: child.children ? updateArrayIndices(child.children) : undefined,
-      }));
-      return {
-        ...node,
-        children: updatedChildren,
-      };
-    } else if (node.children) {
-      // Recursively update children
-      return {
-        ...node,
-        children: updateArrayIndices(node.children),
-      };
-    }
-    return node;
-  });
-};
-
-const handleVisualUpdate = (newTree: JsonLdNode[]) => {
-  triggerSaveIndicator();
-  // Save current scroll position
-  const savedScroll = editorContentRef.value?.scrollTop || 0;
-  
-  // Update array indices
-  const treeWithUpdatedIndices = updateArrayIndices(newTree);
-  
-  treeData.value = treeWithUpdatedIndices;
-  const serialized = serializeJsonLd(treeWithUpdatedIndices, preservedContext.value, 'object') as Record<string, unknown>;
-  
-  // Track what we're emitting so the watcher can skip this update
-  lastEmittedValue = JSON.stringify(serialized);
-  emit('update:modelValue', serialized);
-  
-  // Restore scroll position after DOM update
-  nextTick(() => {
-    if (editorContentRef.value) {
-      editorContentRef.value.scrollTop = savedScroll;
-    }
-  });
-};
-
-const handleCodeUpdate = (newCode: string) => {
-  triggerSaveIndicator();
-  try {
-    const parsed = JSON.parse(newCode) as Record<string, unknown>;
-    // Preserve MMIO extraMetadata: user cannot edit it in code mode — re-inject from props
-    const out = props.extraMetadata?.length
-      ? { ...parsed, 'dspace:extraMetadata': props.extraMetadata }
-      : parsed;
-    const outStr = JSON.stringify(out, null, 2);
-    codeData.value = outStr;
-    lastEmittedValue = outStr;
-    emit('update:modelValue', out);
-  } catch {
-    codeData.value = newCode;
-    lastEmittedValue = newCode;
-    emit('update:modelValue', newCode);
-  }
-};
+const { toggleMode, handleVisualUpdate, handleCodeUpdate } = useJsonLdSynchronization({
+  currentMode,
+  treeData,
+  codeData,
+  preservedContext,
+  editorContentRef,
+  extraMetadata: extraMetadataRef,
+  lastEmittedValueRef,
+  triggerSaveIndicator,
+  parseJsonLd,
+  serializeJsonLd,
+  applyParsedTree,
+  emitModelValue: (value) => emit('update:modelValue', value),
+});
 const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   const isObject = fieldDef.type === 'object';
   const isArray  = fieldDef.type === 'array';
@@ -444,7 +261,7 @@ const handleAddFieldFromFooter = (fieldDef: FieldDefinition) => {
   };
   treeData.value = [...treeData.value, newNode];
   const serialized = serializeJsonLd(treeData.value, preservedContext.value, 'object') as Record<string, unknown>;
-  lastEmittedValue = JSON.stringify(serialized);
+  lastEmittedValueRef.value = JSON.stringify(serialized);
   isInternalUpdate.value = true;
   emit('update:modelValue', serialized);
 };
