@@ -42,12 +42,43 @@ export const useDetailsView = (dayjs: ReturnType<typeof useDayjs>) => {
       isDeleted: "Deleted",
     };
     if (dictionary[key]) return dictionary[key] as string;
-    return key
-      .replaceAll("/", " / ")
-      .replace(/([a-z])([A-Z])/g, "$1 $2")
-      .replaceAll("_", " ")
-      .replaceAll(":", " ")
-      .trim();
+
+    const humanize = (value: string): string =>
+      value
+        .replaceAll("/", " / ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replaceAll("_", " ")
+        .replaceAll(":", " ")
+        .trim();
+
+    // Normalize malformed URI tokens that may come from flattened keys:
+    // e.g. "http//oca.example.org/123/education" -> "http://oca.example.org/123/education".
+    const normalizedKey = key
+      // Flattened key can contain malformed scheme forms like http_//..., http//..., file_//...
+      .replace(
+        /(^|[/.])(https?|file|s3)(?:_|)\/*\/+/gi,
+        (_m, sep: string, scheme: string) => `${sep}${scheme}://`,
+      )
+      // Also handle variants separated by spaces after prior formatting passes.
+      .replace(
+        /(^|[/.])((?:https?|file|s3))\s*\/\/+/gi,
+        (_m, sep: string, scheme: string) => `${sep}${scheme}://`,
+      );
+
+    // Keep URI segments intact (http://..., file://..., s3://...) to avoid
+    // rendering broken labels like "http / / host / ...".
+    const uriMatch = normalizedKey.match(/(https?|file|s3):\/\/\S+/i);
+    if (uriMatch && typeof uriMatch.index === "number") {
+      const uriStart = uriMatch.index;
+      const uriPart = normalizedKey.slice(uriStart);
+      const prefixRaw = normalizedKey
+        .slice(0, uriStart)
+        .replace(/[/.]+$/, "");
+      const prefixLabel = prefixRaw ? humanize(prefixRaw) : "";
+      return prefixLabel ? `${prefixLabel} / ${uriPart}` : uriPart;
+    }
+
+    return humanize(normalizedKey);
   };
 
   const getDisplayValue = (value: unknown): string => {

@@ -814,15 +814,26 @@ function flattenObject(
 
   const entries = Object.entries(obj as Record<string, unknown>);
 
+  const toDisplayPath = (path: string): string =>
+    path
+      .split("/")
+      .map((segment) => {
+        // Keep URI segments intact (e.g. http://oca.example.org/123/education)
+        // so we don't corrupt schemes into http_//...
+        if (segment.includes("://")) return segment;
+        return segment
+          .replace(/[:-]/g, "_")
+          .replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
+      })
+      .join("/");
+
   for (const [key, value] of entries) {
     if (key.startsWith("@")) {
       continue;
     }
 
     const currentPath = prefix ? `${prefix}/${key}` : key;
-    const camelPath = currentPath
-      .replace(/[:-]/g, "_")
-      .replace(/_([a-z])/g, (match, letter) => letter.toUpperCase());
+    const camelPath = toDisplayPath(currentPath);
 
     if (Array.isArray(value)) {
       if (value.length === 0) continue;

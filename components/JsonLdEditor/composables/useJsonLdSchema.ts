@@ -343,7 +343,7 @@ export function useJsonLdSchema() {
             required: false,
             readonly: true,
             repeatable: false,
-            hidden: true, // Auto-managed by the system
+            hidden: false, // Show system-provided date as read-only
             category: 'provenance',
         },
         'dcterms:modified': {
