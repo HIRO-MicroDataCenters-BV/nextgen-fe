@@ -16,19 +16,11 @@
         </div>
 
         <!-- Search -->
-        <div class="panel-search">
-          <Icon name="lucide:search" class="search-icon" />
-          <input
-            ref="searchInput"
-            v-model="searchQuery"
-            class="search-input"
-            type="text"
-            :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
-          >
-          <button v-if="searchQuery" class="clear-btn" type="button" @click="searchQuery = ''">
-            <Icon name="lucide:x" class="size-3.5" />
-          </button>
-        </div>
+        <AddFieldSearchBar
+          v-model="searchQuery"
+          :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
+          ref="searchBarRef"
+        />
 
         <!-- Field groups -->
         <div class="panel-body">
@@ -51,39 +43,13 @@
 
             <!-- Dashboard card grid -->
             <div class="field-grid">
-              <button
+              <AddFieldCard
                 v-for="field in group.fields"
                 :key="field.key"
-                type="button"
-                class="field-card"
-                :class="{ 'field-card--added': isAlreadyAdded(field.key) }"
-                :disabled="isAlreadyAdded(field.key)"
-                @click="selectField(field)"
-              >
-                <!-- Icon circle: always has a background -->
-                <span class="card-icon-wrap" :class="`card-icon--${field.dcatApCompliance ?? 'optional'}`">
-                  <Icon :name="field.icon ?? 'lucide:circle-dot'" class="size-5" />
-                </span>
-
-                <span class="card-body">
-                  <span class="card-name">{{ field.label }}</span>
-                  <span v-if="field.description" class="card-desc">{{ field.description }}</span>
-                </span>
-
-                <!-- Status pill -->
-                <span
-                  v-if="isAlreadyAdded(field.key)"
-                  class="status-pill status-pill--added"
-                >✓ {{ t('jsonld.editor.addFieldDialog.alreadyAdded') }}</span>
-                <span
-                  v-else-if="field.dcatApCompliance === 'mandatory'"
-                  class="status-pill status-pill--mandatory"
-                >{{ t('jsonld.editor.compliance.mandatory') }}</span>
-                <span
-                  v-else-if="field.dcatApCompliance === 'recommended'"
-                  class="status-pill status-pill--recommended"
-                >{{ t('jsonld.editor.compliance.recommended') }}</span>
-              </button>
+                :field="field"
+                :added="isAlreadyAdded(field.key)"
+                @select="selectField(field)"
+              />
             </div>
           </div>
         </div>
@@ -97,6 +63,10 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { FieldDefinition } from '../types/editor.types';
 import { useJsonLdSchema } from '../composables/useJsonLdSchema';
+import { useAddFieldCatalog } from '../composables/useAddFieldCatalog';
+import { ADD_FIELD_CATEGORY_META } from '../constants/addFieldCategories';
+import AddFieldSearchBar from './AddFieldSearchBar.vue';
+import AddFieldCard from './AddFieldCard.vue';
 
 interface Props {
   open: boolean;
@@ -118,7 +88,7 @@ const { t } = useI18n();
 const { getAddableFields } = useJsonLdSchema();
 
 const searchQuery = ref('');
-const searchInput = ref<HTMLInputElement | null>(null);
+const searchBarRef = ref<{ focusInput: () => void } | null>(null);
 
 // Focus search when panel opens
 watch(
@@ -127,48 +97,21 @@ watch(
     if (open) {
       searchQuery.value = '';
       await nextTick();
-      searchInput.value?.focus();
+      searchBarRef.value?.focusInput();
     }
   },
 );
 
 // Category display metadata
-const categoryMeta: Record<string, { emoji: string }> = {
-  identification: { emoji: '🏷️' },
-  provenance:     { emoji: '📅' },
-  coverage:       { emoji: '🌍' },
-  access:         { emoji: '🔑' },
-  distribution:   { emoji: '📦' },
-};
+const categoryMeta = ADD_FIELD_CATEGORY_META;
 
 
-// Category order
-const categoryOrder = ['identification', 'provenance', 'coverage', 'access', 'distribution'];
-
-const allFields = computed(() => getAddableFields(props.context));
-
-const filteredFields = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim();
-  if (!q) return allFields.value;
-  return allFields.value.filter(f =>
-    f.label.toLowerCase().includes(q) ||
-    f.description?.toLowerCase().includes(q) ||
-    f.key.toLowerCase().includes(q),
-  );
+const { filteredGroupedFields, isAlreadyAdded } = useAddFieldCatalog({
+  context: computed(() => props.context),
+  existingKeys: computed(() => props.existingKeys),
+  searchQuery,
+  getAddableFields,
 });
-
-const filteredGroupedFields = computed(() => {
-  const groups: Record<string, FieldDefinition[]> = {};
-  for (const field of filteredFields.value) {
-    const cat = field.category ?? 'other';
-    (groups[cat] ??= []).push(field);
-  }
-  return categoryOrder
-    .filter(cat => groups[cat]?.length)
-    .map(cat => ({ category: cat, fields: groups[cat] }));
-});
-
-const isAlreadyAdded = (key: string) => props.existingKeys.includes(key);
 
 const selectField = (field: FieldDefinition) => {
   if (isAlreadyAdded(field.key)) return;
@@ -272,62 +215,6 @@ const close = () => {
 }
 .close-btn:hover { background: hsl(var(--muted)); color: hsl(var(--foreground)); }
 
-/* ── Search ────────────────────────────────────────────────────  */
-.panel-search {
-  position: relative;
-  padding: 0.875rem 1.5rem;
-  border-bottom: 1px solid hsl(var(--border, 220 13% 88%));
-  box-shadow: var(--sticky-shadow);
-  flex-shrink: 0;
-  background: inherit;
-  z-index: 1;
-}
-
-.search-icon {
-  position: absolute;
-  left: 2.25rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  color: hsl(var(--muted-foreground));
-}
-
-.search-input {
-  width: 100%;
-  height: 40px;
-  padding: 0 2.5rem 0 2.5rem;
-  border-radius: 0.625rem;
-  border: 1.5px solid hsl(var(--border));
-  background: hsl(var(--background));
-  font-size: 0.875rem;
-  color: hsl(var(--foreground));
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.search-input:focus {
-  border-color: hsl(var(--ring));
-  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.1);
-}
-.search-input::placeholder { color: hsl(var(--muted-foreground)); }
-
-.clear-btn {
-  position: absolute;
-  right: 2.25rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px; height: 20px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-}
-.clear-btn:hover { background: hsl(var(--muted)); }
-
 /* ── Body ──────────────────────────────────────────────────────  */
 .panel-body {
   flex: 1;
@@ -376,107 +263,7 @@ const close = () => {
   .field-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Field card ────────────────────────────────────────────────  */
-.field-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.875rem 0.875rem 0.75rem;
-  background: #ffffff;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 0.75rem;
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.18s ease-out,
-              box-shadow   0.18s ease-out,
-              transform    0.18s ease-out;
-  position: relative;
+:root.dark .field-panel {
+  background: #111827;
 }
-
-.field-card:not(.field-card--added):hover {
-  border-color: #9ca3af;
-  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.12),
-              0 2px 10px -2px hsl(var(--primary) / 0.08);
-  transform: translateY(-1px);
-}
-
-.field-card:not(.field-card--added):active {
-  transform: translateY(0);
-}
-
-.field-card--added {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-/* ── Icon wrap ─────────────────────────────────────────────────  */
-.card-icon-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  transition: background 0.25s cubic-bezier(0.4,0,0.2,1), color 0.25s cubic-bezier(0.4,0,0.2,1);
-  /* Solid fallback — always visible regardless of CSS variable resolution */
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.card-icon--mandatory   { background: #fee2e2; color: #b91c1c; }
-.card-icon--recommended { background: #dbeafe; color: #1d4ed8; }
-.card-icon--optional    { background: #f3f4f6; color: #6b7280; }
-
-:root.dark .card-icon--mandatory   { background: #450a0a; color: #fca5a5; }
-:root.dark .card-icon--recommended { background: #1e3a5f; color: #93c5fd; }
-:root.dark .card-icon--optional    { background: #1f2937; color: #9ca3af; }
-:root.dark .field-panel            { background: #111827; }
-:root.dark .field-card             { background: #1f2937; border-color: #374151; }
-
-/* ── Card text ─────────────────────────────────────────────────  */
-.card-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  flex: 1;
-}
-
-.card-name {
-  font-size: 0.83rem;
-  font-weight: 600;
-  color: hsl(var(--foreground));
-  line-height: 1.3;
-}
-
-.card-desc {
-  font-size: 0.72rem;
-  color: hsl(var(--muted-foreground));
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ── Status pills ──────────────────────────────────────────────  */
-.status-pill {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 999px;
-  line-height: 1.6;
-  margin-top: auto;
-}
-
-.status-pill--mandatory   { background: hsl(0 80% 94%);   color: hsl(0 70% 40%); }
-.status-pill--recommended { background: hsl(214 80% 93%); color: hsl(214 70% 38%); }
-.status-pill--added       { background: hsl(142 60% 92%); color: hsl(142 50% 30%); }
-
-:root.dark .status-pill--mandatory   { background: hsl(0 50% 22%);   color: hsl(0 90% 80%); }
-:root.dark .status-pill--recommended { background: hsl(214 50% 22%); color: hsl(214 90% 80%); }
-:root.dark .status-pill--added       { background: hsl(142 40% 18%); color: hsl(142 80% 70%); }
 </style>
