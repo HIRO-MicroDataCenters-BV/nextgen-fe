@@ -17,8 +17,8 @@
 
         <!-- Search -->
         <AddFieldSearchBar
-          v-model="searchQuery"
           ref="searchBarRef"
+          v-model="searchQuery"
           :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
         />
 
