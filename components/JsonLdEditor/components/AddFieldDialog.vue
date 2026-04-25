@@ -18,8 +18,8 @@
         <!-- Search -->
         <AddFieldSearchBar
           v-model="searchQuery"
-          :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
           ref="searchBarRef"
+          :placeholder="t('jsonld.editor.addFieldDialog.searchPlaceholder')"
         />
 
         <!-- Field groups -->
