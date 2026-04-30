@@ -338,6 +338,7 @@ export const useApi = () => {
 
     checkout: async (
       datasets: Array<Record<string, unknown>>,
+      application?: Record<string, unknown> | null,
       options?: { showToast?: boolean }
     ): Promise<{
       order_id: string;
@@ -350,7 +351,7 @@ export const useApi = () => {
           status: string;
         }>("/api/marketplace/checkout", {
           method: "POST",
-          body: { datasets },
+          body: { datasets, application: application ?? null },
         });
         return response;
       } catch (error: unknown) {

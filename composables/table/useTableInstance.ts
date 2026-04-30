@@ -22,6 +22,10 @@ interface UseTableInstanceOptions {
   columnFilters: Ref<Array<{ id: string; value: unknown; column?: string }>>;
   columnVisibility: Ref<Record<string, boolean>>;
   data: Ref<TableRowData[]>;
+  selectedDatasetId: Ref<string | null>;
+  selectedApplicationId: Ref<string | null>;
+  selectedDatasetName: Ref<string | null>;
+  selectedApplicationName: Ref<string | null>;
   t: (key: string) => string;
   updateURLQuery: (replace?: boolean) => void;
   fetchData: () => Promise<void>;
@@ -48,7 +52,10 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
   );
 
   const isSelectionVisible = computed(
-    () => options.selectionEnabled && options.selectedType.value === "datasets",
+    () =>
+      options.selectionEnabled &&
+      (options.selectedType.value === "datasets" ||
+        options.selectedType.value === "applications"),
   );
 
   const table = useVueTable({
@@ -120,6 +127,38 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
     },
   });
 
+  const normalizeSelectionKey = (value: unknown) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase();
+
+  const findRestoredSelectionId = () => {
+    const targetId =
+      options.selectedType.value === "applications"
+        ? options.selectedApplicationId.value
+        : options.selectedDatasetId.value;
+    const targetName =
+      options.selectedType.value === "applications"
+        ? options.selectedApplicationName.value
+        : options.selectedDatasetName.value;
+    const normalizedId = normalizeSelectionKey(targetId);
+    const normalizedName = normalizeSelectionKey(targetName);
+
+    const restoredRow = options.data.value.find((row) => {
+      const rowId = normalizeSelectionKey(row.id);
+      const rowName = normalizeSelectionKey(row.name);
+      const rowTitle = normalizeSelectionKey(row.title);
+
+      return (
+        (!!normalizedId && rowId === normalizedId) ||
+        (!!normalizedName &&
+          (rowName === normalizedName || rowTitle === normalizedName))
+      );
+    });
+
+    return restoredRow ? String(restoredRow.id) : null;
+  };
+
   watch(
     rowSelection,
     () => {
@@ -129,6 +168,28 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
       options.onSelectionChange(ids, rows);
     },
     { deep: true },
+  );
+
+  watch(
+    [
+      () => options.selectedType.value,
+      () => options.data.value,
+      () => options.selectedDatasetId.value,
+      () => options.selectedApplicationId.value,
+      () => options.selectedDatasetName.value,
+      () => options.selectedApplicationName.value,
+    ],
+    () => {
+      const restoredSelectionId = findRestoredSelectionId();
+
+      if (!restoredSelectionId) {
+        rowSelection.value = {};
+        return;
+      }
+
+      rowSelection.value = { [restoredSelectionId]: true };
+    },
+    { immediate: true, deep: true },
   );
 
   const clearSelection = () => {

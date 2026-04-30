@@ -1,6 +1,9 @@
 import { nextTick, ref, shallowRef, type Ref } from "vue";
 import type { TableDataResponse, TableRowData } from "~/types/table.types";
-import { DCMI_TYPE_DATASET, DCMI_TYPE_SOFTWARE } from "~/utils/metadataItemTypeConsistency";
+import {
+  categorizeDctermsTypeId,
+  DCMI_TYPE_DATASET,
+} from "~/utils/metadataItemTypeConsistency";
 
 type SelectedFilterValue = boolean | string | number;
 
@@ -18,14 +21,20 @@ const filterRowsBySelectedType = (rows: TableRowData[], selectedType: string) =>
   if (selectedType === "datasets") {
     return rows.filter((row) => {
       const datasetType = row.datasetType as string | undefined;
-      return !datasetType || datasetType === DCMI_TYPE_DATASET;
+      return (
+        !datasetType ||
+        datasetType === DCMI_TYPE_DATASET ||
+        categorizeDctermsTypeId(datasetType) === "dataset"
+      );
     });
   }
 
   if (selectedType === "applications") {
     return rows.filter((row) => {
       const datasetType = row.datasetType as string | undefined;
-      return datasetType === DCMI_TYPE_SOFTWARE;
+      return datasetType
+        ? categorizeDctermsTypeId(datasetType) === "software"
+        : false;
     });
   }
 

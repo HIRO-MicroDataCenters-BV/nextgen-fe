@@ -10,6 +10,8 @@ interface TableToolbarProps {
   selectedFilterKeys: string[];
   selectedFilters: Record<string, boolean | string | number>;
   filterLabelByKey: Record<string, string>;
+  selectedApplicationName?: string | null;
+  selectedDatasetName?: string | null;
 }
 
 defineProps<TableToolbarProps>();
@@ -24,6 +26,7 @@ const emit = defineEmits<{
     value: boolean | string | number,
     multiple: boolean,
   ): void;
+  (e: "clear-selected-dataset" | "clear-selected-application"): void;
 }>();
 
 const { t } = useI18n();
@@ -64,6 +67,10 @@ const handleSearchUpdate = (value: string) => {
               <Icon name="lucide:box" />
               {{ isMyCatalog ? $t("hint.your") : "" }}
               {{ $t("action.applications") }}
+              <span
+                v-if="isMyCatalog && selectedApplicationName"
+                class="ml-1 inline-flex h-2 w-2 rounded-full bg-primary"
+              />
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -96,6 +103,35 @@ const handleSearchUpdate = (value: string) => {
               "
             />
           </div>
+        </div>
+      </div>
+      <div
+        v-if="isMyCatalog && (selectedDatasetName || selectedApplicationName)"
+        class="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+      >
+        <div v-if="selectedDatasetName" class="inline-flex items-center gap-2 rounded bg-background px-2 py-1">
+          <span class="font-medium">Dataset:</span>
+          <span>{{ selectedDatasetName }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-5 w-5"
+            @click="emit('clear-selected-dataset')"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
+        </div>
+        <div v-if="selectedApplicationName" class="inline-flex items-center gap-2 rounded bg-background px-2 py-1">
+          <span class="font-medium">Application:</span>
+          <span>{{ selectedApplicationName }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-5 w-5"
+            @click="emit('clear-selected-application')"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
         </div>
       </div>
       <div class="filters-list mt-2">

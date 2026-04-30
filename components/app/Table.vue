@@ -13,6 +13,7 @@ import { useTableFilterControls } from "~/composables/table/useTableFilterContro
 import { useTableInstance } from "~/composables/table/useTableInstance";
 import { useTableStateSync } from "~/composables/table/useTableStateSync";
 import { useTrainingPayload } from "~/composables/table/useTrainingPayload";
+import { useTrainingOrder } from "~/composables/training/useTrainingOrder";
 import TableToolbar from "@/components/app/table/TableToolbar.vue";
 import TableGrid from "@/components/app/table/TableGrid.vue";
 
@@ -40,6 +41,14 @@ const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
+  (
+    e: "selection-context-change",
+    value: {
+      selectedType: string;
+      selectedIds: string[];
+      selectedRaw: Array<Record<string, unknown>>;
+    },
+  ): void;
   (
     e: "pass-to-training",
     value: { dataset: Array<Record<string, unknown>> },
@@ -77,10 +86,43 @@ const {
 
 const isMyCatalog = computed(() => page.value.section === "my_catalog");
 const { buildTrainingPayload } = useTrainingPayload();
+const {
+  selectedDataset,
+  selectedApplication,
+  clearSelection: clearTrainingSelection,
+} = useTrainingOrder();
+const selectedDatasetId = computed(() => {
+  if (!selectedDataset.value) return null;
+  const id = selectedDataset.value.id;
+  return id ? String(id) : null;
+});
+const selectedApplicationId = computed(() => {
+  if (!selectedApplication.value) return null;
+  const id = selectedApplication.value.id;
+  return id ? String(id) : null;
+});
+const selectedDatasetName = computed(() => {
+  if (!selectedDataset.value) return null;
+  return String(
+    selectedDataset.value.title ||
+      selectedDataset.value.name ||
+      selectedDataset.value.id ||
+      "",
+  );
+});
+const selectedApplicationName = computed(() => {
+  if (!selectedApplication.value) return null;
+  return String(
+    selectedApplication.value.title ||
+      selectedApplication.value.name ||
+      selectedApplication.value.id ||
+      "",
+  );
+});
 const selectedRows = ref<Row<TableRowData>[]>([]);
 
 function clearSelectionBridge() {
-  clearSelection();
+  clearTableSelection();
 }
 
 const {
@@ -103,7 +145,7 @@ const {
   clearSelection: clearSelectionBridge,
 });
 
-const { table, mappedColumns, isSelectionVisible, clearSelection } = useTableInstance({
+const { table, mappedColumns, isSelectionVisible, clearSelection: clearTableSelection } = useTableInstance({
   columns,
   pageSize,
   selectionEnabled: props.selectionEnabled,
@@ -113,12 +155,34 @@ const { table, mappedColumns, isSelectionVisible, clearSelection } = useTableIns
   columnFilters,
   columnVisibility,
   data,
+  selectedDatasetId,
+  selectedApplicationId,
+  selectedDatasetName,
+  selectedApplicationName,
   t,
   updateURLQuery,
   fetchData,
   onSelectionChange: (ids, rows) => {
     selectedRows.value = rows;
     emit("selection-change", ids);
+    if (ids.length === 0) return;
+    emit("selection-context-change", {
+      selectedType: selectedType.value,
+      selectedIds: ids,
+      selectedRaw: rows
+        .map((row) => {
+          const id = String((row.original as TableRowData).id);
+          const raw = rawById.value[id];
+          if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+            return raw as Record<string, unknown>;
+          }
+          return row.original as unknown as Record<string, unknown>;
+        })
+        .filter(
+          (item): item is Record<string, unknown> =>
+            !!item && typeof item === "object" && !Array.isArray(item),
+        ),
+    });
   },
 });
 
@@ -188,7 +252,7 @@ const {
   applyClientSearch,
   updateURLQuery,
   fetchData,
-  clearSelection,
+  clearSelection: clearTableSelection,
   buildTrainingPayload,
   emitPassToTraining: (payload) => emit("pass-to-training", payload),
   selectedRows,
@@ -213,6 +277,8 @@ defineExpose({ fetchData, getSelectedRaw });
       :selected-filter-keys="selectedFilterKeys"
       :selected-filters="selectedFilters"
       :filter-label-by-key="filterLabelByKey"
+      :selected-dataset-name="selectedDatasetName"
+      :selected-application-name="selectedApplicationName"
       @create="handleCreate"
       @type-change="handleTypeTabChange"
       @search-update="handleSearchUpdate"
@@ -220,6 +286,8 @@ defineExpose({ fetchData, getSelectedRaw });
       @filter-change="handleFilterChange"
       @clear-all-filters="handleClearAllFilters"
       @remove-filter="handleRemoveFilter"
+      @clear-selected-dataset="clearTrainingSelection('datasets')"
+      @clear-selected-application="clearTrainingSelection('applications')"
     />
     <AppTablePreloader v-if="isLoading" class="mt-4" />
     <TableGrid

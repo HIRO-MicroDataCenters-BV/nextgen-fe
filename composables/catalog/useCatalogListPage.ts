@@ -20,6 +20,7 @@ interface UseCatalogListPageOptions {
     searchDistributed: (filter: SearchFilter) => Promise<unknown>;
     checkout: (
       datasets: Array<Record<string, unknown>>,
+      application?: Record<string, unknown> | null,
     ) => Promise<{ order_id: string; status: string } | null>;
   };
 }
@@ -39,8 +40,12 @@ export const useCatalogListPage = ({ source, api }: UseCatalogListPageOptions) =
 
   const handlePassToTraining = async (payload: {
     dataset: Array<Record<string, unknown>>;
+    application?: Record<string, unknown> | null;
   }) => {
-    const checkoutResponse = await api.checkout(payload.dataset);
+    const checkoutResponse = await api.checkout(
+      payload.dataset,
+      payload.application ?? null,
+    );
     if (!checkoutResponse) return;
     successData.value = {
       status_code: 201,

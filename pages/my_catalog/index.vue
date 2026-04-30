@@ -11,7 +11,15 @@
       :selection-enabled="true"
       selection-mode="single"
       :has-source-header="true"
-      @pass-to-training="handlePassToTraining"
+      @pass-to-training="handlePassToTrainingClick"
+      @selection-context-change="handleSelectionContextChange"
+    />
+    <TrainingOrderReviewDialog
+      :open="showTrainingReviewDialog"
+      :dataset="selectedDataset"
+      :application="selectedApplication"
+      @update:open="showTrainingReviewDialog = $event"
+      @confirm="submitTrainingOrder"
     />
     <TrainingSuccessDialog
       :open="showSuccessDialog"
@@ -28,7 +36,9 @@ import type { CatalogItem } from "~/types/catalog.types";
 import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
 import TrainingSuccessDialog from "@/components/app/TrainingSuccessDialog.vue";
+import TrainingOrderReviewDialog from "@/components/app/TrainingOrderReviewDialog.vue";
 import { useCatalogListPage } from "~/composables/catalog/useCatalogListPage";
+import { useTrainingOrder } from "~/composables/training/useTrainingOrder";
 
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
@@ -39,7 +49,9 @@ const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
 const tableRef = ref();
+const showTrainingReviewDialog = ref(false);
 const { setPage } = useApp();
+const toaster = useToaster();
 setPage({
   section: "my_catalog",
   title: t(`menu.${catalogName}`),
@@ -56,6 +68,42 @@ const { showSuccessDialog, successData, handlePassToTraining, fetchTableData } =
       checkout: api.checkout,
     },
   });
+
+const { selectedDataset, selectedApplication, setSelection } = useTrainingOrder();
+
+const handleSelectionContextChange = (value: {
+  selectedType: string;
+  selectedIds: string[];
+  selectedRaw: Array<Record<string, unknown>>;
+}) => {
+  if (value.selectedType === "datasets" || value.selectedType === "applications") {
+    setSelection(value.selectedType, value.selectedRaw, value.selectedIds[0] ?? null);
+  }
+};
+
+const handlePassToTrainingClick = () => {
+  if (!selectedDataset.value) {
+    toaster.show("error", "Select a dataset before passing to training.");
+    return;
+  }
+  showTrainingReviewDialog.value = true;
+};
+
+const submitTrainingOrder = async (value: { includeApplication: boolean }) => {
+  if (!selectedDataset.value) {
+    toaster.show("error", "Application cannot be sent without a dataset.");
+    return;
+  }
+
+  await handlePassToTraining({
+    dataset: [selectedDataset.value],
+    application:
+      value.includeApplication && selectedApplication.value
+        ? selectedApplication.value
+        : null,
+  });
+  showTrainingReviewDialog.value = false;
+};
 
 // Defining columns for the table
 const columns: TableColumn[] = [
