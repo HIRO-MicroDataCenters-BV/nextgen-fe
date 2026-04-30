@@ -17,7 +17,14 @@ interface TableToolbarProps {
 defineProps<TableToolbarProps>();
 
 const emit = defineEmits<{
-  (e: "create" | "apply-search" | "clear-all-filters"): void;
+  (
+    e:
+      | "create"
+      | "apply-search"
+      | "clear-all-filters"
+      | "clear-selected-dataset"
+      | "clear-selected-application",
+  ): void;
   (e: "type-change", value: string | number): void;
   (e: "search-update" | "remove-filter", value: string): void;
   (
@@ -26,7 +33,6 @@ const emit = defineEmits<{
     value: boolean | string | number,
     multiple: boolean,
   ): void;
-  (e: "clear-selected-dataset" | "clear-selected-application"): void;
 }>();
 
 const { t } = useI18n();

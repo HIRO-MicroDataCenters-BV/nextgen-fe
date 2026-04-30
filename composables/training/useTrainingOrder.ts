@@ -54,7 +54,7 @@ const normalizeSelection = (
 
 export const useTrainingOrder = () => {
   const persist = () => {
-    if (!process.client) return;
+    if (!import.meta.client) return;
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
@@ -66,7 +66,7 @@ export const useTrainingOrder = () => {
 
   const hydrate = () => {
     if (hydrated) return;
-    if (!process.client) return;
+    if (!import.meta.client) return;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -102,7 +102,7 @@ export const useTrainingOrder = () => {
   const clearOrder = () => {
     selectedDataset.value = null;
     selectedApplication.value = null;
-    if (process.client) {
+    if (import.meta.client) {
       localStorage.removeItem(STORAGE_KEY);
     }
   };
