@@ -13,7 +13,7 @@ import { useTableFilterControls } from "~/composables/table/useTableFilterContro
 import { useTableInstance } from "~/composables/table/useTableInstance";
 import { useTableStateSync } from "~/composables/table/useTableStateSync";
 import { useTrainingPayload } from "~/composables/table/useTrainingPayload";
-import { useTrainingOrder } from "~/composables/training/useTrainingOrder";
+import { useTableTrainingOrderBridge } from "~/composables/table/useTableTrainingOrderBridge";
 import TableToolbar from "@/components/app/table/TableToolbar.vue";
 import TableGrid from "@/components/app/table/TableGrid.vue";
 
@@ -59,7 +59,6 @@ const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 
-const { page } = useApp();
 const {
   filterGroups,
   getActiveFilters,
@@ -84,41 +83,15 @@ const {
   replaceQuery: (query) => router.replace({ query }),
 });
 
-const isMyCatalog = computed(() => page.value.section === "my_catalog");
 const { buildTrainingPayload } = useTrainingPayload();
 const {
-  selectedDataset,
-  selectedApplication,
-  clearSelection: clearTrainingSelection,
-} = useTrainingOrder();
-const selectedDatasetId = computed(() => {
-  if (!selectedDataset.value) return null;
-  const id = selectedDataset.value.id;
-  return id ? String(id) : null;
-});
-const selectedApplicationId = computed(() => {
-  if (!selectedApplication.value) return null;
-  const id = selectedApplication.value.id;
-  return id ? String(id) : null;
-});
-const selectedDatasetName = computed(() => {
-  if (!selectedDataset.value) return null;
-  return String(
-    selectedDataset.value.title ||
-      selectedDataset.value.name ||
-      selectedDataset.value.id ||
-      "",
-  );
-});
-const selectedApplicationName = computed(() => {
-  if (!selectedApplication.value) return null;
-  return String(
-    selectedApplication.value.title ||
-      selectedApplication.value.name ||
-      selectedApplication.value.id ||
-      "",
-  );
-});
+  isMyCatalog,
+  clearTrainingSelection,
+  selectedDatasetId,
+  selectedApplicationId,
+  selectedDatasetName,
+  selectedApplicationName,
+} = useTableTrainingOrderBridge();
 const selectedRows = ref<Row<TableRowData>[]>([]);
 
 function clearSelectionBridge() {
