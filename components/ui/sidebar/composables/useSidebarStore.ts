@@ -18,7 +18,11 @@ export const useSidebarStore = ({
   const open = computed<boolean>({
     get: () => controlledOpen?.value ?? internalOpen.value,
     set: (value) => {
-      internalOpen.value = value;
+      if (controlledOpen) {
+        controlledOpen.value = value;
+      } else {
+        internalOpen.value = value;
+      }
       onOpenChange(value);
     },
   });
