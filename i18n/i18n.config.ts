@@ -123,6 +123,7 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           actions: "Actions",
           are_you_sure: "Are you sure?",
+          done: "Done",
           create_catalog_item: "Add new item",
           edit_catalog_item: "Edit item",
           unsaved_changes: "Unsaved Changes",
@@ -153,6 +154,15 @@ export default defineI18nConfig(() => {
         },
         alert: {
           delete_dataset: "Are you sure you want to delete {name}?",
+          share_dataset:
+            "Are you sure you want to share {name} with the marketplace?",
+          unshare_dataset:
+            "Are you sure you want to remove {name} from the marketplace?",
+          delete_dataset_success: "Deleted successfully.",
+          share_dataset_success: "Shared with the marketplace successfully.",
+          unshare_dataset_success: "Removed from the marketplace successfully.",
+          processing: "Processing your request…",
+          action_failed: "Something went wrong. Please try again.",
           unsaved_changes_description:
             "You have unsaved changes. Are you sure you want to discard them?",
         },
@@ -377,6 +387,8 @@ export default defineI18nConfig(() => {
           save: "Save",
           edit_dataset: "Edit",
           delete_dataset: "Delete",
+          share_dataset: "Share",
+          unshare_dataset: "Unshare",
           contacts: "Contacts",
           github: "GitHub",
           add_dataset: "Add Dataset",
@@ -388,6 +400,8 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           delete: "Delete",
           cancel: "Cancel",
+          try_again: "Try again",
+          please_wait: "Please wait…",
           update: "Update",
           save_changes: "Save Changes",
           discard: "Discard",

@@ -257,29 +257,44 @@ export const useApi = () => {
       return response ?? null;
     },
 
-    deleteDataset: async (id: string): Promise<boolean> => {
+    deleteDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/`,
-        "DELETE"
+        "DELETE",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
 
-    shareDataset: async (id: string): Promise<boolean> => {
+    shareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/share/`,
-        "POST"
+        "POST",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
 
-    unshareDataset: async (id: string): Promise<boolean> => {
+    unshareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/unshare/`,
-        "POST"
+        "POST",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
