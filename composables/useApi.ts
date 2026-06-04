@@ -55,8 +55,7 @@ export const useApi = () => {
 
   const validateCatalogPayload = <T extends Record<string, unknown>>(
     payload: unknown,
-    kind: "dataset" | "catalog",
-    showToast = true
+    kind: "dataset" | "catalog"
   ): T | null => {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
@@ -74,9 +73,7 @@ export const useApi = () => {
     if (import.meta.dev) {
       console.warn(`[useApi] Invalid ${kind} payload`, parsed.error.flatten());
     }
-    if (showToast) {
-      toaster.show("error", t("app.error.fetch"));
-    }
+    toaster.show("error", t("app.error.fetch"));
     return null;
   };
 
@@ -227,7 +224,6 @@ export const useApi = () => {
       options?: {
         relatedDataProduct?: string | null;
         isApplication?: boolean;
-        showToast?: boolean;
       }
     ): Promise<CatalogDataset | { error: true; data: unknown } | null> => {
       let url = `/datasets/${filename}/`;
@@ -248,7 +244,7 @@ export const useApi = () => {
         "POST",
         dataset,
         {
-          showToast: options?.showToast ?? true,
+          showToast: true,
           hasRawData: true,
           returnErrorDetails: true,
         }
@@ -256,13 +252,9 @@ export const useApi = () => {
       if (response && !isRequestError(response)) {
         const dataset = validateCatalogPayload<CatalogDataset>(
           response,
-          "dataset",
-          options?.showToast ?? true
+          "dataset"
         );
-        // The POST itself succeeded; if the echoed body isn't a usable dataset
-        // (e.g. an empty 200 body), still report success by returning the raw
-        // response rather than collapsing it to null/failure.
-        if (!dataset) return response;
+        if (!dataset) return null;
         return cloneAndSanitizeDataset(dataset);
       }
       if (isRequestError(response)) return response;
