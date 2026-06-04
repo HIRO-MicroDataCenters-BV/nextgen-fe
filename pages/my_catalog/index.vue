@@ -25,16 +25,19 @@
 import { h } from "vue";
 import type { TableColumn } from "~/types/table.types";
 import type { CatalogItem } from "~/types/catalog.types";
+import type { DatasetMetadata } from "~/types/jsonld.types";
 import { Button } from "@/components/ui/button";
 import DropdownAction from "~/components/app/menu/Actions.vue";
 import TrainingSuccessDialog from "@/components/app/TrainingSuccessDialog.vue";
 import { useCatalogListPage } from "~/composables/catalog/useCatalogListPage";
+import { useCatalogShare } from "~/composables/catalog/useCatalogShare";
 
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
 const api = useApi();
-const { deleteDataset } = api;
+const { deleteDataset, getDataset, saveDataset } = api;
+const { setDatasetShared } = useCatalogShare({ getDataset, saveDataset });
 const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -95,21 +98,20 @@ const columns: TableColumn[] = [
     iconOnly: true,
     header: () => t("label.actions"),
     cell: ({ row }) => {
-      const item = row.original as CatalogItem;
+      const item = row.original as unknown as DatasetMetadata;
       const id = item.id;
+      const isShared = item.isShared;
 
       return h(DropdownAction, {
         title: row.getValue("name") as string,
         id,
+        onCompleted: () => tableRef.value.fetchData(),
         items: [
           {
-            key: "delete_dataset",
-            label: "delete_dataset",
+            key: isShared ? "unshare_dataset" : "share_dataset",
+            label: isShared ? "unshare_dataset" : "share_dataset",
             hasConfirmation: true,
-            action: async () => {
-              await deleteDataset(id);
-              tableRef.value.fetchData();
-            },
+            action: () => setDatasetShared(id, !isShared),
           },
           {
             key: "edit_dataset",
@@ -117,6 +119,12 @@ const columns: TableColumn[] = [
             action: () => {
               router.push(`/my_catalog/${id}/edit`);
             },
+          },
+          {
+            key: "delete_dataset",
+            label: "delete_dataset",
+            hasConfirmation: true,
+            action: () => deleteDataset(id, { showToast: false }),
           },
         ],
       });

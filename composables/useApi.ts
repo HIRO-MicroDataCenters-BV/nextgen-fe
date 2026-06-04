@@ -224,6 +224,7 @@ export const useApi = () => {
       options?: {
         relatedDataProduct?: string | null;
         isApplication?: boolean;
+        showToast?: boolean;
       }
     ): Promise<CatalogDataset | { error: true; data: unknown } | null> => {
       let url = `/datasets/${filename}/`;
@@ -243,7 +244,11 @@ export const useApi = () => {
         url,
         "POST",
         dataset,
-        { showToast: true, hasRawData: true, returnErrorDetails: true }
+        {
+          showToast: options?.showToast ?? true,
+          hasRawData: true,
+          returnErrorDetails: true,
+        }
       );
       if (response && !isRequestError(response)) {
         const dataset = validateCatalogPayload<CatalogDataset>(
@@ -257,29 +262,16 @@ export const useApi = () => {
       return response ?? null;
     },
 
-    deleteDataset: async (id: string): Promise<boolean> => {
+    deleteDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/`,
-        "DELETE"
-      );
-      return response !== null;
-    },
-
-    shareDataset: async (id: string): Promise<boolean> => {
-      const response = await request<null>(
-        "catalog",
-        `/datasets/${id}/share/`,
-        "POST"
-      );
-      return response !== null;
-    },
-
-    unshareDataset: async (id: string): Promise<boolean> => {
-      const response = await request<null>(
-        "catalog",
-        `/datasets/${id}/unshare/`,
-        "POST"
+        "DELETE",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },

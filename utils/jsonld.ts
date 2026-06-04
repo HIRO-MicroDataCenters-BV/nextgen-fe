@@ -365,7 +365,9 @@ export function transformDatasetToTableRow(
     isDeleted:
       getJsonLdValue(dataset["isDeleted"] as JsonLdBooleanValue) === "true",
     isShared:
-      getJsonLdValue(dataset["isShared"] as JsonLdBooleanValue) === "true",
+      getJsonLdValue(dataset["isShared"] as JsonLdBooleanValue) === "true" ||
+      getJsonLdValue(dataset["dspace:isShared"] as JsonLdBooleanValue) ===
+        "true",
     metadataFilename: getJsonLdValue(
       dataset["metadataFilename"] as JsonLdStringValue
     ),
