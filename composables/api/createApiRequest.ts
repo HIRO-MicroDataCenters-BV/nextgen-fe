@@ -135,7 +135,9 @@ export const createApiRequest = (options: CreateApiRequestOptions) => {
 
       return data as T;
     } catch (err) {
-      if (method === "DELETE") return;
+      // Return null (not undefined) so DELETE callers using `response !== null`
+      // correctly detect a network/abort failure instead of reading it as success.
+      if (method === "DELETE") return null;
 
       if (err instanceof Error && err.name === "AbortError") {
         if (showToast) {

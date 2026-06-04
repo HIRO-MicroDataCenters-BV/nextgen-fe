@@ -55,7 +55,8 @@ export const useApi = () => {
 
   const validateCatalogPayload = <T extends Record<string, unknown>>(
     payload: unknown,
-    kind: "dataset" | "catalog"
+    kind: "dataset" | "catalog",
+    showToast = true
   ): T | null => {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       return null;
@@ -73,7 +74,9 @@ export const useApi = () => {
     if (import.meta.dev) {
       console.warn(`[useApi] Invalid ${kind} payload`, parsed.error.flatten());
     }
-    toaster.show("error", t("app.error.fetch"));
+    if (showToast) {
+      toaster.show("error", t("app.error.fetch"));
+    }
     return null;
   };
 
@@ -253,9 +256,13 @@ export const useApi = () => {
       if (response && !isRequestError(response)) {
         const dataset = validateCatalogPayload<CatalogDataset>(
           response,
-          "dataset"
+          "dataset",
+          options?.showToast ?? true
         );
-        if (!dataset) return null;
+        // The POST itself succeeded; if the echoed body isn't a usable dataset
+        // (e.g. an empty 200 body), still report success by returning the raw
+        // response rather than collapsing it to null/failure.
+        if (!dataset) return response;
         return cloneAndSanitizeDataset(dataset);
       }
       if (isRequestError(response)) return response;
@@ -270,6 +277,34 @@ export const useApi = () => {
         "catalog",
         `/datasets/${id}/`,
         "DELETE",
+        undefined,
+        { showToast: options?.showToast }
+      );
+      return response !== null;
+    },
+
+    shareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/datasets/${id}/share/`,
+        "POST",
+        undefined,
+        { showToast: options?.showToast }
+      );
+      return response !== null;
+    },
+
+    unshareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
+      const response = await request<null>(
+        "catalog",
+        `/datasets/${id}/unshare/`,
+        "POST",
         undefined,
         { showToast: options?.showToast }
       );

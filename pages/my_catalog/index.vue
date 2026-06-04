@@ -36,8 +36,8 @@ const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
 const api = useApi();
-const { deleteDataset, getDataset, saveDataset } = api;
-const { setDatasetShared } = useCatalogShare({ getDataset, saveDataset });
+const { deleteDataset, shareDataset, unshareDataset } = api;
+const { setDatasetShared } = useCatalogShare({ shareDataset, unshareDataset });
 const router = useRouter();
 const { t } = useI18n();
 const dayjs = useDayjs();
@@ -109,20 +109,17 @@ const columns: TableColumn[] = [
         items: [
           {
             key: isShared ? "unshare_dataset" : "share_dataset",
-            label: isShared ? "unshare_dataset" : "share_dataset",
             hasConfirmation: true,
             action: () => setDatasetShared(id, !isShared),
           },
           {
             key: "edit_dataset",
-            label: "edit_dataset",
             action: () => {
               router.push(`/my_catalog/${id}/edit`);
             },
           },
           {
             key: "delete_dataset",
-            label: "delete_dataset",
             hasConfirmation: true,
             action: () => deleteDataset(id, { showToast: false }),
           },

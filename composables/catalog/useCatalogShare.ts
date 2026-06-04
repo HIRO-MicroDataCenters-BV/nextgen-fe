@@ -1,58 +1,30 @@
-import { findDatasetInJsonLd } from "~/utils/jsonld";
-import {
-  extractRelatedDataProduct,
-  detectDatasetType,
-  extractMetadataFilename,
-} from "~/utils/catalogDataset";
-
 interface UseCatalogShareOptions {
-  getDataset: (id: string) => Promise<unknown>;
-  saveDataset: (
-    filename: string,
-    dataset: string,
-    options?: {
-      relatedDataProduct?: string | null;
-      isApplication?: boolean;
-      showToast?: boolean;
-    },
-  ) => Promise<unknown>;
+  shareDataset: (
+    id: string,
+    options?: { showToast?: boolean },
+  ) => Promise<boolean>;
+  unshareDataset: (
+    id: string,
+    options?: { showToast?: boolean },
+  ) => Promise<boolean>;
 }
 
 /**
- * Share / unshare a dataset by flipping `dspace:isShared` and re-saving the full
- * dataset JSON-LD through the same update-catalog endpoint the edit page uses
- * (`saveDataset` -> POST /datasets/{filename}/). Re-posting the object returned by
- * `getDataset` preserves every field (extra metadata, distributions, @context).
+ * Share / unshare a dataset via the catalog service's dedicated endpoints
+ * (`POST /datasets/{id}/share/` · `/unshare/`). These atomically flip the
+ * dataset node's `dspace:isShared` flag server-side in a single call, without
+ * re-saving the whole document — which would also reset `dcterms:issued`,
+ * reassign the publisher and re-run SHACL validation.
  */
 export const useCatalogShare = ({
-  getDataset,
-  saveDataset,
+  shareDataset,
+  unshareDataset,
 }: UseCatalogShareOptions) => {
-  const setDatasetShared = async (
-    id: string,
-    shared: boolean,
-  ): Promise<boolean> => {
-    const response = await getDataset(id);
-    if (!response) return false;
-
-    const ds =
-      (findDatasetInJsonLd(response) as Record<string, unknown> | null) ??
-      (response as Record<string, unknown>);
-
-    ds["dspace:isShared"] = { "@type": "xsd:boolean", "@value": shared };
-
-    const filename = extractMetadataFilename(ds) || id;
-    const isApplication = detectDatasetType(ds) === "application";
-    const relatedDataProduct = extractRelatedDataProduct(ds);
-
-    const result = await saveDataset(filename, JSON.stringify(response), {
-      relatedDataProduct,
-      isApplication,
-      showToast: false,
-    });
-
-    return !!result && (result as { error?: boolean }).error !== true;
-  };
+  // The confirm dialog renders success/error itself, so suppress API toasts.
+  const setDatasetShared = (id: string, shared: boolean): Promise<boolean> =>
+    shared
+      ? shareDataset(id, { showToast: false })
+      : unshareDataset(id, { showToast: false });
 
   return { setDatasetShared };
 };

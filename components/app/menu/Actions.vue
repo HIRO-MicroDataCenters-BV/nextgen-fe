@@ -1,8 +1,8 @@
 <script setup lang="ts">
 interface Item {
   key: string;
-  label: string;
-  // Returns a boolean (false = failed) or a promise of one; sync/void actions are treated as success.
+  // Failure = resolves to false, null, or { error: true }; sync/void actions
+  // (returning undefined) are treated as success.
   action: () => unknown;
   hasConfirmation?: boolean;
 }
@@ -23,6 +23,11 @@ const emit = defineEmits<{
 const isOpenConfirm = ref(false);
 const activeItem = ref<Item | null>(null);
 const status = ref<ConfirmStatus>('idle');
+
+// Delete is irreversible — surface it with the destructive button styling.
+const isDestructiveAction = computed(
+  () => !!activeItem.value && activeItem.value.key.includes('delete'),
+);
 
 // Auto-close shortly after success so the user sees the message; errors stay open for retry.
 const SUCCESS_CLOSE_DELAY = 1500;
@@ -49,12 +54,21 @@ const closeConfirm = () => {
   if (wasSuccess) emit('completed');
 };
 
+// Treat the codebase's failure conventions (false / null / { error: true }) as
+// failures; only a resolved non-failure (including void/undefined) is success.
+const isActionFailure = (result: unknown): boolean =>
+  result === false ||
+  result === null ||
+  (typeof result === 'object' &&
+    result !== null &&
+    (result as { error?: unknown }).error === true);
+
 const runAction = async () => {
   if (!activeItem.value || status.value === 'loading') return;
   status.value = 'loading';
   try {
     const result = await activeItem.value.action();
-    if (result === false) {
+    if (isActionFailure(result)) {
       status.value = 'error';
     } else {
       status.value = 'success';
@@ -156,11 +170,19 @@ onUnmounted(clearSuccessTimer);
         </template>
         <template v-else-if="status === 'error'">
           <AlertDialogCancel>{{ t('action.cancel') }}</AlertDialogCancel>
-          <Button @click="runAction">{{ t('action.try_again') }}</Button>
+          <Button
+            :variant="isDestructiveAction ? 'destructive' : 'default'"
+            @click="runAction"
+          >
+            {{ t('action.try_again') }}
+          </Button>
         </template>
         <template v-else>
           <AlertDialogCancel>{{ t('action.cancel') }}</AlertDialogCancel>
-          <Button @click="runAction">
+          <Button
+            :variant="isDestructiveAction ? 'destructive' : 'default'"
+            @click="runAction"
+          >
             {{ activeItem ? t(`action.${activeItem.key}`) : '' }}
           </Button>
         </template>
