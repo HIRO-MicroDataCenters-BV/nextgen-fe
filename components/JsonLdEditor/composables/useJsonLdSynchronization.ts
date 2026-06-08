@@ -1,5 +1,7 @@
 import { nextTick, type Ref } from "vue";
 import type { EditorMode, JsonLdNode } from "../types/editor.types";
+import { updateJsonLdArrayIndices } from "../utils/jsonLdTreeArrayIndices";
+import { applyJsonLdCodeUpdate } from "../utils/jsonLdCodeUpdate";
 
 interface UseJsonLdSynchronizationOptions {
   currentMode: Ref<EditorMode>;
@@ -39,62 +41,6 @@ export const useJsonLdSynchronization = ({
   applyParsedTree,
   emitModelValue,
 }: UseJsonLdSynchronizationOptions) => {
-  /**
-   * Recursively normalizes array item keys and preserves object references
-   * when nothing changed to reduce unnecessary reactive churn.
-   */
-  const updateArrayIndices = (nodes: JsonLdNode[]): JsonLdNode[] => {
-    let changed = false;
-
-    const mapped = nodes.map((node) => {
-      if (node.type === "array" && node.children) {
-        let childChanged = false;
-        const updatedChildren = node.children.map((child, index) => {
-          const normalizedChildren = child.children
-            ? updateArrayIndices(child.children)
-            : child.children;
-          const nextKey = `[${index}]`;
-          const keyChanged = child.key !== nextKey;
-          const nestedChanged = normalizedChildren !== child.children;
-          if (keyChanged || nestedChanged) {
-            childChanged = true;
-            return {
-              ...child,
-              key: nextKey,
-              children: normalizedChildren,
-            };
-          }
-          return child;
-        });
-
-        if (childChanged) {
-          changed = true;
-          return {
-            ...node,
-            children: updatedChildren,
-          };
-        }
-
-        return node;
-      }
-
-      if (node.children) {
-        const normalizedChildren = updateArrayIndices(node.children);
-        if (normalizedChildren !== node.children) {
-          changed = true;
-          return {
-            ...node,
-            children: normalizedChildren,
-          };
-        }
-      }
-
-      return node;
-    });
-
-    return changed ? mapped : nodes;
-  };
-
   const toggleMode = (checked: boolean) => {
     const newMode: EditorMode = checked ? "code" : "visual";
 
@@ -124,7 +70,7 @@ export const useJsonLdSynchronization = ({
     triggerSaveIndicator();
     const savedScroll = editorContentRef.value?.scrollTop || 0;
 
-    const treeWithUpdatedIndices = updateArrayIndices(newTree);
+    const treeWithUpdatedIndices = updateJsonLdArrayIndices(newTree);
     treeData.value = treeWithUpdatedIndices;
 
     const serialized = serializeJsonLd(
@@ -145,21 +91,10 @@ export const useJsonLdSynchronization = ({
 
   const handleCodeUpdate = (newCode: string) => {
     triggerSaveIndicator();
-    try {
-      const parsed = JSON.parse(newCode) as Record<string, unknown>;
-      // Preserve MMIO extraMetadata: user cannot edit it in code mode — re-inject from props.
-      const out = extraMetadata.value?.length
-        ? { ...parsed, "dspace:extraMetadata": extraMetadata.value }
-        : parsed;
-      const outStr = JSON.stringify(out, null, 2);
-      codeData.value = outStr;
-      lastEmittedValueRef.value = outStr;
-      emitModelValue(out);
-    } catch {
-      codeData.value = newCode;
-      lastEmittedValueRef.value = newCode;
-      emitModelValue(newCode);
-    }
+    const result = applyJsonLdCodeUpdate(newCode, extraMetadata.value);
+    codeData.value = result.codeData;
+    lastEmittedValueRef.value = result.lastEmitted;
+    emitModelValue(result.modelValue);
   };
 
   return {
