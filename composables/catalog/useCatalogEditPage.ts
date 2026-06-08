@@ -1,5 +1,4 @@
 import { computed, nextTick, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
 import * as z from "zod";
 import type { ApiErrorDetail } from "~/types/api.types";
 import type { JsonLdObject } from "~/types/jsonld.types";

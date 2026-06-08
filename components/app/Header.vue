@@ -71,7 +71,6 @@
 </template>
 
 <script lang="ts" setup>
-import { useRoute, useRouter } from "vue-router";
 import Toolbar from "./header/Toolbar.vue";
 import type { ToolbarButton } from "~/types/toolbar.types";
 

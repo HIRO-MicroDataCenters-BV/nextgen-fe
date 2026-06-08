@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-const route = useRouter();
-const currentRouteName = computed(() => route.currentRoute.value.name);
+const route = useRoute();
+const currentRouteName = computed(() => route.name);
 const isHome = computed(() => currentRouteName.value === "home");
 </script>

@@ -10,11 +10,18 @@ import {
   createTableSearchFilter,
   transformSearchResponseToTableData,
 } from "~/utils/jsonld";
+import {
+  createCheckoutOnlySuccessData,
+  parseTrainingRunResponse,
+  type TrainingSuccessData,
+} from "./parseTrainingRunResponse";
 
 type CatalogSource = "local" | "distributed";
 
 interface UseCatalogListPageOptions {
   source: CatalogSource;
+  /** My Catalog: checkout then start federated pipeline via COG. Marketplace: checkout only. */
+  runTrainingAfterCheckout?: boolean;
   api: {
     getLocalCatalog: (filter: SearchFilter) => Promise<unknown>;
     searchDistributed: (filter: SearchFilter) => Promise<unknown>;
@@ -22,21 +29,21 @@ interface UseCatalogListPageOptions {
       datasets: Array<Record<string, unknown>>,
       application?: Record<string, unknown> | null,
     ) => Promise<{ order_id: string; status: string } | null>;
+    trainingRun?: (
+      datasets: Array<Record<string, unknown>>,
+      orderId: string,
+      application?: Record<string, unknown> | null,
+    ) => Promise<unknown | null>;
   };
 }
 
-export const useCatalogListPage = ({ source, api }: UseCatalogListPageOptions) => {
+export const useCatalogListPage = ({
+  source,
+  runTrainingAfterCheckout = false,
+  api,
+}: UseCatalogListPageOptions) => {
   const showSuccessDialog = ref(false);
-  const successData = ref<{
-    status_code: number;
-    message: string;
-    data: {
-      id: string;
-      pipeline_name: string;
-      order_id: string;
-      status: string;
-    };
-  } | null>(null);
+  const successData = ref<TrainingSuccessData | null>(null);
 
   const handlePassToTraining = async (payload: {
     dataset: Array<Record<string, unknown>>;
@@ -47,16 +54,23 @@ export const useCatalogListPage = ({ source, api }: UseCatalogListPageOptions) =
       payload.application ?? null,
     );
     if (!checkoutResponse) return;
-    successData.value = {
-      status_code: 201,
-      message: "Order created successfully",
-      data: {
-        id: "",
-        pipeline_name: "",
-        order_id: checkoutResponse.order_id,
-        status: "CREATED",
-      },
-    };
+
+    if (runTrainingAfterCheckout && api.trainingRun) {
+      const trainingResponse = await api.trainingRun(
+        payload.dataset,
+        checkoutResponse.order_id,
+        payload.application ?? null,
+      );
+      if (!trainingResponse) return;
+      successData.value = parseTrainingRunResponse(
+        trainingResponse,
+        checkoutResponse.order_id,
+      );
+    } else {
+      successData.value = createCheckoutOnlySuccessData(
+        checkoutResponse.order_id,
+      );
+    }
     showSuccessDialog.value = true;
   };
 

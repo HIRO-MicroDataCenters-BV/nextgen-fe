@@ -384,13 +384,18 @@ export const useApi = () => {
       run: async (
         datasets: Array<Record<string, unknown>>,
         orderId: string,
+        application?: Record<string, unknown> | null,
         options?: { showToast?: boolean }
       ): Promise<unknown | null> => {
         const showToast = options?.showToast !== false;
         try {
           const response = await $fetch("/api/training/run", {
             method: "POST",
-            body: { datasets, order_id: orderId },
+            body: {
+              datasets,
+              order_id: orderId,
+              application: application ?? null,
+            },
           });
           return response;
         } catch (error: unknown) {
