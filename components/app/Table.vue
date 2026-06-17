@@ -285,27 +285,31 @@ defineExpose({ fetchData, getSelectedRaw });
       @clear-selected-application="clearTrainingSelection('applications')"
       @view-change="setViewMode"
     />
-    <AppTablePreloader v-if="isLoading" class="mt-4" />
     <TableCardList
-      v-else-if="enableViewToggle && viewMode === 'card'"
+      v-if="enableViewToggle && viewMode === 'card'"
       :table="table"
       :is-selection-visible="isSelectionVisible"
       :selection-mode="selectionMode"
       :item-href-base="itemHrefBase"
       :content-class="contentClass"
+      :is-loading="isLoading"
+      @create="handleCreate"
     />
-    <TableGrid
-      v-else
-      :table="table"
-      :is-selection-visible="isSelectionVisible"
-      :selection-mode="selectionMode"
-      :mapped-columns="mappedColumns"
-      :data-source="dataSource"
-      :columns="columns"
-      :page-size="pageSize"
-      :title="title"
-      :content-class="contentClass"
-    />
+    <template v-else>
+      <AppTablePreloader v-if="isLoading" class="mt-4" />
+      <TableGrid
+        v-else
+        :table="table"
+        :is-selection-visible="isSelectionVisible"
+        :selection-mode="selectionMode"
+        :mapped-columns="mappedColumns"
+        :data-source="dataSource"
+        :columns="columns"
+        :page-size="pageSize"
+        :title="title"
+        :content-class="contentClass"
+      />
+    </template>
     <AppTableRowMenu
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"

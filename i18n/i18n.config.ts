@@ -422,6 +422,7 @@ export default defineI18nConfig(() => {
           open: "Open",
           table_view: "Table view",
           card_view: "Card view",
+          select_item: "Select {name}",
         },
         placeholder: {
           enter_name: "Enter a name",
@@ -455,6 +456,8 @@ export default defineI18nConfig(() => {
           in: "In",
           all: "All",
           no_results: "No results found",
+          no_results_hint: "Try adjusting your search or filters.",
+          shared: "Shared",
           no_datasets_found: "No datasets found",
           of: "of",
           rows_selected: "row(s) selected",

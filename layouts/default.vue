@@ -126,11 +126,13 @@
 const route = useRoute();
 const currentRouteName = computed(() => route.name);
 const isHome = computed(() => currentRouteName.value === "home");
-// My Catalog uses a full-width content column; widen the header to match so the
-// breadcrumb aligns with the page content instead of a narrow centered column.
+// My Catalog and Marketplace use a full-width content column; widen the header
+// to match so the breadcrumb aligns with the page content.
 // i18n appends a "___<locale>" suffix to route names (e.g. "my_catalog___en"),
 // so compare the base name; this also excludes the create/detail sub-routes.
-const isWide = computed(
-  () => String(currentRouteName.value).split("___")[0] === "my_catalog",
+const isWide = computed(() =>
+  ["my_catalog", "marketplace"].includes(
+    String(currentRouteName.value).split("___")[0],
+  ),
 );
 </script>
