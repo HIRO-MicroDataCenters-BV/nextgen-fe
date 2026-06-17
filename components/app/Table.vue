@@ -29,6 +29,7 @@ interface TableProps {
   enableViewToggle?: boolean;
   itemHrefBase?: string;
   contentClass?: string;
+  defaultView?: "table" | "card";
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -41,15 +42,17 @@ const props = withDefaults(defineProps<TableProps>(), {
   enableViewToggle: false,
   itemHrefBase: undefined,
   contentClass: "mx-auto w-full max-w-[calc(840px+16px)] px-8",
+  defaultView: "table",
 });
 
 const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
   props;
 
-// Persisted per-table so each toggle-enabled table remembers its last view.
+// Persisted per-table so each toggle-enabled table remembers its last view;
+// falls back to `defaultView` on first visit (before any toggle).
 const viewMode = useLocalStorage<"table" | "card">(
   `table-view-mode:${props.title || "default"}`,
-  "table",
+  props.defaultView,
 );
 const setViewMode = (value: "table" | "card") => {
   viewMode.value = value;
