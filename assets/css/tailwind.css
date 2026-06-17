@@ -45,7 +45,9 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  /* Match the side menu (--sidebar) so the page canvas and sidebar share one
+     light-gray tone; white cards/surfaces still stand out via their shadow. */
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.141 0.005 285.823);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);

@@ -11,6 +11,9 @@
       :selection-enabled="true"
       selection-mode="single"
       :has-source-header="true"
+      :enable-view-toggle="true"
+      :item-href-base="'/my_catalog'"
+      :content-class="'mx-auto w-full max-w-[1600px] px-8'"
       @pass-to-training="onPassToTrainingRequest"
       @selection-context-change="onSelectionContextChange"
     />

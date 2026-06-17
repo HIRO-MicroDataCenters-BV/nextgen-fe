@@ -16,6 +16,7 @@ import { useTrainingPayload } from "~/composables/table/useTrainingPayload";
 import { useTableTrainingOrderBridge } from "~/composables/table/useTableTrainingOrderBridge";
 import TableToolbar from "@/components/app/table/TableToolbar.vue";
 import TableGrid from "@/components/app/table/TableGrid.vue";
+import TableCardList from "@/components/app/table/TableCardList.vue";
 
 interface TableProps {
   title?: string;
@@ -25,6 +26,9 @@ interface TableProps {
   selectionEnabled?: boolean;
   hasSourceHeader?: boolean;
   selectionMode?: "single" | "multiple";
+  enableViewToggle?: boolean;
+  itemHrefBase?: string;
+  contentClass?: string;
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -34,10 +38,22 @@ const props = withDefaults(defineProps<TableProps>(), {
   selectionEnabled: true,
   hasSourceHeader: false,
   selectionMode: "multiple",
+  enableViewToggle: false,
+  itemHrefBase: undefined,
+  contentClass: "mx-auto w-full max-w-[calc(840px+16px)] px-8",
 });
 
 const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
   props;
+
+// Persisted per-table so each toggle-enabled table remembers its last view.
+const viewMode = useLocalStorage<"table" | "card">(
+  `table-view-mode:${props.title || "default"}`,
+  "table",
+);
+const setViewMode = (value: "table" | "card") => {
+  viewMode.value = value;
+};
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
@@ -252,6 +268,9 @@ defineExpose({ fetchData, getSelectedRaw });
       :filter-label-by-key="filterLabelByKey"
       :selected-dataset-name="selectedDatasetName"
       :selected-application-name="selectedApplicationName"
+      :enable-view-toggle="enableViewToggle"
+      :view-mode="viewMode"
+      :content-class="contentClass"
       @create="handleCreate"
       @type-change="handleTypeTabChange"
       @search-update="handleSearchUpdate"
@@ -261,8 +280,17 @@ defineExpose({ fetchData, getSelectedRaw });
       @remove-filter="handleRemoveFilter"
       @clear-selected-dataset="clearTrainingSelection('datasets')"
       @clear-selected-application="clearTrainingSelection('applications')"
+      @view-change="setViewMode"
     />
     <AppTablePreloader v-if="isLoading" class="mt-4" />
+    <TableCardList
+      v-else-if="enableViewToggle && viewMode === 'card'"
+      :table="table"
+      :is-selection-visible="isSelectionVisible"
+      :selection-mode="selectionMode"
+      :item-href-base="itemHrefBase"
+      :content-class="contentClass"
+    />
     <TableGrid
       v-else
       :table="table"
@@ -273,6 +301,7 @@ defineExpose({ fetchData, getSelectedRaw });
       :columns="columns"
       :page-size="pageSize"
       :title="title"
+      :content-class="contentClass"
     />
     <AppTableRowMenu
       :rows="selectedRows"

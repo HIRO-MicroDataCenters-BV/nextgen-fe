@@ -419,6 +419,9 @@ export default defineI18nConfig(() => {
           clear_all: "Clear all",
           pass_to_training: "Pass to Training",
           add_new_item: "Add New Item",
+          open: "Open",
+          table_view: "Table view",
+          card_view: "Card view",
         },
         placeholder: {
           enter_name: "Enter a name",

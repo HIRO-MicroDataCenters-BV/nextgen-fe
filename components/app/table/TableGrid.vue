@@ -13,6 +13,7 @@ interface TableGridProps {
   columns: TableColumn[];
   pageSize: number;
   title: string;
+  contentClass?: string;
 }
 
 defineProps<TableGridProps>();
@@ -22,7 +23,7 @@ const { t } = useI18n();
 <template>
   <div class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden">
     <div
-      class="min-h-0 flex-1 overflow-auto px-8 mx-auto max-w-[calc(840px+16px)] w-full mt-4"
+      :class="[contentClass, 'mt-4 min-h-0 flex-1 overflow-auto']"
     >
       <Table
         :data-source="dataSource"

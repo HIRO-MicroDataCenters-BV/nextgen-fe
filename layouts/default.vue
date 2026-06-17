@@ -11,7 +11,10 @@
           <div class="w-full gap-2 border-b border-gray-200 px-0">
             <div class="flex w-full min-w-0 flex-col">
               <div
-                class="mx-auto flex w-full min-w-0 max-w-[calc(840px+16px)] flex-row items-center justify-between px-8"
+                :class="[
+                  'mx-auto flex w-full min-w-0 flex-row items-center justify-between px-8',
+                  isWide ? 'max-w-[1600px]' : 'max-w-[calc(840px+16px)]',
+                ]"
               >
                 <div class="flex h-16 items-center gap-2 py-4">
                   <SidebarTrigger class="-ml-1" />
@@ -123,4 +126,11 @@
 const route = useRoute();
 const currentRouteName = computed(() => route.name);
 const isHome = computed(() => currentRouteName.value === "home");
+// My Catalog uses a full-width content column; widen the header to match so the
+// breadcrumb aligns with the page content instead of a narrow centered column.
+// i18n appends a "___<locale>" suffix to route names (e.g. "my_catalog___en"),
+// so compare the base name; this also excludes the create/detail sub-routes.
+const isWide = computed(
+  () => String(currentRouteName.value).split("___")[0] === "my_catalog",
+);
 </script>
