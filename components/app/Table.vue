@@ -50,9 +50,20 @@ const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
 
 // Persisted per-table so each toggle-enabled table remembers its last view;
 // falls back to `defaultView` on first visit (before any toggle).
+//
+// Key on `itemHrefBase` (a stable route base like "/marketplace") rather than
+// `title`: titles are often translated strings or runtime-config values, so a
+// title-based key would change across locales and collide on "default" when the
+// title is empty. Fall back to title, then a literal, for tables without a base.
+//
+// `initOnMounted` defers the localStorage read until after mount, so SSR and the
+// first client render both use `defaultView` and agree. Without it the client
+// reads the stored value during setup, and the initial DOM (table vs card) can
+// diverge from the server's — the source of the hydration-mismatch warnings.
 const viewMode = useLocalStorage<"table" | "card">(
-  `table-view-mode:${props.title || "default"}`,
+  `table-view-mode:${props.itemHrefBase || props.title || "default"}`,
   props.defaultView,
+  { initOnMounted: true },
 );
 const setViewMode = (value: "table" | "card") => {
   viewMode.value = value;
@@ -291,6 +302,7 @@ defineExpose({ fetchData, getSelectedRaw });
       :is-selection-visible="isSelectionVisible"
       :selection-mode="selectionMode"
       :item-href-base="itemHrefBase"
+      :can-create="hasSourceHeader"
       :content-class="contentClass"
       :is-loading="isLoading"
       @create="handleCreate"

@@ -21,6 +21,11 @@ interface TableCardListProps {
   selectionMode: "single" | "multiple";
   // When set, the title and "Open" action link to `${itemHrefBase}/${id}`.
   itemHrefBase?: string;
+  // Whether the "Add New Item" empty-state CTA is shown. Gated on the same
+  // signal as the toolbar's create button (AppTable's `hasSourceHeader`) so the
+  // CTA only appears where creating is valid (My Catalog) — not on Marketplace,
+  // where items are browsable (hence `itemHrefBase`) but not creatable.
+  canCreate?: boolean;
   // Width/centering classes for the content column (shared with the toolbar so
   // cards and toolbar stay aligned). Supplied by AppTable.
   contentClass?: string;
@@ -251,7 +256,7 @@ const cards = computed(() =>
             {{ t("hint.no_results_hint") }}
           </p>
         </div>
-        <Button v-if="itemHrefBase" size="sm" @click="emit('create')">
+        <Button v-if="canCreate" size="sm" @click="emit('create')">
           <Icon name="lucide:plus" class="size-4" />
           {{ t("action.add_new_item") }}
         </Button>
