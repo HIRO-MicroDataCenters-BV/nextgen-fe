@@ -16,6 +16,7 @@ import { useTrainingPayload } from "~/composables/table/useTrainingPayload";
 import { useTableTrainingOrderBridge } from "~/composables/table/useTableTrainingOrderBridge";
 import TableToolbar from "@/components/app/table/TableToolbar.vue";
 import TableGrid from "@/components/app/table/TableGrid.vue";
+import TableCardList from "@/components/app/table/TableCardList.vue";
 
 interface TableProps {
   title?: string;
@@ -25,6 +26,10 @@ interface TableProps {
   selectionEnabled?: boolean;
   hasSourceHeader?: boolean;
   selectionMode?: "single" | "multiple";
+  enableViewToggle?: boolean;
+  itemHrefBase?: string;
+  contentClass?: string;
+  defaultView?: "table" | "card";
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -34,10 +39,35 @@ const props = withDefaults(defineProps<TableProps>(), {
   selectionEnabled: true,
   hasSourceHeader: false,
   selectionMode: "multiple",
+  enableViewToggle: false,
+  itemHrefBase: undefined,
+  contentClass: "mx-auto w-full max-w-[calc(840px+16px)] px-8",
+  defaultView: "table",
 });
 
 const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
   props;
+
+// Persisted per-table so each toggle-enabled table remembers its last view;
+// falls back to `defaultView` on first visit (before any toggle).
+//
+// Key on `itemHrefBase` (a stable route base like "/marketplace") rather than
+// `title`: titles are often translated strings or runtime-config values, so a
+// title-based key would change across locales and collide on "default" when the
+// title is empty. Fall back to title, then a literal, for tables without a base.
+//
+// `initOnMounted` defers the localStorage read until after mount, so SSR and the
+// first client render both use `defaultView` and agree. Without it the client
+// reads the stored value during setup, and the initial DOM (table vs card) can
+// diverge from the server's — the source of the hydration-mismatch warnings.
+const viewMode = useLocalStorage<"table" | "card">(
+  `table-view-mode:${props.itemHrefBase || props.title || "default"}`,
+  props.defaultView,
+  { initOnMounted: true },
+);
+const setViewMode = (value: "table" | "card") => {
+  viewMode.value = value;
+};
 
 const emit = defineEmits<{
   (e: "selection-change", value: Array<string>): void;
@@ -252,6 +282,9 @@ defineExpose({ fetchData, getSelectedRaw });
       :filter-label-by-key="filterLabelByKey"
       :selected-dataset-name="selectedDatasetName"
       :selected-application-name="selectedApplicationName"
+      :enable-view-toggle="enableViewToggle"
+      :view-mode="viewMode"
+      :content-class="contentClass"
       @create="handleCreate"
       @type-change="handleTypeTabChange"
       @search-update="handleSearchUpdate"
@@ -261,19 +294,34 @@ defineExpose({ fetchData, getSelectedRaw });
       @remove-filter="handleRemoveFilter"
       @clear-selected-dataset="clearTrainingSelection('datasets')"
       @clear-selected-application="clearTrainingSelection('applications')"
+      @view-change="setViewMode"
     />
-    <AppTablePreloader v-if="isLoading" class="mt-4" />
-    <TableGrid
-      v-else
+    <TableCardList
+      v-if="enableViewToggle && viewMode === 'card'"
       :table="table"
       :is-selection-visible="isSelectionVisible"
       :selection-mode="selectionMode"
-      :mapped-columns="mappedColumns"
-      :data-source="dataSource"
-      :columns="columns"
-      :page-size="pageSize"
-      :title="title"
+      :item-href-base="itemHrefBase"
+      :can-create="hasSourceHeader"
+      :content-class="contentClass"
+      :is-loading="isLoading"
+      @create="handleCreate"
     />
+    <template v-else>
+      <AppTablePreloader v-if="isLoading" class="mt-4" />
+      <TableGrid
+        v-else
+        :table="table"
+        :is-selection-visible="isSelectionVisible"
+        :selection-mode="selectionMode"
+        :mapped-columns="mappedColumns"
+        :data-source="dataSource"
+        :columns="columns"
+        :page-size="pageSize"
+        :title="title"
+        :content-class="contentClass"
+      />
+    </template>
     <AppTableRowMenu
       :rows="selectedRows"
       @on-pass-to-training="handlePassToTraining"

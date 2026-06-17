@@ -41,7 +41,7 @@ export const useMyCatalogTableColumns = (tableRef: TableRef) => {
         const raw = row.getValue("issued") as string;
         if (!raw || !String(raw).trim()) return "—";
         const d = dayjs(raw);
-        return d.isValid() ? d.format("DD/MM/YYYY") : "—";
+        return d.isValid() ? d.format("MMM, DD YYYY") : "—";
       },
     },
     {

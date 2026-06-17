@@ -12,6 +12,9 @@ interface TableToolbarProps {
   filterLabelByKey: Record<string, string>;
   selectedApplicationName?: string | null;
   selectedDatasetName?: string | null;
+  enableViewToggle?: boolean;
+  viewMode?: "table" | "card";
+  contentClass?: string;
 }
 
 defineProps<TableToolbarProps>();
@@ -33,6 +36,7 @@ const emit = defineEmits<{
     value: boolean | string | number,
     multiple: boolean,
   ): void;
+  (e: "view-change", value: "table" | "card"): void;
 }>();
 
 const { t } = useI18n();
@@ -41,13 +45,17 @@ const handleSearchUpdate = (value: string) => {
   emit("search-update", value);
   emit("apply-search");
 };
+
+const onViewChange = (value: unknown) => {
+  if (value === "table" || value === "card") emit("view-change", value);
+};
 </script>
 
 <template>
   <div
     class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
   >
-    <div class="mx-auto max-w-[calc(840px+16px)] w-full px-8 py-4">
+    <div :class="[contentClass, 'py-4']">
       <div
         v-if="hasSourceHeader"
         class="flex flex-wrap items-center justify-between gap-2"
@@ -86,7 +94,7 @@ const handleSearchUpdate = (value: string) => {
             <div class="relative flex max-w-sm items-center gap-2">
               <Input
                 :model-value="searchValue"
-                class="w-64 pl-8"
+                class="w-64 bg-card pl-8"
                 type="search"
                 :placeholder="t('placeholder.search', { type: selectedType })"
                 @update:model-value="handleSearchUpdate(String($event || ''))"
@@ -108,6 +116,40 @@ const handleSearchUpdate = (value: string) => {
                   emit('filter-change', key, value, multiple)
               "
             />
+          </div>
+
+          <div
+            v-if="enableViewToggle"
+            class="inline-flex h-9 shrink-0 items-center rounded-lg bg-muted p-[3px]"
+          >
+            <button
+              type="button"
+              :aria-label="t('action.table_view')"
+              :aria-pressed="viewMode === 'table'"
+              :class="[
+                'inline-flex h-full cursor-pointer items-center justify-center rounded-md px-2.5 transition-colors',
+                viewMode === 'table'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              ]"
+              @click="onViewChange('table')"
+            >
+              <Icon name="lucide:table" class="size-4" />
+            </button>
+            <button
+              type="button"
+              :aria-label="t('action.card_view')"
+              :aria-pressed="viewMode === 'card'"
+              :class="[
+                'inline-flex h-full cursor-pointer items-center justify-center rounded-md px-2.5 transition-colors',
+                viewMode === 'card'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              ]"
+              @click="onViewChange('card')"
+            >
+              <Icon name="lucide:layout-grid" class="size-4" />
+            </button>
           </div>
         </div>
       </div>

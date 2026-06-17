@@ -8,6 +8,10 @@
       title="marketplace"
       :columns="columns"
       :data-source="fetchTableData"
+      :enable-view-toggle="true"
+      :item-href-base="'/marketplace'"
+      :content-class="'mx-auto w-full max-w-[1600px] px-8'"
+      :default-view="'card'"
       @pass-to-training="handlePassToTraining"
     />
     <TrainingSuccessDialog
