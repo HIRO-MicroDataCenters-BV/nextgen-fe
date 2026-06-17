@@ -132,7 +132,7 @@ const isHome = computed(() => currentRouteName.value === "home");
 // so compare the base name; this also excludes the create/detail sub-routes.
 const isWide = computed(() =>
   ["my_catalog", "marketplace"].includes(
-    String(currentRouteName.value).split("___")[0],
+    String(currentRouteName.value).split("___")[0] ?? "",
   ),
 );
 </script>
