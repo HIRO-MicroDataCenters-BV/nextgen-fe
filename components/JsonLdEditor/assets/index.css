@@ -71,6 +71,9 @@
   flex: 1;
   overflow: auto;
   max-width: 100%;
+  /* Anchor for the absolutely-filled code editor so it spans the full
+     available height instead of collapsing to its min-height. */
+  position: relative;
 }
 
 /* ── Footer ──────────────────────────────────────────────────── */

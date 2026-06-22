@@ -14,7 +14,23 @@
         <Spinner class="size-8" />
       </div>
     </div>
-    <AppDetails v-else :data="datasetData" />
+    <div
+      v-else-if="metadataContent"
+      class="flex w-full min-w-0 flex-col py-6"
+    >
+      <div class="mx-auto w-full max-w-[calc(840px+16px)] min-w-0 px-8">
+        <JsonLdEditor
+          v-model="metadataContent"
+          :title="page.title"
+          :enforce-client-access-url="false"
+        />
+      </div>
+    </div>
+    <div v-else class="flex w-full min-w-0 flex-col py-10">
+      <div class="mx-auto w-full max-w-[calc(840px+16px)] px-8 text-center">
+        <p>{{ t("status.item_not_found") }}</p>
+      </div>
+    </div>
   </AppContent>
 </template>
 
@@ -26,13 +42,13 @@ import {
   createTableSearchFilter,
 } from "~/utils/jsonld";
 import { Spinner } from "@/components/ui/spinner";
+import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
 
-// // const { t } = useI18n();
-// const dayjs = useDayjs();
+const { t } = useI18n();
 const api = useApi();
 const { setPage, page } = useApp();
 
-const datasetData = ref();
+const metadataContent = ref<string>("");
 const loading = ref(true);
 
 const route = useRoute();
@@ -65,14 +81,16 @@ onMounted(async () => {
     const dataset = findDatasetInJsonLd(response);
 
     if (dataset) {
+      // Raw JSON-LD drives the editor; mirrors the catalog edit page.
+      metadataContent.value = JSON.stringify(dataset, null, 2);
+
+      // Flattened view is used only to derive the page title/subtitle.
       const data = convertJsonLdDatasetToJson(dataset, {
         preferredLanguage: "en",
         includeRawData: false,
         flattenArrays: true,
         excludeOriginalData: true,
       });
-
-      datasetData.value = data;
 
       if (data) {
         setPage({
