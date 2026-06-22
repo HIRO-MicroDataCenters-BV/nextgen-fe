@@ -131,7 +131,7 @@ const isHome = computed(() => currentRouteName.value === "home");
 // i18n appends a "___<locale>" suffix to route names (e.g. "my_catalog___en"),
 // so compare the base name; this also excludes the create/detail sub-routes.
 const isWide = computed(() =>
-  ["my_catalog", "marketplace"].includes(
+  ["home", "my_catalog", "marketplace"].includes(
     String(currentRouteName.value).split("___")[0] ?? "",
   ),
 );
