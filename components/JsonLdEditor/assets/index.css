@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.4rem 1rem;
   border-bottom: 1px solid hsl(var(--border));
   background: hsl(var(--muted) / 0.3);
   box-shadow: var(--sticky-shadow);
@@ -19,53 +19,9 @@
   z-index: 1;
 }
 
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-/* Mode toggle — subtle */
-.mode-toggle-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  opacity: 0.65;
-  transition: opacity 0.2s;
-}
-.mode-toggle-wrap:hover { opacity: 1; }
-
-/* Save slot — fixed width so search doesn't jump */
-.save-slot {
-  min-width: 90px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-/* save indicator fades in/out but slot stays fixed */
-.save-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  white-space: nowrap;
-  animation: save-appear 0.2s ease;
-}
-@keyframes save-appear { from { opacity: 0; } to { opacity: 1; } }
-.save-indicator--saving {
-  color: hsl(var(--muted-foreground));
-  background: hsl(var(--muted));
-}
-.save-indicator--saved {
-  color: hsl(142 50% 32%);
-  background: hsl(142 60% 92%);
-}
-:root.dark .save-indicator--saved { background: hsl(142 40% 18%); color: hsl(142 70% 65%); }
+/* NOTE: .header-right / .mode-toggle-wrap / .save-slot / .save-indicator
+   live inside the child EditorHeader.vue. Scoped CSS here cannot reach a
+   child's inner elements, so those styles now live in EditorHeader.vue. */
 
 .editor-content {
   flex: 1;

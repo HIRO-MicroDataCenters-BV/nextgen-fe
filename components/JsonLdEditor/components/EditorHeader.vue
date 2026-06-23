@@ -80,3 +80,64 @@ const { t } = useI18n();
     </div>
   </div>
 </template>
+
+<style scoped>
+/* These elements live in this component, so the styles must be defined here:
+   scoped CSS in the parent (index.css) cannot reach a child's inner nodes. */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Fixed-width slot reserves space for the transient save indicator so it can
+   fade in/out beside the toggle without shifting it (was causing a flicker). */
+.save-slot {
+  width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.save-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  animation: save-appear 0.2s ease;
+}
+@keyframes save-appear {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.save-indicator--saving {
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--muted));
+}
+.save-indicator--saved {
+  color: hsl(142 50% 32%);
+  background: hsl(142 60% 92%);
+}
+:global(:root.dark) .save-indicator--saved {
+  background: hsl(142 40% 18%);
+  color: hsl(142 70% 65%);
+}
+
+/* Mode toggle — keep Visual / switch / JSON stacked vertically */
+.mode-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.mode-toggle-wrap:hover {
+  opacity: 1;
+}
+</style>

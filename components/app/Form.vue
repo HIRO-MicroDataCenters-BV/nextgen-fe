@@ -364,7 +364,7 @@ defineExpose({
   .editor-pane :deep([data-slot="form-item"]) {
     flex: 1 1 0%;
     min-height: 0;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
   }
   .editor-pane :deep(.jsonld-editor) {
     height: 100%;
