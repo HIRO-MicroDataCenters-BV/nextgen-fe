@@ -53,6 +53,17 @@ const { processMmioFile } = useMmioProcessor();
 
 const isEditMode = computed(() => Boolean(props.id));
 
+// Layout split: configuration fields live in the left rail, the metadata
+// editor (jsonld-editor) takes the wide main column. Falls back to a single
+// column when a form has no metadata editor.
+const sidebarFields = computed(() =>
+  props.fields.filter((f) => f.type !== "jsonld-editor"),
+);
+const mainFields = computed(() =>
+  props.fields.filter((f) => f.type === "jsonld-editor"),
+);
+const hasSplitLayout = computed(() => mainFields.value.length > 0);
+
 const typedSchema = computed(() => toTypedSchema(props.formSchema));
 
 const { handleSubmit, values, meta, resetForm, setFieldValue, validateField } = useForm({
@@ -162,8 +173,16 @@ defineExpose({
 </script>
 
 <template>
-  <form class="space-y-6" @submit.prevent="onSubmit">
-    <div v-if="props.title || props.description" class="mb-6">
+  <form
+    class="lg:flex lg:h-full lg:min-h-0 lg:flex-col"
+    @submit.prevent="onSubmit"
+  >
+    <!-- Single-column heading (fallback layout only). In the split layout the
+         heading lives in the rail so the editor column starts flush at the top. -->
+    <div
+      v-if="(props.title || props.description) && !hasSplitLayout"
+      class="mb-8"
+    >
       <h2 v-if="props.title" class="text-2xl font-semibold mb-2">
         {{ props.title }}
       </h2>
@@ -171,45 +190,141 @@ defineExpose({
         {{ props.description }}
       </p>
     </div>
-    <FormFieldsRenderer
-      :fields="props.fields"
-      :values="values as Record<string, unknown>"
-      :disabled="props.disabled"
-      :is-edit-mode="isEditMode"
-      :field-options="fieldOptions"
-      :loading-options="loadingOptions"
-      :displayed-mmio-file-name="displayedMmioFileName"
-      :uploading-files="uploadingFiles"
-      :file-input-keys="fileInputKeys"
-      :mmio-extra-metadata="mmioExtraMetadata"
-      :is-field-visible="isFieldVisible"
-      :get-formatted-date="getFormattedDate"
-      @set-field-value="(name, value) => setFieldValue(name, value)"
-      @file-change="(name, file) => handleFileChange(name, fileToFileList(file))"
-      @file-delete="handleFileDelete"
-    />
 
-    <ServerErrorsBlock
-      v-if="props.serverErrors && props.serverErrors.length > 0"
-      :errors="props.serverErrors"
-      class="mt-4"
-    />
+    <!-- Two-column editor layout: configuration rail + metadata editor.
+         On desktop each column scrolls independently within a fixed-height
+         shell so the page itself does not scroll. -->
+    <div
+      v-if="hasSplitLayout"
+      class="grid grid-cols-1 items-start gap-x-10 gap-y-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[330px_minmax(0,1fr)] lg:items-stretch lg:[grid-template-rows:minmax(0,1fr)]"
+    >
+      <!-- Left rail: heading + configuration fields + actions -->
+      <aside class="flex min-w-0 flex-col lg:h-full lg:min-h-0">
+        <div
+          v-if="props.title || props.description"
+          class="mb-6 lg:shrink-0"
+        >
+          <h2 v-if="props.title" class="text-2xl font-semibold mb-2">
+            {{ props.title }}
+          </h2>
+          <p v-if="props.description" class="text-sm text-muted-foreground">
+            {{ props.description }}
+          </p>
+        </div>
 
-    <div class="actions flex justify-start gap-2 pt-4">
-      <Button
-        type="button"
-        variant="outline"
+        <div
+          class="flex flex-col gap-6 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1"
+        >
+          <div class="space-y-6">
+            <FormFieldsRenderer
+              :fields="sidebarFields"
+              :values="values as Record<string, unknown>"
+              :disabled="props.disabled"
+              :is-edit-mode="isEditMode"
+              :field-options="fieldOptions"
+              :loading-options="loadingOptions"
+              :displayed-mmio-file-name="displayedMmioFileName"
+              :uploading-files="uploadingFiles"
+              :file-input-keys="fileInputKeys"
+              :mmio-extra-metadata="mmioExtraMetadata"
+              :is-field-visible="isFieldVisible"
+              :get-formatted-date="getFormattedDate"
+              @set-field-value="(name, value) => setFieldValue(name, value)"
+              @file-change="(name, file) => handleFileChange(name, fileToFileList(file))"
+              @file-delete="handleFileDelete"
+            />
+          </div>
+
+          <ServerErrorsBlock
+            v-if="props.serverErrors && props.serverErrors.length > 0"
+            :errors="props.serverErrors"
+          />
+
+          <div
+            class="actions flex gap-2 border-t pt-4 lg:flex-col-reverse lg:[&>button]:w-full"
+          >
+            <Button
+              type="button"
+              variant="outline"
+              :disabled="props.disabled"
+              @click="handleDiscard"
+            >
+              {{ t("action.discard") }}
+            </Button>
+            <Button
+              type="submit"
+              :disabled="props.disabled || !meta.valid || meta.pending"
+            >
+              {{ isEditMode ? t("action.update") : t("action.save") }}
+            </Button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main column: metadata editor (scrolls independently on desktop) -->
+      <div class="editor-pane min-w-0 lg:min-h-0">
+        <FormFieldsRenderer
+          :fields="mainFields"
+          :values="values as Record<string, unknown>"
+          :disabled="props.disabled"
+          :is-edit-mode="isEditMode"
+          :field-options="fieldOptions"
+          :loading-options="loadingOptions"
+          :displayed-mmio-file-name="displayedMmioFileName"
+          :uploading-files="uploadingFiles"
+          :file-input-keys="fileInputKeys"
+          :mmio-extra-metadata="mmioExtraMetadata"
+          :is-field-visible="isFieldVisible"
+          :get-formatted-date="getFormattedDate"
+          @set-field-value="(name, value) => setFieldValue(name, value)"
+          @file-change="(name, file) => handleFileChange(name, fileToFileList(file))"
+          @file-delete="handleFileDelete"
+        />
+      </div>
+    </div>
+
+    <!-- Fallback: single column (forms without a metadata editor) -->
+    <div v-else class="space-y-6">
+      <FormFieldsRenderer
+        :fields="props.fields"
+        :values="values as Record<string, unknown>"
         :disabled="props.disabled"
-        @click="handleDiscard"
-      >
-        {{ t("action.discard") }}
-      </Button>
-      <Button
-        type="submit"
-        :disabled="props.disabled || !meta.valid || meta.pending"
-      >
-        {{ isEditMode ? t("action.update") : t("action.save") }}
-      </Button>
+        :is-edit-mode="isEditMode"
+        :field-options="fieldOptions"
+        :loading-options="loadingOptions"
+        :displayed-mmio-file-name="displayedMmioFileName"
+        :uploading-files="uploadingFiles"
+        :file-input-keys="fileInputKeys"
+        :mmio-extra-metadata="mmioExtraMetadata"
+        :is-field-visible="isFieldVisible"
+        :get-formatted-date="getFormattedDate"
+        @set-field-value="(name, value) => setFieldValue(name, value)"
+        @file-change="(name, file) => handleFileChange(name, fileToFileList(file))"
+        @file-delete="handleFileDelete"
+      />
+
+      <ServerErrorsBlock
+        v-if="props.serverErrors && props.serverErrors.length > 0"
+        :errors="props.serverErrors"
+        class="mt-4"
+      />
+
+      <div class="actions flex justify-start gap-2 pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="props.disabled"
+          @click="handleDiscard"
+        >
+          {{ t("action.discard") }}
+        </Button>
+        <Button
+          type="submit"
+          :disabled="props.disabled || !meta.valid || meta.pending"
+        >
+          {{ isEditMode ? t("action.update") : t("action.save") }}
+        </Button>
+      </div>
     </div>
   </form>
 
@@ -233,3 +348,28 @@ defineExpose({
     </AlertDialogContent>
   </AlertDialog>
 </template>
+
+<style scoped>
+/* Desktop: let the metadata editor fill its column so its own internal
+   scroll (search/toggle header and footer stay pinned, only the fields
+   scroll) becomes the right pane's single scroll area. The vee-validate
+   FormField is renderless and FormControl is a renderless Slot, so the
+   FormItem grid is the direct parent of the editor root (.jsonld-editor). */
+@media (min-width: 1024px) {
+  .editor-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .editor-pane :deep([data-slot="form-item"]) {
+    flex: 1 1 0%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .editor-pane :deep(.jsonld-editor) {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+  }
+}
+</style>

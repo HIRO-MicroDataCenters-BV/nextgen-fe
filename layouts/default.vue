@@ -131,10 +131,14 @@ const isHome = computed(() => currentRouteName.value === "home");
 // My Catalog and Marketplace use a full-width content column; widen the header
 // to match so the breadcrumb aligns with the page content.
 // i18n appends a "___<locale>" suffix to route names (e.g. "my_catalog___en"),
-// so compare the base name; this also excludes the create/detail sub-routes.
-const isWide = computed(() =>
-  ["home", "my_catalog", "marketplace"].includes(
-    String(currentRouteName.value).split("___")[0] ?? "",
-  ),
-);
+// so compare the base name. The catalog editor sub-routes (create + detail)
+// also use the wide editor layout, so match them by path.
+const isWide = computed(() => {
+  const base = String(currentRouteName.value).split("___")[0] ?? "";
+  if (["home", "my_catalog", "marketplace"].includes(base)) return true;
+  return (
+    route.path.startsWith("/my_catalog/") ||
+    route.path.startsWith("/marketplace/")
+  );
+});
 </script>

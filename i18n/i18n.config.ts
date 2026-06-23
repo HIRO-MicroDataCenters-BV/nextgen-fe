@@ -413,6 +413,7 @@ export default defineI18nConfig(() => {
           view: "View",
           upload_file: "Upload File",
           back_to_catalog: "Back to Catalog",
+          back_to_marketplace: "Back to Marketplace",
           for_researchers: "For Researchers",
           for_data_providers: "For Data Providers",
           items_selected: "Items selected",

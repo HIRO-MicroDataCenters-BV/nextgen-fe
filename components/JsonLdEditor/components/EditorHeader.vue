@@ -71,7 +71,6 @@ const { t } = useI18n();
         <Switch
           id="mode-switch"
           :model-value="currentMode === 'code'"
-          :disabled="readonly"
           @update:model-value="emit('toggle-mode', !!$event)"
         />
         <Label for="mode-switch" class="text-xs text-muted-foreground">{{
