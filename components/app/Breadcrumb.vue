@@ -1,6 +1,11 @@
 <template>
   <Breadcrumb v-if="breadcrumbs.length > 0">
     <BreadcrumbList>
+      <Icon
+        v-if="sectionIcon"
+        :name="sectionIcon"
+        class="size-4 shrink-0 text-muted-foreground"
+      />
       <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
         <BreadcrumbItem>
           <BreadcrumbLink v-if="!crumb.isCurrent" :as-child="true">
@@ -28,6 +33,15 @@ interface BreadcrumbItemType {
 
 const route = useRoute();
 const { t } = useI18n();
+
+// Leading section icon mirrors the sidebar nav icons (see useMenu).
+const sectionIcon = computed<string | null>(() => {
+  const section = route.path.split("/").filter((p) => p)[0]?.toLowerCase();
+  if (section === "marketplace") return "lucide:store";
+  if (section === "my_catalog") return "lucide:library-big";
+  if (section === "home") return "lucide:home";
+  return null;
+});
 
 const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
   const pathArray = route.path.split("/").filter((p) => p);

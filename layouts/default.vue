@@ -19,8 +19,6 @@
                 ]"
               >
                 <div class="flex h-16 items-center gap-2 py-4">
-                  <SidebarTrigger class="-ml-1" />
-                  <Separator orientation="vertical" class="mr-2 h-12" />
                   <AppBreadcrumb />
                 </div>
 
