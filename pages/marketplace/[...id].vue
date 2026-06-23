@@ -3,6 +3,7 @@
     :title="page.title"
     :description="page.subtitle"
     :show-available-biobanks="false"
+    class="lg:-mb-8"
   >
     <div
       v-if="loading"
@@ -14,16 +15,22 @@
         <Spinner class="size-8" />
       </div>
     </div>
+    <!-- Desktop: fixed-height shell matching the catalog editor so the page
+         doesn't scroll; the rail and read-only viewer scroll independently. -->
     <div
       v-else-if="metadataContent"
-      class="flex w-full min-w-0 flex-col py-6"
+      class="flex w-full min-w-0 flex-col lg:h-[calc(100svh_-_4rem)]"
     >
-      <div class="mx-auto w-full max-w-[1600px] min-w-0 px-8">
+      <div
+        class="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col px-8 py-6 lg:min-h-0 lg:flex-1 lg:py-3"
+      >
         <div
-          class="grid grid-cols-1 items-start gap-x-10 gap-y-8 lg:grid-cols-[330px_minmax(0,1fr)]"
+          class="grid grid-cols-1 items-start gap-x-10 gap-y-8 lg:min-h-0 lg:flex-1 lg:grid-cols-[330px_minmax(0,1fr)] lg:items-stretch lg:[grid-template-rows:minmax(0,1fr)]"
         >
           <!-- Summary rail: dataset overview + back action -->
-          <aside class="flex min-w-0 flex-col gap-5 lg:sticky lg:top-20">
+          <aside
+            class="flex min-w-0 flex-col gap-5 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1"
+          >
             <div>
               <h1 class="text-2xl font-semibold leading-tight">
                 {{ page.title }}
@@ -60,8 +67,8 @@
             </Button>
           </aside>
 
-          <!-- Main column: read-only metadata viewer -->
-          <div class="min-w-0">
+          <!-- Main column: read-only metadata viewer (fills + scrolls inside) -->
+          <div class="editor-pane min-w-0 lg:min-h-0">
             <JsonLdEditor
               v-model="metadataContent"
               :title="page.title"
@@ -161,4 +168,19 @@ onMounted(async () => {
 });
 </script>
 
-<style></style>
+<style scoped>
+/* Desktop: let the read-only editor fill its column so its own internal
+   scroll becomes the right pane's single scroll area (matches catalog edit). */
+@media (min-width: 1024px) {
+  .editor-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .editor-pane :deep(.jsonld-editor) {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+  }
+}
+</style>
