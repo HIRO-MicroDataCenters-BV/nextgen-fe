@@ -105,6 +105,7 @@
                       >{{ $t("action.github") }}</Button
                     >
                   </div>
+                  <AppHeaderSource compact />
                 </div>
               </div>
             </div>

@@ -56,19 +56,6 @@ const onViewChange = (value: unknown) => {
     class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
   >
     <div :class="[contentClass, 'py-4']">
-      <div
-        v-if="hasSourceHeader"
-        class="flex flex-wrap items-center justify-between gap-2"
-      >
-        <div class="flex items-center gap-2">
-          <AppHeaderSource />
-        </div>
-        <div class="flex items-center gap-2">
-          <Button class="cursor-pointer" @click="emit('create')">{{
-            t("action.add_new_item")
-          }}</Button>
-        </div>
-      </div>
       <div class="flex items-center justify-between gap-2">
         <Tabs :model-value="selectedType" @update:model-value="emit('type-change', $event)">
           <TabsList class="mx-auto flex items-center justify-center">
@@ -151,6 +138,15 @@ const onViewChange = (value: unknown) => {
               <Icon name="lucide:layout-grid" class="size-4" />
             </button>
           </div>
+
+          <Button
+            v-if="hasSourceHeader"
+            class="shrink-0 cursor-pointer"
+            @click="emit('create')"
+          >
+            <Icon name="lucide:plus" />
+            {{ t("action.add_new_item") }}
+          </Button>
         </div>
       </div>
       <div
