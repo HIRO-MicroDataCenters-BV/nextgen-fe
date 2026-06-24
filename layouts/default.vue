@@ -12,13 +12,16 @@
             <div class="flex w-full min-w-0 flex-col">
               <div
                 :class="[
-                  'flex w-full min-w-0 flex-row items-center justify-between px-8',
-                  isWide
-                    ? 'mx-auto max-w-[1600px]'
-                    : 'max-w-[calc(840px+16px)]',
+                  'mx-auto flex w-full min-w-0 flex-row items-center justify-between px-8',
+                  isWide ? 'max-w-[1600px]' : 'max-w-[calc(840px+16px)]',
                 ]"
               >
                 <div class="flex h-16 items-center gap-2 py-4">
+                  <SidebarTrigger class="-ml-1 sm:hidden" />
+                  <Separator
+                    orientation="vertical"
+                    class="mr-2 h-4 sm:hidden"
+                  />
                   <AppBreadcrumb />
                 </div>
 

@@ -1,11 +1,12 @@
 <template>
   <Breadcrumb v-if="breadcrumbs.length > 0">
     <BreadcrumbList>
-      <Icon
-        v-if="sectionIcon"
-        :name="sectionIcon"
-        class="size-4 shrink-0 text-muted-foreground"
-      />
+      <BreadcrumbItem v-if="sectionIcon" aria-hidden="true">
+        <Icon
+          :name="sectionIcon"
+          class="size-4 shrink-0 text-muted-foreground"
+        />
+      </BreadcrumbItem>
       <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
         <BreadcrumbItem>
           <BreadcrumbLink v-if="!crumb.isCurrent" :as-child="true">
