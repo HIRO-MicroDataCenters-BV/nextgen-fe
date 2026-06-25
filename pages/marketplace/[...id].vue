@@ -160,8 +160,8 @@ onMounted(async () => {
         });
       }
     }
-  } catch {
-    // Error loading dataset
+  } catch (error) {
+    console.error("[marketplace/detail] Failed to load dataset", error);
   } finally {
     loading.value = false;
   }

@@ -62,8 +62,9 @@ const itemType = computed(() => {
         <FormLabel
           v-if="field.type !== 'checkbox' && field.type !== 'jsonld-editor'"
           :for="field.name"
-          >{{ field.label }}</FormLabel
         >
+          {{ field.label }}
+        </FormLabel>
         <FormFieldControlText
           v-if="field.type === 'text'"
           :field="field"
