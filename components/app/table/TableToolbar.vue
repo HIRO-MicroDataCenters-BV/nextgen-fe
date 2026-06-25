@@ -53,7 +53,7 @@ const onViewChange = (value: unknown) => {
 
 <template>
   <div
-    class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
+    class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm dark:border-b dark:border-border dark:shadow-none"
   >
     <div :class="[contentClass, 'py-4']">
       <div class="flex items-center justify-between gap-2">

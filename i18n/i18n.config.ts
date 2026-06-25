@@ -174,6 +174,8 @@ export default defineI18nConfig(() => {
           help: "Help",
           guest_user: "Guest",
           logout: "Logout",
+          light_mode: "Light mode",
+          dark_mode: "Dark mode",
           hus_catalog: "My Catalog",
           ki_catalog: "My Catalog",
           umcu_catalog: "My Catalog",

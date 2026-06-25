@@ -4,7 +4,7 @@
       class="w-full md:w-1/2 flex items-center justify-center bg-background p-8"
     >
       <div
-        class="w-full max-w-md space-y-6 bg-white/90 rounded-2xl shadow-xl p-8 border border-gray-100"
+        class="w-full max-w-md space-y-6 bg-card/95 rounded-2xl shadow-xl p-8 border border-border"
       >
         <div class="flex flex-col items-center mb-8">
           <img

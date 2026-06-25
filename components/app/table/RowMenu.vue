@@ -8,12 +8,12 @@
     leave-to-class="translate-y-full opacity-0"
   >
     <div v-if="selectedCount > 0" class="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
-      <Menubar class="bg-gray-900 text-white overflow rounded-md px-2 shadow-lg">
+      <Menubar class="bg-foreground text-background overflow rounded-md px-2 shadow-lg">
         <MenubarMenu>
           <template v-for="item in items" :key="item.label">
             <MenubarTrigger
               v-if="item.type === 'button'"
-              class="bg-transparent! hover:bg-gray-800! text-white! cursor-pointer flex items-center gap-1"
+              class="bg-transparent! hover:bg-background/15! text-background! cursor-pointer flex items-center gap-1"
               @click="item.action"
               ><Icon :name="item.icon" class="size-4" />
               {{ item.label }}</MenubarTrigger
@@ -21,7 +21,7 @@
 
             <MenubarTrigger
               v-else-if="item.type === 'counter'"
-              class="bg-transparent! text-white!"
+              class="bg-transparent! text-background!"
               @click="item.action"
               >{{ selectedCount }} {{ item.label }}</MenubarTrigger
             >
