@@ -103,6 +103,8 @@ import JsonLdEditor from "@/components/JsonLdEditor/index.vue";
 const { t } = useI18n();
 const api = useApi();
 const { setPage, page } = useApp();
+const config = useRuntimeConfig();
+const catalogName = config.public.catalogName;
 
 const metadataContent = ref<string>("");
 const loading = ref(true);
@@ -116,6 +118,17 @@ const datasetId = computed(() => {
     return idParam.join("/");
   }
   return (idParam as string) || "";
+});
+
+// Seed a default Marketplace page state synchronously so the header source
+// display and AppContent stay populated on a hard refresh / direct navigation,
+// before (or even if) the async dataset load resolves. Title/subtitle are
+// overwritten once the dataset is found.
+setPage({
+  section: "marketplace",
+  title: t("title.marketplace"),
+  subtitle: t("subtitle.marketplace"),
+  source: catalogName as string,
 });
 
 onMounted(async () => {
