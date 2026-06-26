@@ -120,10 +120,6 @@ const datasetId = computed(() => {
   return (idParam as string) || "";
 });
 
-// Seed a default Marketplace page state synchronously so the header source
-// display and AppContent stay populated on a hard refresh / direct navigation,
-// before (or even if) the async dataset load resolves. Title/subtitle are
-// overwritten once the dataset is found.
 setPage({
   section: "marketplace",
   title: t("title.marketplace"),
