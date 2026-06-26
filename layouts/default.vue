@@ -17,94 +17,16 @@
                 ]"
               >
                 <div class="flex h-16 items-center gap-2 py-4">
-                  <SidebarTrigger class="-ml-1" />
-                  <Separator orientation="vertical" class="mr-2 h-12" />
+                  <SidebarTrigger class="-ml-1 sm:hidden" />
+                  <Separator
+                    orientation="vertical"
+                    class="mr-2 h-4 sm:hidden"
+                  />
                   <AppBreadcrumb />
                 </div>
 
-                <div class="ml-auto flex items-center justify-between gap-2">
-                  <div v-if="isHome" class="flex items-end gap-2">
-                    <HoverCard>
-                      <HoverCardTrigger as-child>
-                        <Button variant="outline" size="sm">
-                          {{ $t("action.contacts") }}
-                        </Button>
-                      </HoverCardTrigger>
-                      <HoverCardContent class="w-80">
-                        <div class="flex justify-between space-x-4">
-                          <div class="flex justify-between space-x-4">
-                            <img
-                              src="/images/logo.svg"
-                              class="size-10"
-                              alt="cog-logo"
-                            >
-                            <div class="space-y-1">
-                              <div class="mb-2">
-                                <h4 class="text-sm font-semibold">
-                                  {{ $t("app.title") }}
-                                </h4>
-                                <p class="text-sm">
-                                  {{ $t("subtitle.short_description") }}
-                                </p>
-                              </div>
-                              <div>
-                                <ul class="text-gray-500 text-xs">
-                                  <li class="mb-1">
-                                    <a
-                                      href="mailto:info@nextgentools.eu"
-                                      class="flex gap-2 items-center justify-start"
-                                    >
-                                      <Icon name="lucide:mail" />
-                                      <span>info@nextgentools.eu</span>
-                                    </a>
-                                  </li>
-                                  <li class="mb-1">
-                                    <a
-                                      href="https://www.linkedin.com/company/nextgen-cvd-dataspace"
-                                      class="flex gap-2 items-center justify-start"
-                                    >
-                                      <Icon name="lucide:linkedin" />
-                                      <span>{{
-                                        $t("home.contacts.linkedin")
-                                      }}</span>
-                                    </a>
-                                  </li>
-                                  <li class="mb-1">
-                                    <a
-                                      href="https://www.youtube.com/@NextGenCVDDataspace"
-                                      class="flex gap-2 items-center justify-start"
-                                    >
-                                      <Icon name="lucide:youtube" />
-                                      <span>{{
-                                        $t("home.contacts.youtube")
-                                      }}</span>
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a
-                                      href="https://twitter.com/NextGenCVD"
-                                      class="flex gap-2 items-center justify-start"
-                                    >
-                                      <Icon name="lucide:twitter" />
-                                      <span>{{
-                                        $t("home.contacts.twitter")
-                                      }}</span>
-                                    </a>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                    <Button
-                      variant="secondary"
-                      as="a"
-                      href="https://github.com/HIRO-MicroDataCenters-BV"
-                      >{{ $t("action.github") }}</Button
-                    >
-                  </div>
+                <div class="ml-auto flex items-center gap-2">
+                  <AppHeaderSource compact />
                 </div>
               </div>
             </div>
@@ -124,15 +46,21 @@
 
 <script setup lang="ts">
 const route = useRoute();
-const currentRouteName = computed(() => route.name);
-const isHome = computed(() => currentRouteName.value === "home");
-// My Catalog and Marketplace use a full-width content column; widen the header
-// to match so the breadcrumb aligns with the page content.
-// i18n appends a "___<locale>" suffix to route names (e.g. "my_catalog___en"),
-// so compare the base name; this also excludes the create/detail sub-routes.
-const isWide = computed(() =>
-  ["my_catalog", "marketplace"].includes(
-    String(currentRouteName.value).split("___")[0] ?? "",
-  ),
-);
+// nuxt-i18n appends a "___<locale>" suffix to route names (e.g. "home___en"),
+// so strip it to get the base name before comparing.
+const baseRouteName = computed(() => String(route.name ?? "").split("___")[0] ?? "");
+
+// Home, My Catalog, and Marketplace use a full-width content column; widen the
+// header to match so the breadcrumb aligns with the page content. The catalog
+// editor sub-routes (create + detail) also use the wide editor layout, so match
+// by path.
+const isWide = computed(() => {
+  if (["home", "my_catalog", "marketplace"].includes(baseRouteName.value)) {
+    return true;
+  }
+  return (
+    route.path.startsWith("/my_catalog/") ||
+    route.path.startsWith("/marketplace/")
+  );
+});
 </script>

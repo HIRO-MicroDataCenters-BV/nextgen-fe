@@ -155,6 +155,7 @@ const { table, mappedColumns, isSelectionVisible, clearSelection: clearTableSele
   selectionMode: props.selectionMode,
   selectedType,
   currentPage,
+  isUpdatingFromState,
   columnFilters,
   columnVisibility,
   data,

@@ -19,6 +19,7 @@ interface UseTableInstanceOptions {
   selectionMode: "single" | "multiple";
   selectedType: Ref<string>;
   currentPage: Ref<number>;
+  isUpdatingFromState: Ref<boolean>;
   columnFilters: Ref<Array<{ id: string; value: unknown; column?: string }>>;
   columnVisibility: Ref<Record<string, boolean>>;
   data: Ref<TableRowData[]>;
@@ -102,6 +103,11 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
           ? updater(table.getState().pagination)
           : updater;
       options.currentPage.value = newPagination.pageIndex;
+      // Skip the URL write + refetch when pagination is being set
+      // programmatically (route/state restore via setPageIndex, or a filter
+      // reset). Those flows schedule their own fetch, so reacting here would
+      // fire a duplicate backend request on load.
+      if (options.isUpdatingFromState.value) return;
       options.updateURLQuery();
       options.fetchData();
     },

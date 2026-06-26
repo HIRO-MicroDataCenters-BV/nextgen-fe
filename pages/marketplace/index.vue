@@ -30,6 +30,8 @@ import { useMarketplaceTableColumns } from "~/composables/catalog/useMarketplace
 const { t } = useI18n();
 const { page, setPage } = useApp();
 const api = useApi();
+const config = useRuntimeConfig();
+const catalogName = config.public.catalogName;
 
 const { showSuccessDialog, successData, handlePassToTraining, fetchTableData } =
   useCatalogListPage({
@@ -45,7 +47,7 @@ setPage({
   section: "marketplace",
   title: t("title.marketplace"),
   subtitle: t("subtitle.marketplace"),
-  source: "uva",
+  source: catalogName as string,
 });
 
 const { columns } = useMarketplaceTableColumns(page.value.section);
