@@ -1,13 +1,15 @@
 <template>
+  <!-- Tooltip, icon and label all describe the TARGET mode (what clicking switches
+       to): in dark mode → sun + "Light mode"; in light mode → moon + "Dark mode". -->
   <SidebarMenuButton
     class="cursor-pointer"
     :tooltip="isDark ? t('menu.light_mode') : t('menu.dark_mode')"
     @click="toggleTheme"
   >
     <span class="text-lg">
-      <Icon :name="isDark ? 'lucide:moon' : 'lucide:sun'" />
+      <Icon :name="isDark ? 'lucide:sun' : 'lucide:moon'" />
     </span>
-    <span>{{ isDark ? t("menu.dark_mode") : t("menu.light_mode") }}</span>
+    <span>{{ isDark ? t("menu.light_mode") : t("menu.dark_mode") }}</span>
   </SidebarMenuButton>
 </template>
 
