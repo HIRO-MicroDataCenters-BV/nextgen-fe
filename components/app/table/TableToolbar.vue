@@ -56,7 +56,7 @@ const onViewChange = (value: unknown) => {
     class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm dark:border-b dark:border-border dark:shadow-none"
   >
     <div :class="[contentClass, 'py-4']">
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
         <Tabs :model-value="selectedType" @update:model-value="emit('type-change', $event)">
           <TabsList class="mx-auto flex items-center justify-center">
             <TabsTrigger value="datasets">
@@ -76,7 +76,7 @@ const onViewChange = (value: unknown) => {
           </TabsList>
         </Tabs>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="flex flex-auto flex-wrap gap-2">
             <div class="relative flex max-w-sm items-center gap-2">
               <Input
