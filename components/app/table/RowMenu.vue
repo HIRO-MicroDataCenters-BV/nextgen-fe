@@ -8,7 +8,7 @@
     leave-to-class="translate-y-full opacity-0"
   >
     <div v-if="selectedCount > 0" class="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
-      <Menubar class="bg-foreground text-background overflow rounded-md px-2 shadow-lg">
+      <Menubar class="bg-foreground text-background overflow-hidden rounded-md px-2 shadow-lg">
         <MenubarMenu>
           <template v-for="item in items" :key="item.label">
             <MenubarTrigger
