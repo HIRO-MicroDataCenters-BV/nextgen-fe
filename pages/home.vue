@@ -7,7 +7,7 @@
         <img src="/images/logo.svg" class="size-8" alt="cog-logo" >
       </div>
       <h1 class="text-4xl font-bold">{{ $t("app.title") }}</h1>
-      <p class="text-sm text-black">
+      <p class="text-sm text-muted-foreground">
         {{ $t("app.description") }}
       </p>
     </div>
@@ -33,7 +33,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[0].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[0].description") }}
                 </p>
               </div>
@@ -44,7 +44,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[1].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[1].description") }}
                 </p>
               </div>
@@ -55,7 +55,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[2].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[2].description") }}
                 </p>
               </div>
@@ -70,7 +70,7 @@
                 <h3 class="text-2xl font-semibold mb-2">
                   {{ $t("home.footer.title") }}
                 </h3>
-                <h4 class="text-sm font-normal text-gray-500 mb-8">
+                <h4 class="text-sm font-normal text-muted-foreground mb-8">
                   {{ $t("home.footer.subtitle") }}
                 </h4>
                 <p class="text-sm mb-4">
@@ -91,7 +91,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[3].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[3].description") }}
                 </p>
               </div>
@@ -102,7 +102,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[4].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[4].description") }}
                 </p>
               </div>
@@ -113,7 +113,7 @@
               </div>
               <div class="card-content p-4">
                 <h4 class="text-sm mb-2">{{ $t("home.card[5].title") }}</h4>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-muted-foreground">
                   {{ $t("home.card[5].description") }}
                 </p>
               </div>
@@ -128,7 +128,7 @@
                 <h3 class="text-2xl font-semibold mb-2">
                   {{ $t("home.footer.title") }}
                 </h3>
-                <h4 class="text-sm font-normal text-gray-500 mb-8">
+                <h4 class="text-sm font-normal text-muted-foreground mb-8">
                   {{ $t("home.footer.subtitle") }}
                 </h4>
                 <p class="text-sm mb-4">
@@ -143,7 +143,7 @@
         </TabsContent>
       </Tabs>
     </div>
-    <footer class="text-sm text-gray-500 text-center mt-12">
+    <footer class="text-sm text-muted-foreground text-center mt-12">
       {{ $t("app.copyright", { year: new Date().getFullYear() }) }}
     </footer>
   </div>

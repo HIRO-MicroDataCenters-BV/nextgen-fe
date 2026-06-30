@@ -14,7 +14,7 @@ function handleUserLogout() {
 <template>
   <Sidebar collapsible="icon">
     <SidebarHeader
-      class="h-16 max-h-16 shrink-0 gap-0 border-b border-gray-200 p-0 px-2"
+      class="h-16 max-h-16 shrink-0 gap-0 border-b border-sidebar-border p-0 px-2"
     >
       <SidebarMenu class="h-full min-h-0 gap-0">
         <SidebarMenuItem class="flex h-full min-h-0">
@@ -48,7 +48,10 @@ function handleUserLogout() {
           <template v-for="item in menu.main" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
+                <NuxtLink
+                  :href="item.url"
+                  exact-active-class="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
@@ -106,7 +109,10 @@ function handleUserLogout() {
           <template v-for="item in menu.secondary" :key="item.title">
             <SidebarMenuItem v-if="item.items.length === 0">
               <SidebarMenuButton as-child>
-                <NuxtLink :href="item.url" exact-active-class="bg-gray-200">
+                <NuxtLink
+                  :href="item.url"
+                  exact-active-class="bg-sidebar-accent text-sidebar-accent-foreground"
+                >
                   <span class="text-lg">
                     <Icon :name="item.icon" />
                   </span>
@@ -160,6 +166,10 @@ function handleUserLogout() {
     </SidebarContent>
     <SidebarFooter>
       <SidebarMenu class="gap-2">
+        <SidebarMenuItem>
+          <AppColorModeSwitch />
+        </SidebarMenuItem>
+        <SidebarSeparator />
         <SidebarMenuItem>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>

@@ -30,16 +30,16 @@ const { t } = useI18n();
         :columns="columns"
         :page-size="pageSize"
         :title="title"
-        class="outline outline-1 outline-gray-200 rounded-md overflow-hidden"
+        class="outline outline-1 outline-border rounded-md overflow-hidden"
       >
-        <TableHeader class="bg-gray-50 outline outline-1 outline-gray-200">
+        <TableHeader class="bg-muted outline outline-1 outline-border">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
           >
             <TableHead
               v-if="isSelectionVisible"
-              class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50 border-t rounded-t-md overflow-hidden rounded-md"
+              class="sticky top-0 z-20 border-b border-border bg-muted border-t rounded-t-md overflow-hidden rounded-md"
             >
               <div
                 v-if="selectionMode === 'multiple'"
@@ -62,7 +62,7 @@ const { t } = useI18n();
             <TableHead
               v-for="header in headerGroup.headers"
               :key="header.id"
-              class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50"
+              class="sticky top-0 z-20 border-b border-border bg-muted"
             >
               <FlexRender
                 v-if="!header.isPlaceholder"

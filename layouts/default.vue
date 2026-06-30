@@ -8,7 +8,7 @@
         <header
           class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-2 bg-background transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-16"
         >
-          <div class="w-full gap-2 border-b border-gray-200 px-0">
+          <div class="w-full gap-2 border-b border-border px-0">
             <div class="flex w-full min-w-0 flex-col">
               <div
                 :class="[
