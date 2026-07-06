@@ -60,6 +60,8 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
       label = t("breadcrumb.my_catalog", t(`menu.${catalogName}`));
     } else if (segment.toLowerCase() === "marketplace") {
       label = t("breadcrumb.marketplace", "Marketplace");
+    } else if (segment.toLowerCase() === "tools") {
+      label = t("breadcrumb.tools", "Tools");
     } else if (segment.toLowerCase() === "create") {
       label = t("breadcrumb.create", "Create");
     } else if (segment.toLowerCase() === "edit") {

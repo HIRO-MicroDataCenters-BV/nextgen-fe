@@ -16,9 +16,10 @@ const typeBadgeClass: Record<ToolType, string> = {
     "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300",
 };
 
-// Thumbnail styling is derived from the tool's category (not stored on the tool)
-// so the data model stays a faithful copy of the API shape. Unknown categories
-// fall back to a neutral tint. Accent classes are literal for Tailwind v4.
+// The icon/colour mapping is derived here from the tool's `category`, rather than
+// stored on the tool, so the data model stays a faithful copy of the API shape.
+// Unknown categories fall back to a neutral tint. Accent classes are literal for
+// Tailwind v4.
 const CATEGORY_STYLE: Record<string, { icon: string; accent: string }> = {
   imaging: { icon: "lucide:image", accent: "bg-blue-100 dark:bg-blue-950/40" },
   analytics: { icon: "lucide:activity", accent: "bg-violet-100 dark:bg-violet-950/40" },
