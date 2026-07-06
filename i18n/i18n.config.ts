@@ -116,6 +116,7 @@ export default defineI18nConfig(() => {
         },
         title: {
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           settings: "Settings",
           home: "Login",
@@ -135,6 +136,8 @@ export default defineI18nConfig(() => {
         },
         subtitle: {
           marketplace: "Decentralised search across all institutional catalogs",
+          tools:
+            "Browse tools developed across the NextGen consortium. Federated tools can be deployed on the Pathfinder platform.",
           data_products: "Data Products",
           available_biobanks: "Available Biobanks",
           my_catalog: "Private metadata catalog",
@@ -169,6 +172,7 @@ export default defineI18nConfig(() => {
         menu: {
           home: "Home",
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           settings: "Settings",
           help: "Help",
@@ -189,8 +193,28 @@ export default defineI18nConfig(() => {
         },
         breadcrumb: {
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           create: "Create",
+        },
+        tools: {
+          search_placeholder: "Search tools…",
+          all_categories: "All categories",
+          all_types: "All types",
+          empty_title: "No tools found",
+          empty_hint: "Try adjusting your search or filters.",
+          action: {
+            view: "View",
+          },
+          link: {
+            pathfinder: "Deploy on Pathfinder",
+            doi: "View DOI",
+          },
+          type: {
+            federated: "Federated",
+            library: "Library",
+            utility: "Utility",
+          },
         },
         filter: {
           distribution: "Distribution",

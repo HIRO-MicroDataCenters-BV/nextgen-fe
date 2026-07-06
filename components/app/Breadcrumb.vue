@@ -39,6 +39,7 @@ const { t } = useI18n();
 const sectionIcon = computed<string | null>(() => {
   const section = route.path.split("/").filter((p) => p)[0]?.toLowerCase();
   if (section === "marketplace") return "lucide:store";
+  if (section === "tools") return "lucide:blocks";
   if (section === "my_catalog") return "lucide:library-big";
   if (section === "home") return "lucide:home";
   return null;
