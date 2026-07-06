@@ -1,6 +1,13 @@
 <template>
   <AppContent :title="t('title.tools')" :description="t('subtitle.tools')">
     <div class="mx-auto w-full max-w-[1600px] px-8 py-6">
+      <!-- Header -->
+      <div class="mb-6">
+        <p class="text-sm text-muted-foreground">
+          {{ t("subtitle.tools") }}
+        </p>
+      </div>
+
       <!-- Search + filters -->
       <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         <div class="relative w-full sm:max-w-xs">
