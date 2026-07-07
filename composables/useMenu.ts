@@ -42,6 +42,14 @@ export function useMenu() {
         items: [],
         isActive: route.path === "/",
       },
+      {
+        id: "tools",
+        title: t("menu.tools"),
+        icon: "lucide:blocks",
+        url: "/tools",
+        items: [],
+        isActive: route.path === "/tools",
+      },
     ],
     secondary: [
       {

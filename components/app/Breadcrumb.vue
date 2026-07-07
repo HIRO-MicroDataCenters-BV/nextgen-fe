@@ -39,6 +39,7 @@ const { t } = useI18n();
 const sectionIcon = computed<string | null>(() => {
   const section = route.path.split("/").filter((p) => p)[0]?.toLowerCase();
   if (section === "marketplace") return "lucide:store";
+  if (section === "tools") return "lucide:blocks";
   if (section === "my_catalog") return "lucide:library-big";
   if (section === "home") return "lucide:home";
   return null;
@@ -59,6 +60,8 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
       label = t("breadcrumb.my_catalog", t(`menu.${catalogName}`));
     } else if (segment.toLowerCase() === "marketplace") {
       label = t("breadcrumb.marketplace", "Marketplace");
+    } else if (segment.toLowerCase() === "tools") {
+      label = t("breadcrumb.tools", "Tools");
     } else if (segment.toLowerCase() === "create") {
       label = t("breadcrumb.create", "Create");
     } else if (segment.toLowerCase() === "edit") {

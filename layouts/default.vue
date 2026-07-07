@@ -50,17 +50,18 @@ const route = useRoute();
 // so strip it to get the base name before comparing.
 const baseRouteName = computed(() => String(route.name ?? "").split("___")[0] ?? "");
 
-// Home, My Catalog, and Marketplace use a full-width content column; widen the
-// header to match so the breadcrumb aligns with the page content. The catalog
-// editor sub-routes (create + detail) also use the wide editor layout, so match
-// by path.
+// Home, Tools, My Catalog, and Marketplace use a full-width content column;
+// widen the header to match so the breadcrumb aligns with the page content. The
+// catalog editor sub-routes (create + detail) also use the wide editor layout,
+// so match by path.
 const isWide = computed(() => {
-  if (["home", "my_catalog", "marketplace"].includes(baseRouteName.value)) {
+  if (["home", "my_catalog", "marketplace", "tools"].includes(baseRouteName.value)) {
     return true;
   }
   return (
     route.path.startsWith("/my_catalog/") ||
-    route.path.startsWith("/marketplace/")
+    route.path.startsWith("/marketplace/") ||
+    route.path.startsWith("/tools/")
   );
 });
 </script>
