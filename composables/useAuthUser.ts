@@ -1,3 +1,5 @@
+import { StorageSerializers } from "@vueuse/core";
+
 /** Shown until real auth; not in i18n — `@` breaks message compilation (linked messages). */
 const guestEmailPlaceholder = "guest@example.com";
 
@@ -47,7 +49,11 @@ export interface AuthUserProfile {
  */
 export function useAuthUser() {
   const { t } = useI18n();
-  const authUser = useLocalStorage<AuthUserProfile | null>("auth_user", null);
+  // Use the JSON serializer explicitly: with a `null` default, useLocalStorage would
+  // otherwise pick the pass-through serializer and persist the profile as "[object Object]".
+  const authUser = useLocalStorage<AuthUserProfile | null>("auth_user", null, {
+    serializer: StorageSerializers.object,
+  });
 
   const token = useLocalStorage<string | null>("access_token", null);
 

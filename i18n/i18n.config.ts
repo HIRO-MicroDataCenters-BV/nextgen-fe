@@ -110,6 +110,18 @@ export default defineI18nConfig(() => {
             fetch: "An error occurred while fetching data",
           },
         },
+        login: {
+          title: "Welcome back",
+          subtitle: "Sign in to continue to NextGen",
+          forgot: "Forgot password?",
+          forgot_hint:
+            "Password reset isn't available yet — please contact your administrator.",
+          remember: "Remember me",
+          show_password: "Show password",
+          hide_password: "Hide password",
+          no_account: "Don't have an account?",
+          contact_admin: "Contact your administrator",
+        },
         status: {
           loading_data: "Loading data...",
           item_not_found: "Item not found",
@@ -670,6 +682,9 @@ export default defineI18nConfig(() => {
               string: {
                 inclusive: "This field is required",
               },
+            },
+            invalid_string: {
+              email: "This field must be a valid email address",
             },
             invalid_type: "Invalid type received",
             invalid_type_received_undefined: "Invalid type received",
