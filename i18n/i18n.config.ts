@@ -110,6 +110,13 @@ export default defineI18nConfig(() => {
             fetch: "An error occurred while fetching data",
           },
         },
+        landing: {
+          eyebrow: "Federated medical-data platform",
+          headline: "Build ML models on institutional medical data at source.",
+          subheadline:
+            "Accelerate research, advance treatment, change lives for the better.",
+          browse_tools: "Browse tools",
+        },
         login: {
           title: "Welcome back",
           subtitle: "Sign in to continue to NextGen",

@@ -28,14 +28,16 @@
       <slot />
     </main>
 
+    <AppFooter />
+
     <AppLoginDialog v-model:open="loginOpen" @success="onLoginSuccess" />
   </div>
 </template>
 
 <script setup lang="ts">
 const { t } = useI18n();
-
-const loginOpen = ref(false);
+// Shared state so the top-bar button AND the landing hero CTA open the same modal.
+const { open: loginOpen } = useLoginDialog();
 
 // After signing in, close the modal and go to the authenticated home page.
 const onLoginSuccess = () => {
