@@ -7,7 +7,7 @@ const { logout } = useAuthUser();
 
 function handleUserLogout() {
   logout();
-  navigateTo("/login");
+  navigateTo("/tools");
 }
 </script>
 

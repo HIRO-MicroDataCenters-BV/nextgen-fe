@@ -44,6 +44,13 @@ export interface AuthUserProfile {
 }
 
 /**
+ * localStorage key for the persisted profile. Exported so client-side route
+ * middleware can read the sign-in state directly (it must NOT call `useAuthUser()`,
+ * which invokes `useI18n()` and throws outside a component setup).
+ */
+export const AUTH_USER_KEY = "auth_user";
+
+/**
  * Persisted profile for the signed-in user. After real auth, call `setAuthUser`
  * from the login response or a `/me` fetch; `logout` clears profile and token.
  */
@@ -51,7 +58,7 @@ export function useAuthUser() {
   const { t } = useI18n();
   // Use the JSON serializer explicitly: with a `null` default, useLocalStorage would
   // otherwise pick the pass-through serializer and persist the profile as "[object Object]".
-  const authUser = useLocalStorage<AuthUserProfile | null>("auth_user", null, {
+  const authUser = useLocalStorage<AuthUserProfile | null>(AUTH_USER_KEY, null, {
     serializer: StorageSerializers.object,
   });
 

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-const router = useRouter();
-
-onMounted(() => {
-  router.push("/home");
-});
+// The public landing at "/". Guests see the tools catalogue here (clean root URL,
+// no "/tools"). Authenticated users never render this — the global `auth.global.ts`
+// middleware redirects "/" → "/home" for them.
 </script>
 
 <template>
-  <div/>
+  <AppToolsCatalog />
 </template>
