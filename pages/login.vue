@@ -47,7 +47,11 @@
                   >
                     <img
                       :src="item.src"
-                      :alt="item.title"
+                      alt=""
+                      width="264"
+                      height="256"
+                      loading="lazy"
+                      decoding="async"
                       class="size-full object-cover"
                     >
                   </div>
@@ -72,7 +76,7 @@
       <div class="form-glow pointer-events-none absolute inset-0" />
 
       <div
-        class="relative w-full max-w-md duration-700 animate-in fade-in slide-in-from-bottom-4"
+        class="relative w-full max-w-md duration-700 animate-in fade-in slide-in-from-bottom-4 motion-reduce:animate-none"
       >
         <div
           class="rounded-2xl border border-border/60 bg-card/80 p-8 shadow-xl backdrop-blur-sm sm:p-10"
@@ -104,6 +108,7 @@
                   <FormControl>
                     <div class="relative">
                       <Mail
+                        aria-hidden="true"
                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                       />
                       <Input
@@ -125,7 +130,7 @@
                     <FormLabel>{{ t("label.password") }}</FormLabel>
                     <button
                       type="button"
-                      class="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
+                      class="rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none transition-colors hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
                       @click="handleForgotPassword"
                     >
                       {{ t("login.forgot") }}
@@ -134,6 +139,7 @@
                   <FormControl>
                     <div class="relative">
                       <Lock
+                        aria-hidden="true"
                         class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
                       />
                       <Input
@@ -145,13 +151,17 @@
                       />
                       <button
                         type="button"
-                        class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                         :aria-label="
                           showPassword ? t('login.hide_password') : t('login.show_password')
                         "
                         @click="showPassword = !showPassword"
                       >
-                        <component :is="showPassword ? EyeOff : Eye" class="size-4" />
+                        <component
+                          :is="showPassword ? EyeOff : Eye"
+                          aria-hidden="true"
+                          class="size-4"
+                        />
                       </button>
                     </div>
                   </FormControl>
@@ -174,6 +184,7 @@
                 {{ loading ? t("action.please_wait") : t("action.login") }}
                 <ArrowRight
                   v-if="!loading"
+                  aria-hidden="true"
                   class="size-4 transition-transform group-hover:translate-x-0.5"
                 />
               </Button>
@@ -220,6 +231,10 @@ const { t } = useI18n();
 const router = useRouter();
 const { setAuthUser } = useAuthUser();
 const toaster = useToaster();
+
+useSeoMeta({
+  title: () => t("login.page_title"),
+});
 
 const loading = ref(false);
 const showPassword = ref(false);
@@ -275,6 +290,13 @@ const onSubmit = handleSubmit((values) => {
 const handleForgotPassword = () => {
   toaster.show("info", t("login.forgot_hint"));
 };
+
+// Focus the email field on load — expected UX for a single-purpose sign-in page.
+onMounted(() => {
+  document
+    .querySelector<HTMLInputElement>('input[name="email"]')
+    ?.focus({ preventScroll: true });
+});
 </script>
 
 <style scoped>

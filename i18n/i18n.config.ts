@@ -111,6 +111,7 @@ export default defineI18nConfig(() => {
           },
         },
         login: {
+          page_title: "Sign in · NextGen",
           title: "Welcome back",
           subtitle: "Sign in to continue to NextGen",
           forgot: "Forgot password?",
