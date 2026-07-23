@@ -115,7 +115,9 @@ export default defineI18nConfig(() => {
           headline: "Build ML models on institutional medical data at source.",
           subheadline:
             "Accelerate research, advance treatment, change lives for the better.",
+          consortium: "In collaboration with leading academic medical centres",
           browse_tools: "Browse tools",
+          built_by: "Built by",
         },
         login: {
           title: "Welcome back",
@@ -651,7 +653,7 @@ export default defineI18nConfig(() => {
             title: "Real-World Impact",
             subtitle: "Cardiovascular Research Network",
             description:
-              "A multi-institution team used Dataspace to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
+              "A multi-institution team used NextGen to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
             result:
               "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
           },

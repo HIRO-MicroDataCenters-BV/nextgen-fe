@@ -3,6 +3,12 @@
     <div
       class="mx-auto flex max-w-[1200px] flex-col items-center px-8 py-6 text-center lg:py-8"
     >
+      <span
+        class="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground"
+      >
+        {{ t("landing.eyebrow") }}
+      </span>
+
       <h1
         class="max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
       >
