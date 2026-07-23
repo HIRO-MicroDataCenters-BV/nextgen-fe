@@ -1,29 +1,43 @@
 <template>
-  <section class="border-b border-border">
-    <div
-      class="mx-auto flex max-w-[1200px] flex-col items-center px-8 py-6 text-center lg:py-8"
+  <section
+    class="hero relative overflow-hidden border-b border-border bg-white dark:bg-background"
+  >
+    <!-- Heart illustration (pre-cut with an organic alpha edge) so it dissolves
+         naturally into the page in both light and dark mode — no straight mask. -->
+    <img
+      :src="heartSrc"
+      alt=""
+      class="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-auto select-none lg:block"
     >
-      <span
-        class="mb-4 inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground"
-      >
-        {{ t("landing.eyebrow") }}
-      </span>
 
-      <h1
-        class="max-w-2xl text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
-      >
-        {{ t("landing.headline") }}
-      </h1>
+    <div class="relative z-10 mx-auto max-w-[1200px] px-8 py-6 lg:py-10">
+      <div class="max-w-lg text-center lg:text-left">
+        <span
+          class="mb-4 inline-flex items-center rounded-full border border-border bg-background/70 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur"
+        >
+          {{ t("landing.eyebrow") }}
+        </span>
 
-      <p
-        class="mt-3 max-w-xl text-pretty leading-relaxed text-muted-foreground sm:text-lg"
-      >
-        {{ t("landing.subheadline") }}
-      </p>
+        <h1
+          class="text-balance text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl"
+        >
+          {{ t("landing.headline") }}
+        </h1>
+
+        <p
+          class="mt-4 max-w-md text-pretty leading-relaxed text-muted-foreground sm:text-lg"
+        >
+          {{ t("landing.subheadline") }}
+        </p>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
 const { t } = useI18n();
+
+// Dynamic src (runtime URL) — a static `src="/images/…"` gets rewritten by Vite's
+// asset transform and can resolve to a broken path in dev.
+const heartSrc = "/images/hart-hero.png?v=7";
 </script>

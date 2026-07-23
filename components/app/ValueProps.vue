@@ -24,7 +24,11 @@
               :key="card.img"
               class="overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-md"
             >
-              <img :src="card.img" :alt="card.title" class="w-full">
+              <img
+                :src="card.img"
+                :alt="card.title"
+                class="aspect-[3/2] w-full object-cover"
+              >
               <div class="p-5">
                 <h3 class="mb-1.5 text-sm font-medium">{{ card.title }}</h3>
                 <p class="text-sm leading-relaxed text-muted-foreground">
