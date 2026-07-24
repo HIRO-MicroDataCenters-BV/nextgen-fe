@@ -110,6 +110,26 @@ export default defineI18nConfig(() => {
             fetch: "An error occurred while fetching data",
           },
         },
+        landing: {
+          eyebrow: "Federated medical-data platform",
+          headline: "Build ML models on institutional medical data at source.",
+          subheadline:
+            "Accelerate research, advance treatment, change lives for the better.",
+          consortium: "In collaboration with leading academic medical centres",
+          browse_tools: "Browse tools",
+          built_by: "Built by",
+        },
+        login: {
+          title: "Welcome back",
+          subtitle: "Sign in to continue to NextGen",
+          forgot: "Forgot password?",
+          forgot_hint:
+            "Password reset isn't available yet — please contact your administrator.",
+          show_password: "Show password",
+          hide_password: "Hide password",
+          no_account: "Don't have an account?",
+          contact_admin: "Contact your administrator",
+        },
         status: {
           loading_data: "Loading data...",
           item_not_found: "Item not found",
@@ -632,7 +652,7 @@ export default defineI18nConfig(() => {
             title: "Real-World Impact",
             subtitle: "Cardiovascular Research Network",
             description:
-              "A multi-institution team used Dataspace to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
+              "A multi-institution team used NextGen to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
             result:
               "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
           },
@@ -670,6 +690,9 @@ export default defineI18nConfig(() => {
               string: {
                 inclusive: "This field is required",
               },
+            },
+            invalid_string: {
+              email: "This field must be a valid email address",
             },
             invalid_type: "Invalid type received",
             invalid_type_received_undefined: "Invalid type received",

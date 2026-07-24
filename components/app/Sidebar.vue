@@ -7,7 +7,9 @@ const { logout } = useAuthUser();
 
 function handleUserLogout() {
   logout();
-  navigateTo("/login");
+  // Go straight to the guest landing "/" — sending users to "/tools" would just be
+  // bounced to "/" by the global auth middleware (an extra redirect hop).
+  navigateTo("/");
 }
 </script>
 
