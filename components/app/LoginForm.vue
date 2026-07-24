@@ -128,15 +128,21 @@ const { handleSubmit } = useForm({
 
 const onSubmit = handleSubmit((values) => {
   loading.value = true;
-  // TODO: wire real authentication (Dex/OIDC via server/utils/dex-auth.ts).
-  // For now this keeps the existing local stub: store the profile and let the
-  // host (dialog / shell) react — signing in flips `isSignedIn`, which swaps the
-  // guest shell for the authenticated sidebar in place.
-  setAuthUser({
-    email: values.email,
-    name: values.email.split("@")[0]?.trim() || values.email,
-  });
-  emit("success");
+  try {
+    // TODO: wire real authentication (Dex/OIDC via server/utils/dex-auth.ts).
+    // For now this keeps the existing local stub: store the profile and let the
+    // host (dialog / shell) react — signing in flips `isSignedIn`, which swaps the
+    // guest shell for the authenticated sidebar in place.
+    setAuthUser({
+      email: values.email,
+      name: values.email.split("@")[0]?.trim() || values.email,
+    });
+    emit("success");
+  } finally {
+    // Always clear loading so the button never sticks (e.g. if the host keeps the
+    // form mounted, or a future async auth flow throws).
+    loading.value = false;
+  }
 });
 
 // TODO: no password-reset flow exists yet — placeholder feedback until it's built.
