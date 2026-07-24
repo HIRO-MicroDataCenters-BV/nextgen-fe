@@ -4,7 +4,7 @@
       <h3 class="text-2xl font-semibold">
         {{ $t("home.roadmap.title") }}
       </h3>
-      <h4 class="text-sm font-normal text-gray-500 mb-8">
+      <h4 class="text-sm font-normal text-muted-foreground mb-8">
         {{ $t("home.roadmap.subtitle") }}
       </h4>
       <Separator class="mb-4" />
@@ -17,7 +17,7 @@
           </p>
         </div>
         <div>
-          <p class="text-gray-500">{{ item.description }}</p>
+          <p class="text-muted-foreground">{{ item.description }}</p>
         </div>
       </div>
       <Separator class="my-4" />

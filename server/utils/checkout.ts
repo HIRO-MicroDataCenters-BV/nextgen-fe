@@ -1,5 +1,8 @@
 export class CheckoutService {
-  async processCheckout(datasets: Array<Record<string, unknown>>) {
+  async processCheckout(
+    datasets: Array<Record<string, unknown>>,
+    application?: Record<string, unknown> | null,
+  ) {
     if (!datasets || !Array.isArray(datasets) || datasets.length === 0) {
       throw createError({
         statusCode: 400,
@@ -50,6 +53,7 @@ export class CheckoutService {
       "@type": "dcat:Catalog",
       "dcterms:title": "Marketplace Selection",
       "dcat:dataset": typedDatasets,
+      application: application ?? null,
     };
 
     const config = useRuntimeConfig();

@@ -110,12 +110,33 @@ export default defineI18nConfig(() => {
             fetch: "An error occurred while fetching data",
           },
         },
+        landing: {
+          eyebrow: "Federated medical-data platform",
+          headline: "Build ML models on institutional medical data at source.",
+          subheadline:
+            "Accelerate research, advance treatment, change lives for the better.",
+          consortium: "In collaboration with leading academic medical centres",
+          browse_tools: "Browse tools",
+          built_by: "Built by",
+        },
+        login: {
+          title: "Welcome back",
+          subtitle: "Sign in to continue to NextGen",
+          forgot: "Forgot password?",
+          forgot_hint:
+            "Password reset isn't available yet — please contact your administrator.",
+          show_password: "Show password",
+          hide_password: "Hide password",
+          no_account: "Don't have an account?",
+          contact_admin: "Contact your administrator",
+        },
         status: {
           loading_data: "Loading data...",
           item_not_found: "Item not found",
         },
         title: {
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           settings: "Settings",
           home: "Login",
@@ -123,6 +144,7 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           actions: "Actions",
           are_you_sure: "Are you sure?",
+          done: "Done",
           create_catalog_item: "Add new item",
           edit_catalog_item: "Edit item",
           unsaved_changes: "Unsaved Changes",
@@ -134,6 +156,8 @@ export default defineI18nConfig(() => {
         },
         subtitle: {
           marketplace: "Decentralised search across all institutional catalogs",
+          tools:
+            "Browse tools developed across the NextGen consortium. Federated tools can be deployed on the Pathfinder platform.",
           data_products: "Data Products",
           available_biobanks: "Available Biobanks",
           my_catalog: "Private metadata catalog",
@@ -153,17 +177,30 @@ export default defineI18nConfig(() => {
         },
         alert: {
           delete_dataset: "Are you sure you want to delete {name}?",
+          share_dataset:
+            "Are you sure you want to share {name} with the marketplace?",
+          unshare_dataset:
+            "Are you sure you want to remove {name} from the marketplace?",
+          delete_dataset_success: "Deleted successfully.",
+          share_dataset_success: "Shared with the marketplace successfully.",
+          unshare_dataset_success: "Removed from the marketplace successfully.",
+          processing: "Processing your request…",
+          action_failed: "Something went wrong. Please try again.",
           unsaved_changes_description:
             "You have unsaved changes. Are you sure you want to discard them?",
         },
         menu: {
           home: "Home",
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           settings: "Settings",
           help: "Help",
           guest_user: "Guest",
           logout: "Logout",
+          theme: "Theme",
+          light_mode: "Light mode",
+          dark_mode: "Dark mode",
           hus_catalog: "My Catalog",
           ki_catalog: "My Catalog",
           umcu_catalog: "My Catalog",
@@ -176,8 +213,28 @@ export default defineI18nConfig(() => {
         },
         breadcrumb: {
           marketplace: "Marketplace",
+          tools: "Tools",
           my_catalog: "My Catalog",
           create: "Create",
+        },
+        tools: {
+          search_placeholder: "Search tools…",
+          all_categories: "All categories",
+          all_types: "All types",
+          empty_title: "No tools found",
+          empty_hint: "Try adjusting your search or filters.",
+          action: {
+            view: "View",
+          },
+          link: {
+            pathfinder: "Deploy on Pathfinder",
+            doi: "View DOI",
+          },
+          type: {
+            federated: "Federated",
+            library: "Library",
+            utility: "Utility",
+          },
         },
         filter: {
           distribution: "Distribution",
@@ -377,6 +434,8 @@ export default defineI18nConfig(() => {
           save: "Save",
           edit_dataset: "Edit",
           delete_dataset: "Delete",
+          share_dataset: "Share",
+          unshare_dataset: "Unshare",
           contacts: "Contacts",
           github: "GitHub",
           add_dataset: "Add Dataset",
@@ -388,6 +447,8 @@ export default defineI18nConfig(() => {
           edit: "Edit",
           delete: "Delete",
           cancel: "Cancel",
+          try_again: "Try again",
+          please_wait: "Please wait…",
           update: "Update",
           save_changes: "Save Changes",
           discard: "Discard",
@@ -399,12 +460,17 @@ export default defineI18nConfig(() => {
           view: "View",
           upload_file: "Upload File",
           back_to_catalog: "Back to Catalog",
+          back_to_marketplace: "Back to Marketplace",
           for_researchers: "For Researchers",
           for_data_providers: "For Data Providers",
           items_selected: "Items selected",
           clear_all: "Clear all",
           pass_to_training: "Pass to Training",
           add_new_item: "Add New Item",
+          open: "Open",
+          table_view: "Table view",
+          card_view: "Card view",
+          select_item: "Select {name}",
         },
         placeholder: {
           enter_name: "Enter a name",
@@ -438,6 +504,8 @@ export default defineI18nConfig(() => {
           in: "In",
           all: "All",
           no_results: "No results found",
+          no_results_hint: "Try adjusting your search or filters.",
+          shared: "Shared",
           no_datasets_found: "No datasets found",
           of: "of",
           rows_selected: "row(s) selected",
@@ -584,7 +652,7 @@ export default defineI18nConfig(() => {
             title: "Real-World Impact",
             subtitle: "Cardiovascular Research Network",
             description:
-              "A multi-institution team used Dataspace to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
+              "A multi-institution team used NextGen to build predictive models across hospitals without transferring sensitive patient data. Their federated learning approach incorporated genetic markers, imaging data, and clinical records while maintaining complete regulatory compliance.",
             result:
               "Result: accelerated research timeline while ensuring data sovereignty and regulatory compliance.",
           },
@@ -622,6 +690,9 @@ export default defineI18nConfig(() => {
               string: {
                 inclusive: "This field is required",
               },
+            },
+            invalid_string: {
+              email: "This field must be a valid email address",
             },
             invalid_type: "Invalid type received",
             invalid_type_received_undefined: "Invalid type received",
