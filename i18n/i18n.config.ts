@@ -125,7 +125,6 @@ export default defineI18nConfig(() => {
           forgot: "Forgot password?",
           forgot_hint:
             "Password reset isn't available yet — please contact your administrator.",
-          remember: "Remember me",
           show_password: "Show password",
           hide_password: "Hide password",
           no_account: "Don't have an account?",

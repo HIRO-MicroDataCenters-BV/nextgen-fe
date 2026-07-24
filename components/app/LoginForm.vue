@@ -67,13 +67,6 @@
       </FormItem>
     </FormField>
 
-    <label
-      class="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground select-none"
-    >
-      <Checkbox v-model="rememberMe" />
-      {{ t("login.remember") }}
-    </label>
-
     <Button
       type="submit"
       class="group h-11 w-full text-sm font-medium shadow-sm transition-shadow hover:shadow-md"
@@ -117,7 +110,6 @@ const toaster = useToaster();
 
 const loading = ref(false);
 const showPassword = ref(false);
-const rememberMe = ref(true);
 
 const formSchema = toTypedSchema(
   z.object({
@@ -151,11 +143,4 @@ const onSubmit = handleSubmit((values) => {
 const handleForgotPassword = () => {
   toaster.show("info", t("login.forgot_hint"));
 };
-
-// Focus the email field when the form mounts (i.e. when the modal opens).
-onMounted(() => {
-  document
-    .querySelector<HTMLInputElement>('input[name="email"]')
-    ?.focus({ preventScroll: true });
-});
 </script>

@@ -1,6 +1,6 @@
 <template>
   <Dialog :open="open" @update:open="emit('update:open', $event)">
-    <DialogContent class="sm:max-w-md">
+    <DialogContent class="sm:max-w-md" @open-auto-focus.prevent>
       <DialogHeader class="items-center gap-3 text-center sm:text-center">
         <span
           class="flex size-11 items-center justify-center rounded-xl bg-muted"

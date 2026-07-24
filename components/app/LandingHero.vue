@@ -37,7 +37,6 @@
 <script setup lang="ts">
 const { t } = useI18n();
 
-// Dynamic src (runtime URL) — a static `src="/images/…"` gets rewritten by Vite's
-// asset transform and can resolve to a broken path in dev.
+// `?v=` cache-busts the illustration, which was regenerated under the same filename.
 const heartSrc = "/images/hart-hero.png?v=7";
 </script>
