@@ -5,7 +5,7 @@
     <!-- Heart illustration (pre-cut with an organic alpha edge) so it dissolves
          naturally into the page in both light and dark mode — no straight mask. -->
     <img
-      :src="heartSrc"
+      src="/images/hero-heart.png"
       alt=""
       class="pointer-events-none absolute inset-y-0 right-0 hidden h-full w-auto select-none lg:block"
     >
@@ -36,7 +36,4 @@
 
 <script setup lang="ts">
 const { t } = useI18n();
-
-// `?v=` cache-busts the illustration, which was regenerated under the same filename.
-const heartSrc = "/images/hart-hero.png?v=7";
 </script>
