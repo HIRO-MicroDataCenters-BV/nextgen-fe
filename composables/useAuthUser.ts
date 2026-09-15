@@ -44,9 +44,9 @@ export interface AuthUserProfile {
 }
 
 /**
- * localStorage key for the persisted profile. Exported so client-side route
- * middleware can read the sign-in state directly (it must NOT call `useAuthUser()`,
- * which invokes `useI18n()` and throws outside a component setup).
+ * localStorage key for the persisted profile. Route middleware and plugins read it via
+ * `readStoredSignIn()` — they must NOT call `useAuthUser()`, which invokes `useI18n()`
+ * and throws outside a component setup.
  */
 export const AUTH_USER_KEY = "auth_user";
 
@@ -58,11 +58,49 @@ export const AUTH_USER_KEY = "auth_user";
  */
 export const AUTH_SESSION_COOKIE = "auth_session";
 
-const AUTH_SESSION_COOKIE_OPTIONS = {
+export const AUTH_SESSION_COOKIE_OPTIONS = {
   path: "/",
   sameSite: "lax",
   maxAge: 60 * 60 * 24 * 365,
 } as const;
+
+/** Sign-in state as persisted in localStorage (client only). */
+export function readStoredSignIn(): boolean {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    return Boolean(raw && (JSON.parse(raw) as AuthUserProfile | null)?.email);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `false` until the client has hydrated. Until then the client must decide sign-in
+ * state exactly as the server did — from `AUTH_SESSION_COOKIE` — or its first render
+ * won't match the server HTML whenever the cookie and localStorage disagree (e.g. a
+ * session that predates the cookie). Afterwards localStorage is the source of truth.
+ * `plugins/auth-session.client.ts` flips this and reconciles the two.
+ */
+export const useAuthHydrated = () => useState("auth-hydrated", () => false);
+
+/**
+ * Where the guest/authenticated access rules send `path`, or `undefined` to stay.
+ * Shared by the route middleware and the post-hydration reconciliation.
+ */
+export function authRedirectFor(
+  path: string,
+  signedIn: boolean,
+): string | undefined {
+  // The standalone /login page is retired — always bounce off it.
+  if (path === "/login") return signedIn ? "/home" : "/";
+
+  // Guests may see only the public landing at "/" (the tools catalogue). Everything
+  // else — including /tools — redirects there so the guest URL stays a clean root.
+  if (!signedIn) return path === "/" ? undefined : "/";
+
+  // Signed in: the bare root goes to the home page.
+  return path === "/" ? "/home" : undefined;
+}
 
 /**
  * Persisted profile for the signed-in user. After real auth, call `setAuthUser`
@@ -96,27 +134,30 @@ export function useAuthUser() {
     };
   });
 
-  // The server can't see localStorage, so it decides from the cookie. The client always
-  // trusts localStorage and keeps the cookie in sync with it — on load (self-heals
-  // sessions that predate the cookie), on login/logout, and on cross-tab changes.
   const sessionCookie = useCookie<boolean | null>(
     AUTH_SESSION_COOKIE,
     AUTH_SESSION_COOKIE_OPTIONS,
   );
+  const hydrated = useAuthHydrated();
+
+  // Keep the cookie in step with login/logout and cross-tab changes. Deliberately not
+  // `immediate`: writing it during hydration would change what the first client render
+  // sees. The on-load reconciliation runs after hydration instead.
   if (import.meta.client) {
     watch(
       () => Boolean(authUser.value?.email),
       (signedIn) => {
         sessionCookie.value = signedIn ? true : null;
       },
-      { immediate: true },
     );
   }
 
+  // The server and the hydrating client decide from the cookie, so they agree; once
+  // hydrated, the client trusts localStorage.
   const isSignedIn = computed(() =>
-    import.meta.server
-      ? sessionCookie.value === true
-      : Boolean(authUser.value?.email),
+    hydrated.value
+      ? Boolean(authUser.value?.email)
+      : sessionCookie.value === true,
   );
 
   function setAuthUser(profile: Partial<AuthUserProfile> & { email: string }) {

@@ -2,8 +2,9 @@
   <!-- Auth-aware root. Signed-in users stay client-only: the server renders the
        deterministic splash, so no protected content is ever server-rendered. Guests
        get the public shell server-rendered (SEO / first paint for the landing at "/").
-       The server tells them apart from the auth cookie `useAuthUser()` maintains;
-       signing in/out flips `isSignedIn` and swaps shells in place.
+       The server — and the client until hydration is done — tells them apart from the
+       auth cookie `useAuthUser()` maintains, so the first client render matches the
+       server HTML; signing in/out flips `isSignedIn` and swaps shells in place.
 
        Guests may only see "/" (the auth middleware redirects everything else), so a
        guest on any other path — e.g. right after logout, before the redirect lands —
