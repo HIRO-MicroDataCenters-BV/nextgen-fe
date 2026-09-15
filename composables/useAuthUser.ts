@@ -51,6 +51,20 @@ export interface AuthUserProfile {
 export const AUTH_USER_KEY = "auth_user";
 
 /**
+ * Cookie mirror of the sign-in state. Not a credential — the profile stays in
+ * localStorage — only a hint the server can read, so server-side route middleware and
+ * the layout can tell guests (server-rendered landing) from signed-in users
+ * (client-only shell) without seeing localStorage.
+ */
+export const AUTH_SESSION_COOKIE = "auth_session";
+
+const AUTH_SESSION_COOKIE_OPTIONS = {
+  path: "/",
+  sameSite: "lax",
+  maxAge: 60 * 60 * 24 * 365,
+} as const;
+
+/**
  * Persisted profile for the signed-in user. After real auth, call `setAuthUser`
  * from the login response or a `/me` fetch; `logout` clears profile and token.
  */
@@ -82,7 +96,28 @@ export function useAuthUser() {
     };
   });
 
-  const isSignedIn = computed(() => Boolean(authUser.value?.email));
+  // The server can't see localStorage, so it decides from the cookie. The client always
+  // trusts localStorage and keeps the cookie in sync with it — on load (self-heals
+  // sessions that predate the cookie), on login/logout, and on cross-tab changes.
+  const sessionCookie = useCookie<boolean | null>(
+    AUTH_SESSION_COOKIE,
+    AUTH_SESSION_COOKIE_OPTIONS,
+  );
+  if (import.meta.client) {
+    watch(
+      () => Boolean(authUser.value?.email),
+      (signedIn) => {
+        sessionCookie.value = signedIn ? true : null;
+      },
+      { immediate: true },
+    );
+  }
+
+  const isSignedIn = computed(() =>
+    import.meta.server
+      ? sessionCookie.value === true
+      : Boolean(authUser.value?.email),
+  );
 
   function setAuthUser(profile: Partial<AuthUserProfile> & { email: string }) {
     const email = profile.email.trim();

@@ -1,27 +1,26 @@
-import { AUTH_USER_KEY, type AuthUserProfile } from "~/composables/useAuthUser";
+import {
+  AUTH_SESSION_COOKIE,
+  AUTH_USER_KEY,
+  type AuthUserProfile,
+} from "~/composables/useAuthUser";
 
 /**
  * Guest vs authenticated access control.
  *
- * Auth lives in localStorage (client-only), so we never decide on the server —
- * it can't read the store and would treat every user as a guest, bouncing signed-in
- * users to /tools on every hard load. The guard runs on the client during hydration
- * (Nuxt 4 runs global middleware then), so hard loads / direct URLs are still gated
- * before the page renders.
+ * The profile lives in localStorage, which the server can't read, so `useAuthUser()`
+ * mirrors the sign-in state into a cookie (`AUTH_SESSION_COOKIE`). The server decides
+ * from that cookie, so guests are redirected before anything renders and the guest
+ * landing at "/" can be server-rendered. The client decides from localStorage (the
+ * source of truth); `useAuthUser()` keeps the cookie in sync with it.
  *
  * We read localStorage directly rather than via `useAuthUser()`, which calls
  * `useI18n()` and throws outside a component setup.
  */
 export default defineNuxtRouteMiddleware((to) => {
-  if (import.meta.server) return;
-
-  let signedIn = false;
-  try {
-    const raw = localStorage.getItem(AUTH_USER_KEY);
-    signedIn = Boolean(raw && (JSON.parse(raw) as AuthUserProfile | null)?.email);
-  } catch {
-    signedIn = false;
-  }
+  const signedIn = import.meta.server
+    ? useCookie<boolean | null>(AUTH_SESSION_COOKIE, { readonly: true }).value ===
+      true
+    : readStoredSignIn();
 
   // Use `path` (not route name — names carry the `___en` i18n suffix).
   const path = to.path;
@@ -36,3 +35,12 @@ export default defineNuxtRouteMiddleware((to) => {
   // Signed in: the bare root goes to the home page.
   if (path === "/") return navigateTo("/home");
 });
+
+function readStoredSignIn(): boolean {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    return Boolean(raw && (JSON.parse(raw) as AuthUserProfile | null)?.email);
+  } catch {
+    return false;
+  }
+}
