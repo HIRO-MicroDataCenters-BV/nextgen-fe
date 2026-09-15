@@ -1,8 +1,14 @@
 <template>
   <NuxtLayout>
     <NuxtPage />
-    <Toaster />
   </NuxtLayout>
+  <!-- Outside the layout on purpose. The toasts float over the page, but their
+       empty container, when placed inside, became a flex item in the shell's
+       gap-4 / md:gap-8 column and added 16-32px of phantom height under every
+       page. Client-only, as it effectively was inside the layout's ClientOnly. -->
+  <ClientOnly>
+    <Toaster />
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">

@@ -6,6 +6,8 @@ const props = defineProps<{
   pageSize: number;
   canPreviousPage: boolean;
   canNextPage: boolean;
+  /** What the rows are, for "showing 1 to 20 out of 57 …". Defaults to data products. */
+  itemsLabel?: string;
 }>();
 
 const emit = defineEmits<{
@@ -22,7 +24,7 @@ const handlePageChange = (page: number) => {
 
 <template>
   <div
-    class="flex items-center justify-between px-2 py-4 bg-sidebar-background sticky bottom-0"
+    class="flex items-center justify-between px-2 py-4 bg-background sticky bottom-0"
   >
     <div class="flex-1 text-sm text-muted-foreground">
       {{ t("hint.showing") }}
@@ -31,7 +33,7 @@ const handlePageChange = (page: number) => {
       {{ Math.min((currentPage + 1) * pageSize, totalItems) }}
       {{ t("hint.out_of") }}
       {{ totalItems }}
-      {{ t("hint.data_products") }}
+      {{ itemsLabel ?? t("hint.data_products") }}
     </div>
 
     <div class="flex items-center space-x-6 lg:space-x-8">

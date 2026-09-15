@@ -168,6 +168,20 @@ function handleUserLogout() {
     </SidebarContent>
     <SidebarFooter>
       <SidebarMenu class="gap-2">
+        <!-- Footer items navigate; until the Admin entry they were unused. -->
+        <SidebarMenuItem v-for="item in menu.footer" :key="item.key">
+          <SidebarMenuButton as-child :tooltip="item.title">
+            <NuxtLink
+              :href="item.url"
+              active-class="bg-sidebar-accent text-sidebar-accent-foreground"
+            >
+              <span class="text-lg">
+                <Icon :name="item.icon" />
+              </span>
+              <span>{{ item.title }}</span>
+            </NuxtLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
         <SidebarMenuItem>
           <AppColorModeSwitch />
         </SidebarMenuItem>
@@ -220,14 +234,6 @@ function handleUserLogout() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </SidebarMenuItem>
-        <SidebarMenuItem v-for="item in menu.footer" :key="item.key">
-          <SidebarMenuButton :tooltip="item.title">
-            <span class="text-lg">
-              <Icon :name="item.icon" />
-            </span>
-            <span>{{ item.title }}</span>
-          </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarFooter>
