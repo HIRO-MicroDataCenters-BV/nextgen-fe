@@ -7,8 +7,10 @@
     leave-from-class="translate-y-0 opacity-100"
     leave-to-class="translate-y-full opacity-0"
   >
-    <div v-if="selectedCount > 0" class="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
-      <Menubar class="bg-foreground text-background overflow-hidden rounded-md px-2 shadow-lg">
+    <!-- The full-width wrapper only centers the bar; it must not swallow clicks
+         meant for what sits beneath it (e.g. the sidebar user/logout menu). -->
+    <div v-if="selectedCount > 0" class="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-4">
+      <Menubar class="pointer-events-auto bg-foreground text-background overflow-hidden rounded-md px-2 shadow-lg">
         <MenubarMenu>
           <template v-for="item in items" :key="item.label">
             <MenubarTrigger
