@@ -25,7 +25,10 @@
                   <AppBreadcrumb />
                 </div>
 
-                <div class="ml-auto flex items-center gap-2">
+                <div
+                  v-if="showNodeSource"
+                  class="ml-auto flex items-center gap-2"
+                >
                   <AppHeaderSource compact />
                 </div>
               </div>
@@ -64,4 +67,12 @@ const isWide = computed(() => {
     route.path.startsWith("/tools/")
   );
 });
+
+// The node (source) name only belongs to My Catalog and its sub-routes; the
+// marketplace aggregates datasets across nodes, so it's hidden there.
+const showNodeSource = computed(
+  () =>
+    baseRouteName.value === "my_catalog" ||
+    route.path.startsWith("/my_catalog/")
+);
 </script>
