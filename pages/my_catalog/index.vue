@@ -11,7 +11,19 @@
       :selection-enabled="true"
       selection-mode="single"
       :has-source-header="true"
-      @pass-to-training="handlePassToTraining"
+      :enable-view-toggle="true"
+      :item-href-base="'/my_catalog'"
+      :content-class="'mx-auto w-full max-w-[1600px] px-8'"
+      :default-view="'card'"
+      @pass-to-training="onPassToTrainingRequest"
+      @selection-context-change="onSelectionContextChange"
+    />
+    <TrainingOrderReviewDialog
+      :open="showTrainingReviewDialog"
+      :dataset="selectedDataset"
+      :application="selectedApplication"
+      @update:open="showTrainingReviewDialog = $event"
+      @confirm="confirmTrainingOrderSubmit"
     />
     <TrainingSuccessDialog
       :open="showSuccessDialog"
@@ -22,24 +34,20 @@
 </template>
 
 <script setup lang="ts">
-import { h } from "vue";
-import type { TableColumn } from "~/types/table.types";
-import type { CatalogItem } from "~/types/catalog.types";
-import { Button } from "@/components/ui/button";
-import DropdownAction from "~/components/app/menu/Actions.vue";
 import TrainingSuccessDialog from "@/components/app/TrainingSuccessDialog.vue";
+import TrainingOrderReviewDialog from "@/components/app/TrainingOrderReviewDialog.vue";
 import { useCatalogListPage } from "~/composables/catalog/useCatalogListPage";
+import { useMyCatalogTrainingOrderFlow } from "~/composables/catalog/useMyCatalogTrainingOrderFlow";
+import { useMyCatalogTableColumns } from "~/composables/catalog/useMyCatalogTableColumns";
 
 const config = useRuntimeConfig();
 const catalogName = config.public.catalogName;
 
 const api = useApi();
-const { deleteDataset } = api;
-const router = useRouter();
 const { t } = useI18n();
-const dayjs = useDayjs();
 const tableRef = ref();
 const { setPage } = useApp();
+
 setPage({
   section: "my_catalog",
   title: t(`menu.${catalogName}`),
@@ -50,78 +58,24 @@ setPage({
 const { showSuccessDialog, successData, handlePassToTraining, fetchTableData } =
   useCatalogListPage({
     source: "local",
+    runTrainingAfterCheckout: true,
     api: {
       getLocalCatalog: api.getLocalCatalog,
       searchDistributed: api.searchDistributed,
       checkout: api.checkout,
+      trainingRun: (datasets, orderId, application) =>
+        api.training.run(datasets, orderId, application),
     },
   });
 
-// Defining columns for the table
-const columns: TableColumn[] = [
-  {
-    id: "name",
-    icon: "lucide:text",
-    header: () => t("label.data_product_name"),
-    cell: ({ row }) => {
-      const item = row.original as CatalogItem;
-      const id = item.id;
+const {
+  selectedDataset,
+  selectedApplication,
+  showTrainingReviewDialog,
+  onSelectionContextChange,
+  onPassToTrainingRequest,
+  confirmTrainingOrderSubmit,
+} = useMyCatalogTrainingOrderFlow({ handlePassToTraining });
 
-      return h(
-        Button,
-        {
-          href: `/my_catalog/${id}`,
-          as: "a",
-          variant: "link",
-        },
-        () => [row.getValue("name") as string]
-      );
-    },
-  },
-  {
-    id: "issued",
-    icon: "lucide:calendar",
-    header: () => t("label.issued"),
-    cell: ({ row }) => {
-      const raw = row.getValue("issued") as string;
-      if (!raw || !String(raw).trim()) return "—";
-      const d = dayjs(raw);
-      return d.isValid() ? d.format("DD/MM/YYYY") : "—";
-    },
-  },
-  {
-    id: "actions",
-    icon: "lucide:circle-plus",
-    iconOnly: true,
-    header: () => t("label.actions"),
-    cell: ({ row }) => {
-      const item = row.original as CatalogItem;
-      const id = item.id;
-
-      return h(DropdownAction, {
-        title: row.getValue("name") as string,
-        id,
-        items: [
-          {
-            key: "delete_dataset",
-            label: "delete_dataset",
-            hasConfirmation: true,
-            action: async () => {
-              await deleteDataset(id);
-              tableRef.value.fetchData();
-            },
-          },
-          {
-            key: "edit_dataset",
-            label: "edit_dataset",
-            action: () => {
-              router.push(`/my_catalog/${id}/edit`);
-            },
-          },
-        ],
-      });
-    },
-  },
-];
-
+const { columns } = useMyCatalogTableColumns(tableRef);
 </script>

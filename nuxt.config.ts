@@ -47,8 +47,10 @@ export default defineNuxtConfig({
     "@nuxtjs/i18n",
     "nuxt-zod-i18n",
     "dayjs-nuxt",
-    //"@nuxtjs/color-mode",
     "@vueuse/nuxt",
+    // Registered after @vueuse/nuxt so its `useColorMode` auto-import wins
+    // (Nuxt resolves duplicate auto-imports "last wins").
+    "@nuxtjs/color-mode",
   ],
   icon: {
     serverBundle: {
@@ -66,16 +68,16 @@ export default defineNuxtConfig({
     defaultLocale: "en",
     plugins: ["utc", "timezone", "quarterOfYear"],
   },
-  /*
   colorMode: {
-    preference: "system",
+    preference: "light", // default theme on first visit
     fallback: "light",
     classPrefix: "",
+    // Keep empty so the module toggles the `.dark` class our CSS targets
+    // (the module default is "-mode", which would apply `.dark-mode`).
     classSuffix: "",
     storage: "localStorage",
     storageKey: "nuxt-color-mode",
   },
-  */
   i18n: {
     defaultLocale: "en",
     locales: [{ code: "en", language: "en-US", name: "English" }],

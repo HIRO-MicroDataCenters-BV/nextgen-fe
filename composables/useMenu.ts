@@ -1,5 +1,4 @@
 import { ref, computed } from "vue";
-import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import type { AuthUserProfile } from "./useAuthUser";
 
@@ -42,6 +41,14 @@ export function useMenu() {
         url: "/home",
         items: [],
         isActive: route.path === "/",
+      },
+      {
+        id: "tools",
+        title: t("menu.tools"),
+        icon: "lucide:blocks",
+        url: "/tools",
+        items: [],
+        isActive: route.path === "/tools",
       },
     ],
     secondary: [

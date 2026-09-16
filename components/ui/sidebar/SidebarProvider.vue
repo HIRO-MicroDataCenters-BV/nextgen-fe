@@ -3,7 +3,7 @@ import type { HTMLAttributes, Ref } from "vue"
 import { defaultDocument, useVModel } from "@vueuse/core"
 import { TooltipProvider } from "reka-ui"
 import { cn } from "@/lib/utils"
-import { provideSidebarContext, SIDEBAR_COOKIE_NAME, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from "./utils"
+import { provideSidebarContext, SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME, SIDEBAR_WIDTH, SIDEBAR_WIDTH_ICON } from "./utils"
 import { useSidebarStore } from "./composables/useSidebarStore"
 import { useSidebarEffects } from "./composables/useSidebarEffects"
 
@@ -29,10 +29,11 @@ const open = useVModel(props, "open", emits, {
 const store = useSidebarStore({
   defaultOpen: props.defaultOpen ?? false,
   controlledOpen: open,
-  onOpenChange: (value) => emits("update:open", value),
+  onOpenChange: (value) => {
+    document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+  },
 })
-const { registerKeyboardShortcut, setOpenWithEffects } = useSidebarEffects({
-  setOpen: store.setOpen,
+const { registerKeyboardShortcut } = useSidebarEffects({
   toggleSidebar: store.toggleSidebar,
 })
 registerKeyboardShortcut()
@@ -40,7 +41,7 @@ registerKeyboardShortcut()
 provideSidebarContext({
   state: store.state,
   open: store.open,
-  setOpen: setOpenWithEffects,
+  setOpen: store.setOpen,
   isMobile: store.isMobile,
   openMobile: store.openMobile,
   setOpenMobile: store.setOpenMobile,

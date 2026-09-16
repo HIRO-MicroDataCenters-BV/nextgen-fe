@@ -10,12 +10,24 @@ interface TableToolbarProps {
   selectedFilterKeys: string[];
   selectedFilters: Record<string, boolean | string | number>;
   filterLabelByKey: Record<string, string>;
+  selectedApplicationName?: string | null;
+  selectedDatasetName?: string | null;
+  enableViewToggle?: boolean;
+  viewMode?: "table" | "card";
+  contentClass?: string;
 }
 
 defineProps<TableToolbarProps>();
 
 const emit = defineEmits<{
-  (e: "create" | "apply-search" | "clear-all-filters"): void;
+  (
+    e:
+      | "create"
+      | "apply-search"
+      | "clear-all-filters"
+      | "clear-selected-dataset"
+      | "clear-selected-application",
+  ): void;
   (e: "type-change", value: string | number): void;
   (e: "search-update" | "remove-filter", value: string): void;
   (
@@ -24,6 +36,7 @@ const emit = defineEmits<{
     value: boolean | string | number,
     multiple: boolean,
   ): void;
+  (e: "view-change", value: "table" | "card"): void;
 }>();
 
 const { t } = useI18n();
@@ -32,27 +45,18 @@ const handleSearchUpdate = (value: string) => {
   emit("search-update", value);
   emit("apply-search");
 };
+
+const onViewChange = (value: unknown) => {
+  if (value === "table" || value === "card") emit("view-change", value);
+};
 </script>
 
 <template>
   <div
-    class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm"
+    class="sticky top-16 z-30 -mx-1 shrink-0 space-y-4 bg-background px-1 pb-3 shadow-sm dark:border-b dark:border-border dark:shadow-none"
   >
-    <div class="mx-auto max-w-[calc(840px+16px)] w-full px-8 py-4">
-      <div
-        v-if="hasSourceHeader"
-        class="flex flex-wrap items-center justify-between gap-2"
-      >
-        <div class="flex items-center gap-2">
-          <AppHeaderSource />
-        </div>
-        <div class="flex items-center gap-2">
-          <Button class="cursor-pointer" @click="emit('create')">{{
-            t("action.add_new_item")
-          }}</Button>
-        </div>
-      </div>
-      <div class="flex items-center justify-between gap-2">
+    <div :class="[contentClass, 'py-4']">
+      <div class="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
         <Tabs :model-value="selectedType" @update:model-value="emit('type-change', $event)">
           <TabsList class="mx-auto flex items-center justify-center">
             <TabsTrigger value="datasets">
@@ -64,16 +68,20 @@ const handleSearchUpdate = (value: string) => {
               <Icon name="lucide:box" />
               {{ isMyCatalog ? $t("hint.your") : "" }}
               {{ $t("action.applications") }}
+              <span
+                v-if="isMyCatalog && selectedApplicationName"
+                class="ml-1 inline-flex h-2 w-2 rounded-full bg-primary"
+              />
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="flex flex-auto flex-wrap gap-2">
             <div class="relative flex max-w-sm items-center gap-2">
               <Input
                 :model-value="searchValue"
-                class="w-64 pl-8"
+                class="w-64 bg-card pl-8"
                 type="search"
                 :placeholder="t('placeholder.search', { type: selectedType })"
                 @update:model-value="handleSearchUpdate(String($event || ''))"
@@ -96,6 +104,78 @@ const handleSearchUpdate = (value: string) => {
               "
             />
           </div>
+
+          <div
+            v-if="enableViewToggle"
+            class="inline-flex h-9 shrink-0 items-center rounded-lg bg-muted p-[3px]"
+          >
+            <button
+              type="button"
+              :aria-label="t('action.table_view')"
+              :aria-pressed="viewMode === 'table'"
+              :class="[
+                'inline-flex h-full cursor-pointer items-center justify-center rounded-md px-2.5 transition-colors',
+                viewMode === 'table'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              ]"
+              @click="onViewChange('table')"
+            >
+              <Icon name="lucide:table" class="size-4" />
+            </button>
+            <button
+              type="button"
+              :aria-label="t('action.card_view')"
+              :aria-pressed="viewMode === 'card'"
+              :class="[
+                'inline-flex h-full cursor-pointer items-center justify-center rounded-md px-2.5 transition-colors',
+                viewMode === 'card'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              ]"
+              @click="onViewChange('card')"
+            >
+              <Icon name="lucide:layout-grid" class="size-4" />
+            </button>
+          </div>
+
+          <Button
+            v-if="hasSourceHeader"
+            class="shrink-0 cursor-pointer"
+            @click="emit('create')"
+          >
+            <Icon name="lucide:plus" />
+            {{ t("action.add_new_item") }}
+          </Button>
+        </div>
+      </div>
+      <div
+        v-if="isMyCatalog && (selectedDatasetName || selectedApplicationName)"
+        class="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+      >
+        <div v-if="selectedDatasetName" class="inline-flex items-center gap-2 rounded bg-background px-2 py-1">
+          <span class="font-medium">Dataset:</span>
+          <span>{{ selectedDatasetName }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-5 w-5"
+            @click="emit('clear-selected-dataset')"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
+        </div>
+        <div v-if="selectedApplicationName" class="inline-flex items-center gap-2 rounded bg-background px-2 py-1">
+          <span class="font-medium">Application:</span>
+          <span>{{ selectedApplicationName }}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="h-5 w-5"
+            @click="emit('clear-selected-application')"
+          >
+            <Icon name="lucide:x" class="h-3 w-3" />
+          </Button>
         </div>
       </div>
       <div class="filters-list mt-2">

@@ -3,7 +3,7 @@ import { getDexSessionCookie } from "~/server/utils/dex-auth";
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const body = await readBody(event);
-  const { datasets, order_id } = body;
+  const { datasets, order_id, application } = body;
 
   if (!datasets || !Array.isArray(datasets) || datasets.length === 0) {
     throw createError({
@@ -66,6 +66,10 @@ export default defineEventHandler(async (event) => {
     payload.output_path = firstDataset.output_path;
   } else {
     payload.output_path = [];
+  }
+
+  if (application && typeof application === "object" && !Array.isArray(application)) {
+    payload.application = application;
   }
 
   try {

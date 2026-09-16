@@ -13,6 +13,7 @@ interface TableGridProps {
   columns: TableColumn[];
   pageSize: number;
   title: string;
+  contentClass?: string;
 }
 
 defineProps<TableGridProps>();
@@ -22,23 +23,23 @@ const { t } = useI18n();
 <template>
   <div class="mb-2 flex min-h-0 flex-1 flex-col overflow-hidden">
     <div
-      class="min-h-0 flex-1 overflow-auto px-8 mx-auto max-w-[calc(840px+16px)] w-full mt-4"
+      :class="[contentClass, 'mt-4 min-h-0 flex-1 overflow-auto']"
     >
       <Table
         :data-source="dataSource"
         :columns="columns"
         :page-size="pageSize"
         :title="title"
-        class="outline outline-1 outline-gray-200 rounded-md overflow-hidden"
+        class="outline outline-1 outline-border rounded-md overflow-hidden"
       >
-        <TableHeader class="bg-gray-50 outline outline-1 outline-gray-200">
+        <TableHeader class="bg-muted outline outline-1 outline-border">
           <TableRow
             v-for="headerGroup in table.getHeaderGroups()"
             :key="headerGroup.id"
           >
             <TableHead
               v-if="isSelectionVisible"
-              class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50 border-t rounded-t-md overflow-hidden rounded-md"
+              class="sticky top-0 z-20 border-b border-border bg-muted border-t rounded-t-md overflow-hidden rounded-md"
             >
               <div
                 v-if="selectionMode === 'multiple'"
@@ -61,7 +62,7 @@ const { t } = useI18n();
             <TableHead
               v-for="header in headerGroup.headers"
               :key="header.id"
-              class="sticky top-0 z-20 border-b border-gray-200 bg-gray-50"
+              class="sticky top-0 z-20 border-b border-border bg-muted"
             >
               <FlexRender
                 v-if="!header.isPlaceholder"

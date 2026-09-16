@@ -1,6 +1,7 @@
 import { watch, type Ref } from "vue";
 import type { JsonLdNode } from "../types/editor.types";
 import { DCAT_AP_CONTEXT } from "../dcatApContext";
+import { resolveParsedJsonLdTree } from "../utils/jsonLdTreeInitialization";
 
 interface UseJsonLdTreeInitializationOptions {
   modelValue: Ref<string | Record<string, unknown>>;
@@ -29,45 +30,20 @@ export const useJsonLdTreeInitialization = ({
   preservedContext,
   lastEmittedValueRef,
 }: UseJsonLdTreeInitializationOptions) => {
-  const nodeHasValue = (n: JsonLdNode): boolean => {
-    if (n.value !== undefined && n.value !== null && n.value !== "") return true;
-    if (n.children?.length) return n.children.some(nodeHasValue);
-    return false;
-  };
-
-  const markFileNodesRecursive = (nodes: JsonLdNode[]): void => {
-    for (const n of nodes) {
-      if (nodeHasValue(n)) {
-        // Use a dedicated 'fromFile' flag — do NOT set readonly: true to avoid
-        // triggering the existing "hide readonly/system nodes" logic in the template.
-        (n.metadata as unknown as Record<string, unknown>).fromFile = true;
-      }
-      if (n.children?.length) markFileNodesRecursive(n.children);
-    }
-  };
-
   const applyParsedTree = (
     tree: JsonLdNode[],
     context: Record<string, string> | undefined,
   ) => {
-    if (isEmptyDataset(tree)) {
-      const hiddenNodes = tree.filter((n) => n.metadata.hidden || n.metadata.readonly);
-      const defaultTree = buildDefaultDatasetTree();
-      treeData.value = [...defaultTree, ...hiddenNodes];
-    } else {
-      let next = tree;
-      if (!contentFromFile.value) {
-        next = mergeDatasetTreeWithDefaults(tree);
-      }
-      if (contentFromFile.value) {
-        markFileNodesRecursive(next);
-      }
-      treeData.value = next;
-    }
-
-    preservedContext.value = context
-      ? { ...DCAT_AP_CONTEXT, ...context }
-      : { ...DCAT_AP_CONTEXT };
+    const resolved = resolveParsedJsonLdTree({
+      tree,
+      context,
+      contentFromFile: contentFromFile.value,
+      buildDefaultDatasetTree,
+      isEmptyDataset,
+      mergeDatasetTreeWithDefaults,
+    });
+    treeData.value = resolved.treeData;
+    preservedContext.value = resolved.preservedContext;
   };
 
   const parseInitialData = () => {
@@ -84,7 +60,8 @@ export const useJsonLdTreeInitialization = ({
       console.error("Failed to parse JSON-LD:", error);
       treeData.value = buildDefaultDatasetTree();
       preservedContext.value = { ...DCAT_AP_CONTEXT };
-      codeData.value = typeof modelValue.value === "string" ? modelValue.value : "";
+      codeData.value =
+        typeof modelValue.value === "string" ? modelValue.value : "";
     }
   };
 
@@ -93,8 +70,8 @@ export const useJsonLdTreeInitialization = ({
   watch(
     modelValue,
     (newVal) => {
-      // Skip if the incoming value matches what we last emitted internally (prevents loops).
-      const incomingStr = typeof newVal === "string" ? newVal : JSON.stringify(newVal);
+      const incomingStr =
+        typeof newVal === "string" ? newVal : JSON.stringify(newVal);
       if (lastEmittedValueRef.value && incomingStr === lastEmittedValueRef.value) {
         return;
       }
@@ -103,7 +80,6 @@ export const useJsonLdTreeInitialization = ({
     { deep: true },
   );
 
-  // When file origin changes, re-parse with the matching behavior.
   watch(contentFromFile, () => {
     parseInitialData();
   });

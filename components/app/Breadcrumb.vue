@@ -1,6 +1,12 @@
 <template>
   <Breadcrumb v-if="breadcrumbs.length > 0">
     <BreadcrumbList>
+      <BreadcrumbItem v-if="sectionIcon" aria-hidden="true">
+        <Icon
+          :name="sectionIcon"
+          class="size-4 shrink-0 text-muted-foreground"
+        />
+      </BreadcrumbItem>
       <template v-for="(crumb, index) in breadcrumbs" :key="crumb.path">
         <BreadcrumbItem>
           <BreadcrumbLink v-if="!crumb.isCurrent" :as-child="true">
@@ -15,7 +21,6 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute, RouterLink } from "vue-router";
 import { useI18n } from "vue-i18n";
 
 const config = useRuntimeConfig();
@@ -29,6 +34,16 @@ interface BreadcrumbItemType {
 
 const route = useRoute();
 const { t } = useI18n();
+
+// Leading section icon mirrors the sidebar nav icons (see useMenu).
+const sectionIcon = computed<string | null>(() => {
+  const section = route.path.split("/").filter((p) => p)[0]?.toLowerCase();
+  if (section === "marketplace") return "lucide:store";
+  if (section === "tools") return "lucide:blocks";
+  if (section === "my_catalog") return "lucide:library-big";
+  if (section === "home") return "lucide:home";
+  return null;
+});
 
 const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
   const pathArray = route.path.split("/").filter((p) => p);
@@ -45,6 +60,8 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
       label = t("breadcrumb.my_catalog", t(`menu.${catalogName}`));
     } else if (segment.toLowerCase() === "marketplace") {
       label = t("breadcrumb.marketplace", "Marketplace");
+    } else if (segment.toLowerCase() === "tools") {
+      label = t("breadcrumb.tools", "Tools");
     } else if (segment.toLowerCase() === "create") {
       label = t("breadcrumb.create", "Create");
     } else if (segment.toLowerCase() === "edit") {

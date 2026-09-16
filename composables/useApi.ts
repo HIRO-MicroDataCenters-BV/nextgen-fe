@@ -257,29 +257,44 @@ export const useApi = () => {
       return response ?? null;
     },
 
-    deleteDataset: async (id: string): Promise<boolean> => {
+    deleteDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/`,
-        "DELETE"
+        "DELETE",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
 
-    shareDataset: async (id: string): Promise<boolean> => {
+    shareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/share/`,
-        "POST"
+        "POST",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
 
-    unshareDataset: async (id: string): Promise<boolean> => {
+    unshareDataset: async (
+      id: string,
+      options?: { showToast?: boolean }
+    ): Promise<boolean> => {
       const response = await request<null>(
         "catalog",
         `/datasets/${id}/unshare/`,
-        "POST"
+        "POST",
+        undefined,
+        { showToast: options?.showToast }
       );
       return response !== null;
     },
@@ -338,6 +353,7 @@ export const useApi = () => {
 
     checkout: async (
       datasets: Array<Record<string, unknown>>,
+      application?: Record<string, unknown> | null,
       options?: { showToast?: boolean }
     ): Promise<{
       order_id: string;
@@ -350,7 +366,7 @@ export const useApi = () => {
           status: string;
         }>("/api/marketplace/checkout", {
           method: "POST",
-          body: { datasets },
+          body: { datasets, application: application ?? null },
         });
         return response;
       } catch (error: unknown) {
@@ -368,13 +384,18 @@ export const useApi = () => {
       run: async (
         datasets: Array<Record<string, unknown>>,
         orderId: string,
+        application?: Record<string, unknown> | null,
         options?: { showToast?: boolean }
       ): Promise<unknown | null> => {
         const showToast = options?.showToast !== false;
         try {
           const response = await $fetch("/api/training/run", {
             method: "POST",
-            body: { datasets, order_id: orderId },
+            body: {
+              datasets,
+              order_id: orderId,
+              application: application ?? null,
+            },
           });
           return response;
         } catch (error: unknown) {

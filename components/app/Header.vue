@@ -25,7 +25,7 @@
             <h5 class="text-sm font-semibold mb-2">
               {{ t("subtitle.available_biobanks") }}
             </h5>
-            <p class="text-sm text-muted-foreground text-black">
+            <p class="text-sm text-muted-foreground">
               {{ t("text.available_biobank_description") }}
             </p>
           </div>
@@ -71,7 +71,6 @@
 </template>
 
 <script lang="ts" setup>
-import { useRoute, useRouter } from "vue-router";
 import Toolbar from "./header/Toolbar.vue";
 import type { ToolbarButton } from "~/types/toolbar.types";
 

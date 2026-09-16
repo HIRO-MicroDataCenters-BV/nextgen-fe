@@ -2,7 +2,7 @@
 
 Web client for the **NextGen** data ecosystem: catalog management, **DCAT-AP 3.0** dataset metadata in **JSON-LD**, marketplace discovery, and connector-backed workflows (MMIO, related data products, checkout).
 
-Built with **[Nuxt 3](https://nuxt.com/)** and **[Vue 3](https://vuejs.org/)**.
+Built with **[Nuxt 4](https://nuxt.com/)** and **[Vue 3](https://vuejs.org/)** (`future.compatibilityVersion: 4` in `nuxt.config.ts`).
 
 ---
 
@@ -44,7 +44,14 @@ https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunit
 ### Marketplace & search
 
 - Browse and filter datasets from the **search** service, dataset detail views, and **checkout** flow (order id / status) via configured checkout API.
+- **Pass to Training** on marketplace: **checkout only** → success dialog links to the COG pipeline builder with `order_id`.
 - Table/search state is synced with URL query params. On reload, malformed or object-shaped `filters` params are now handled safely (no server crash on `.find()` for non-array values).
+
+### My Catalog → Training builder
+
+- Select **one dataset** (required) and optionally **one application** across table tabs; selection persists in `localStorage`.
+- Review dialog before submit; checkout includes optional `application`.
+- After checkout, **My Catalog** also calls `/api/training/run` (COG federated pipeline) and surfaces pipeline metadata in the success dialog.
 
 ### Auth & shell
 
@@ -56,7 +63,7 @@ https://ec.europa.eu/info/funding-tenders/opportunities/portal/screen/opportunit
 
 | Area | Choice |
 |------|--------|
-| Framework | Nuxt 3, Vue 3, Vue Router |
+| Framework | Nuxt 4.4, Vue 3.5, Vue Router 5 |
 | UI | Tailwind CSS 4, shadcn-nuxt, Reka UI, Lucide icons |
 | Forms | Vee-Validate + Zod |
 | i18n | @nuxtjs/i18n, nuxt-zod-i18n |
