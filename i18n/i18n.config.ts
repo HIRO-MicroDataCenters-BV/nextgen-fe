@@ -232,6 +232,8 @@ export default defineI18nConfig(() => {
             empty_title: "No contracts",
             empty: "Nothing has been registered yet.",
             empty_filtered: "No contract matches these filters.",
+            refresh: "Refresh",
+            updated: "Updated {time}",
           },
           drawer: {
             title: "Contract",

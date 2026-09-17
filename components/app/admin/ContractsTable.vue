@@ -1,61 +1,88 @@
 <template>
   <div class="flex min-h-0 flex-1 flex-col gap-4">
+    <!-- Two groups: filters on the left, refresh on the right, bottom-aligned
+         so the button lines up with the inputs rather than their labels. The
+         filters wrap among themselves when space runs out, so the refresh
+         group never ends up alone on a line of its own; flex-1 is what lets
+         the filter group give up width before the row itself wraps. -->
     <div class="flex shrink-0 flex-wrap items-end gap-3">
-      <div class="grid gap-1.5">
-        <Label for="admin-filter-status">{{ t("admin.filter.status") }}</Label>
-        <Select v-model="filters.status">
-          <SelectTrigger id="admin-filter-status" class="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{{ t("admin.filter.all") }}</SelectItem>
-            <SelectItem v-for="status in STATUSES" :key="status" :value="status">
-              {{ t(`admin.state.${status}`) }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+      <div class="flex flex-1 flex-wrap items-end gap-3">
+        <div class="grid gap-1.5">
+          <Label for="admin-filter-status">{{ t("admin.filter.status") }}</Label>
+          <Select v-model="filters.status">
+            <SelectTrigger id="admin-filter-status" class="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{{ t("admin.filter.all") }}</SelectItem>
+              <SelectItem v-for="status in STATUSES" :key="status" :value="status">
+                {{ t(`admin.state.${status}`) }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="grid gap-1.5">
+          <Label for="admin-filter-expiry">{{ t("admin.filter.expiry") }}</Label>
+          <Select v-model="filters.expiry">
+            <SelectTrigger id="admin-filter-expiry" class="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">{{ t("admin.filter.any") }}</SelectItem>
+              <SelectItem value="not_expired">
+                {{ t("admin.filter.not_expired") }}
+              </SelectItem>
+              <SelectItem value="expired">{{ t("admin.filter.expired") }}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div class="grid gap-1.5">
+          <Label for="admin-filter-consumer">{{ t("admin.filter.consumer") }}</Label>
+          <Input
+            id="admin-filter-consumer"
+            v-model="filters.consumerId"
+            class="w-40"
+            :placeholder="t('admin.filter.exact_match')"
+          />
+        </div>
+
+        <div class="grid gap-1.5">
+          <Label for="admin-filter-order">{{ t("admin.filter.order") }}</Label>
+          <Input
+            id="admin-filter-order"
+            v-model="filters.orderId"
+            class="w-40"
+            :placeholder="t('admin.filter.exact_match')"
+          />
+        </div>
+
+        <Button variant="ghost" :disabled="!hasFilters" @click="clearFilters">
+          <Icon name="lucide:x" class="size-4" />
+          {{ t("admin.filter.clear") }}
+        </Button>
       </div>
 
-      <div class="grid gap-1.5">
-        <Label for="admin-filter-expiry">{{ t("admin.filter.expiry") }}</Label>
-        <Select v-model="filters.expiry">
-          <SelectTrigger id="admin-filter-expiry" class="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">{{ t("admin.filter.any") }}</SelectItem>
-            <SelectItem value="not_expired">
-              {{ t("admin.filter.not_expired") }}
-            </SelectItem>
-            <SelectItem value="expired">{{ t("admin.filter.expired") }}</SelectItem>
-          </SelectContent>
-        </Select>
+      <!-- Refreshing keeps the filters and the page. -->
+      <div class="ml-auto flex shrink-0 items-center gap-3">
+        <!-- Always as wide as the longest wording, "a few seconds ago", so
+             the row does not reflow as the time counts up, or while nothing
+             has loaded yet. -->
+        <span class="min-w-40 text-right text-xs whitespace-nowrap text-muted-foreground">
+          <time v-if="updatedAt !== null" :datetime="isoTime(updatedAt)">
+            {{ t("admin.contracts.updated", { time: fromNow(updatedAt) }) }}
+          </time>
+        </span>
+        <Button variant="outline" @click="load">
+          <Icon
+            name="lucide:refresh-cw"
+            class="size-4"
+            :class="{ 'motion-safe:animate-spin': loading }"
+          />
+          {{ t("admin.contracts.refresh") }}
+        </Button>
       </div>
-
-      <div class="grid gap-1.5">
-        <Label for="admin-filter-consumer">{{ t("admin.filter.consumer") }}</Label>
-        <Input
-          id="admin-filter-consumer"
-          v-model="filters.consumerId"
-          class="w-52"
-          :placeholder="t('admin.filter.exact_match')"
-        />
-      </div>
-
-      <div class="grid gap-1.5">
-        <Label for="admin-filter-order">{{ t("admin.filter.order") }}</Label>
-        <Input
-          id="admin-filter-order"
-          v-model="filters.orderId"
-          class="w-52"
-          :placeholder="t('admin.filter.exact_match')"
-        />
-      </div>
-
-      <Button variant="ghost" :disabled="!hasFilters" @click="clearFilters">
-        <Icon name="lucide:x" class="size-4" />
-        {{ t("admin.filter.clear") }}
-      </Button>
     </div>
 
     <AppTablePreloader v-if="!page && !error" :rows="6" />
@@ -211,9 +238,11 @@ const loading = ref(false);
 const error = ref<AdminApiError | null>(null);
 // The contract whose panel is open, or null.
 const selectedJti = ref<string | null>(null);
+// When the rows on screen were fetched, in seconds; null while none are shown.
+const updatedAt = ref<number | null>(null);
 
 // One clock and one date format for the table, the panel and the badges.
-const { nowSeconds, formatTime, fromNow } = useAdminTime();
+const { nowSeconds, tick, formatTime, fromNow, isoTime } = useAdminTime();
 
 const hasFilters = computed(
   () =>
@@ -236,17 +265,29 @@ async function load(): Promise<void> {
     const result = await api.listContracts(
       contractListQuery(filters, pageIndex.value, LIMIT),
     );
-    if (request === latestRequest) page.value = result;
+    if (request !== latestRequest) return;
+    // The list can shrink between loads (contracts revoked while filtering on
+    // Active, say), leaving this page past the end. Go to the last page that
+    // still exists instead of showing an empty one; the pageIndex watcher
+    // loads it.
+    if (result.total_pages > 0 && pageIndex.value >= result.total_pages) {
+      pageIndex.value = result.total_pages - 1;
+      return;
+    }
+    // Catch the clock up first, so rows newer than its last tick, and the
+    // "Updated" time itself, do not read as being in the future.
+    tick();
+    page.value = result;
+    updatedAt.value = nowSeconds.value;
   } catch (e: unknown) {
     if (request !== latestRequest) return;
     error.value = e instanceof AdminApiError ? e : new AdminApiError("failed", String(e));
     page.value = null;
+    updatedAt.value = null;
   } finally {
     if (request === latestRequest) loading.value = false;
   }
 }
-
-
 
 function clearFilters(): void {
   Object.assign(filters, NO_CONTRACT_FILTERS);

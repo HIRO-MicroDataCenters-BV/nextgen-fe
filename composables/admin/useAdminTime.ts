@@ -7,8 +7,19 @@
  */
 export function useAdminTime() {
   const dayjs = useDayjs();
-  const now = useNow({ interval: 30_000 });
-  const nowSeconds = computed(() => Math.floor(now.value.getTime() / 1000));
+  const now = ref(Date.now());
+  const nowSeconds = computed(() => Math.floor(now.value / 1000));
+
+  /**
+   * Moves the clock to this instant. Call it when fresh data arrives: between
+   * ticks the clock can be up to 30 s behind, and a record newer than the
+   * clock would read "in a few seconds" instead of "a few seconds ago".
+   */
+  function tick(): void {
+    now.value = Date.now();
+  }
+
+  useIntervalFn(tick, 30_000);
 
   /** "Sep, 11 2026 15:02" — the catalog's date format, plus the time. */
   function formatTime(seconds: number): string {
@@ -25,5 +36,5 @@ export function useAdminTime() {
     return dayjs.unix(seconds).toISOString();
   }
 
-  return { nowSeconds, formatTime, fromNow, isoTime };
+  return { nowSeconds, tick, formatTime, fromNow, isoTime };
 }
