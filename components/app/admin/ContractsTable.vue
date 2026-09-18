@@ -127,8 +127,30 @@
               <TableHead :class="HEAD_CLASS">{{ t("admin.column.order") }}</TableHead>
               <TableHead :class="HEAD_CLASS">{{ t("admin.column.consumer") }}</TableHead>
               <TableHead :class="HEAD_CLASS">{{ t("admin.column.status") }}</TableHead>
-              <TableHead :class="HEAD_CLASS">{{ t("admin.column.expires") }}</TableHead>
-              <TableHead :class="HEAD_CLASS">{{ t("admin.column.registered") }}</TableHead>
+              <!-- Sorted by the Clearing House, not here: sorting in the
+                   browser would only reorder the page on screen. aria-sort
+                   on the th is what tells a screen reader the order; the
+                   arrow is for the eye. -->
+              <TableHead
+                v-for="header in SORTABLE_HEADERS"
+                :key="header.column"
+                :class="HEAD_CLASS"
+                :aria-sort="ariaSort(sort, header.column)"
+              >
+                <button
+                  type="button"
+                  class="-mx-1 inline-flex items-center gap-1 rounded-sm px-1 py-0.5 outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  :class="{ 'text-foreground': sort.column === header.column }"
+                  @click="sortBy(header.column)"
+                >
+                  {{ t(header.label) }}
+                  <Icon
+                    :name="sortIcon(header.column)"
+                    class="size-3.5"
+                    :class="{ 'opacity-50': sort.column !== header.column }"
+                  />
+                </button>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,7 +219,9 @@
       />
     </template>
 
-    <ContractDrawer v-model:jti="selectedJti" />
+    <!-- A revocation in the panel reloads the table too, so the row's badge
+         does not go on saying Active behind it. -->
+    <ContractDrawer v-model:jti="selectedJti" @changed="load" />
   </div>
 </template>
 
@@ -208,11 +232,16 @@ import { AdminApiError, useAdminApi } from "~/composables/admin/useAdminApi";
 import { useAdminTime } from "~/composables/admin/useAdminTime";
 import type { ContractPage, ContractStatus } from "~/types/admin.types";
 import {
+  DEFAULT_CONTRACT_SORT,
   NO_CONTRACT_FILTERS,
+  ariaSort,
   contractDisplayState,
   contractListQuery,
+  nextContractSort,
   shortId,
   type ContractFilters,
+  type ContractSort,
+  type ContractSortColumn,
 } from "~/utils/contractState";
 
 const LIMIT = 20;
@@ -227,11 +256,19 @@ const HEADER_CLASS =
   "sticky top-0 z-10 border-t-0 bg-[color:color-mix(in_oklab,var(--muted)_50%,var(--background))]";
 const HEAD_CLASS = "h-9 text-xs text-muted-foreground";
 const STATUSES: ContractStatus[] = ["active", "completed", "cancelled", "revoked"];
+// In the order they appear, after Status.
+const SORTABLE_HEADERS: { column: ContractSortColumn; label: string }[] = [
+  { column: "exp", label: "admin.column.expires" },
+  { column: "registered_at", label: "admin.column.registered" },
+];
 
 const { t } = useI18n();
 const api = useAdminApi();
 
 const filters = reactive<ContractFilters>({ ...NO_CONTRACT_FILTERS });
+// Replaced whole on every change, never edited in place, so the watcher
+// below sees each one.
+const sort = ref<ContractSort>({ ...DEFAULT_CONTRACT_SORT });
 const pageIndex = ref(0); // counted from 0, like the table; the API counts from 1
 const page = ref<ContractPage | null>(null);
 const loading = ref(false);
@@ -263,7 +300,7 @@ async function load(): Promise<void> {
   error.value = null;
   try {
     const result = await api.listContracts(
-      contractListQuery(filters, pageIndex.value, LIMIT),
+      contractListQuery(filters, sort.value, pageIndex.value, LIMIT),
     );
     if (request !== latestRequest) return;
     // The list can shrink between loads (contracts revoked while filtering on
@@ -293,13 +330,24 @@ function clearFilters(): void {
   Object.assign(filters, NO_CONTRACT_FILTERS);
 }
 
-// Any change of filter starts again from the first page.
+function sortBy(column: ContractSortColumn): void {
+  sort.value = nextContractSort(sort.value, column);
+}
+
+function sortIcon(column: ContractSortColumn): string {
+  if (sort.value.column !== column) return "lucide:arrow-up-down";
+  return sort.value.direction === "asc" ? "lucide:arrow-up" : "lucide:arrow-down";
+}
+
+// Any change of filter or sort starts again from the first page: page 3 of
+// a different order is a different, arbitrary set of rows.
 function restartFromFirstPage(): void {
   if (pageIndex.value === 0) void load();
   else pageIndex.value = 0; // the pageIndex watcher does the loading
 }
 
 watch(() => [filters.status, filters.expiry], restartFromFirstPage);
+watch(sort, restartFromFirstPage);
 // Typing is debounced, so each keystroke is not a request.
 watchDebounced(() => [filters.consumerId, filters.orderId], restartFromFirstPage, {
   debounce: 300,

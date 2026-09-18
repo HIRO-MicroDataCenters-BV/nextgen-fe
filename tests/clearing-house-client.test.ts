@@ -10,13 +10,22 @@ import {
 describe("pickParams", () => {
   it("forwards only the parameters the endpoint understands", () => {
     // `cursor` was the Clearing House's old paging parameter; it must not leak
-    // through, and neither should anything else a caller invents.
+    // through, and neither should anything else a caller invents — `order`
+    // included, which reads like a sort direction but is not the API's name.
     expect(
       pickParams(
-        { status: "revoked", page: 2, cursor: "WzQ3XQ", sort: "jti", admin: "1" },
+        { status: "revoked", page: 2, cursor: "WzQ3XQ", order: "asc", admin: "1" },
         CONTRACT_LIST_PARAMS,
       ),
     ).toEqual({ status: "revoked", page: "2" });
+  });
+
+  it("forwards the sort column and direction", () => {
+    // Values are the Clearing House's to check: an unknown sort comes back
+    // as its 422, not silently as the default order.
+    expect(
+      pickParams({ sort: "exp", direction: "asc" }, CONTRACT_LIST_PARAMS),
+    ).toEqual({ sort: "exp", direction: "asc" });
   });
 
   it("takes the first value of a repeated parameter", () => {

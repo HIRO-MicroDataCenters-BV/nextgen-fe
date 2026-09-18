@@ -23,6 +23,8 @@ export const CONTRACT_LIST_PARAMS = [
   "consumer_id",
   "order_id",
   "expired",
+  "sort",
+  "direction",
   "page",
   "limit",
 ] as const;
@@ -168,6 +170,22 @@ export class ClearingHouseClient {
   getHistory(jti: string): Promise<AuditEventList> {
     const path = this.contractPath(jti, "/history");
     return this.call(() => $fetch<AuditEventList>(path, this.options()));
+  }
+
+  // The Clearing House's status endpoint takes any status. This only ever
+  // sends "revoked", so revoking is all the admin API can do with it.
+  revokeContract(
+    jti: string,
+    change: { actor: string; reason: string },
+  ): Promise<ContractRecord> {
+    const path = this.contractPath(jti, "/status");
+    return this.call(() =>
+      $fetch<ContractRecord>(path, {
+        ...this.options(),
+        method: "PATCH",
+        body: { status: "revoked", actor: change.actor, reason: change.reason },
+      }),
+    );
   }
 
   listEvents(query: Record<string, unknown>): Promise<AuditEventPage> {

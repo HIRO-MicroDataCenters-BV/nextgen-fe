@@ -66,3 +66,20 @@ export const adminIdentitySchema = z.object({
   email: z.string().min(1),
   actor: z.string().min(1),
 });
+
+/**
+ * The one request the admin page sends rather than receives: revoking a
+ * contract. Checked by the dialog, and again by the server route.
+ *
+ * The reason is required here although the Clearing House would accept none.
+ * A revocation cannot be undone, and its history entry is where the next
+ * admin will look for why. Trimmed and capped at 500 characters, the
+ * Clearing House's own rule, so a reason it would refuse never gets that far.
+ *
+ * Only `reason`: anything else in the body, an `actor` included, is dropped.
+ */
+export const REVOKE_REASON_MAX = 500;
+
+export const revokeRequestSchema = z.object({
+  reason: z.string().trim().min(1).max(REVOKE_REASON_MAX),
+});

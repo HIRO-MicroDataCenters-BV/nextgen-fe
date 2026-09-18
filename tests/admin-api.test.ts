@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { classifyAdminError } from "~/composables/admin/useAdminApi";
 import {
+  REVOKE_REASON_MAX,
   auditEventListSchema,
   contractPageSchema,
+  revokeRequestSchema,
 } from "~/schemas/admin.schema";
 
 const contract = {
@@ -21,6 +23,7 @@ describe("classifyAdminError", () => {
     expect(classifyAdminError(401)).toBe("not_signed_in");
     expect(classifyAdminError(403)).toBe("forbidden");
     expect(classifyAdminError(404)).toBe("not_found");
+    expect(classifyAdminError(409)).toBe("conflict");
     expect(classifyAdminError(502)).toBe("unavailable");
     expect(classifyAdminError(503)).toBe("disabled");
   });
@@ -78,5 +81,36 @@ describe("auditEventListSchema", () => {
       ],
     };
     expect(auditEventListSchema.safeParse(history).success).toBe(true);
+  });
+});
+
+describe("revokeRequestSchema", () => {
+  const parse = (body: unknown) => revokeRequestSchema.safeParse(body);
+
+  it("accepts a reason, trimmed", () => {
+    expect(parse({ reason: "  consent withdrawn \n" })).toEqual({
+      success: true,
+      data: { reason: "consent withdrawn" },
+    });
+  });
+
+  it("requires a reason that says something", () => {
+    for (const body of [undefined, {}, { reason: "" }, { reason: "   \n\t" }, { reason: 42 }]) {
+      expect(parse(body).success, JSON.stringify(body)).toBe(false);
+    }
+  });
+
+  it("stops at the Clearing House's own limit of 500 characters", () => {
+    // Counted after trimming, as the Clearing House counts it.
+    expect(parse({ reason: "x".repeat(REVOKE_REASON_MAX) }).success).toBe(true);
+    expect(parse({ reason: ` ${"x".repeat(REVOKE_REASON_MAX)} ` }).success).toBe(true);
+    expect(parse({ reason: "x".repeat(REVOKE_REASON_MAX + 1) }).success).toBe(false);
+  });
+
+  it("drops an actor sent by the browser", () => {
+    // Who revoked comes from requireAdmin(). A body that names someone else
+    // must not be able to reach the history.
+    const result = parse({ reason: "audit", actor: "dev-allowlist:someone@else.org" });
+    expect(result.success && result.data).toEqual({ reason: "audit" });
   });
 });

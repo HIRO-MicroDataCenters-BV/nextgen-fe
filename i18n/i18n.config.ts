@@ -246,6 +246,24 @@ export default defineI18nConfig(() => {
             not_found: "This contract no longer exists.",
             failed: "Could not load this contract.",
           },
+          revoke: {
+            action: "Revoke contract",
+            title: "Revoke this contract?",
+            description:
+              "The consumer loses access the next time this contract is checked. This cannot be undone: to give access back, a new contract has to be issued.",
+            scope: "Only this contract is revoked. Other contracts in order {order} are not affected.",
+            reason: "Reason",
+            reason_placeholder: "Why is this contract being revoked?",
+            reason_hint: "Saved in the contract's history, together with your email.",
+            cancel: "Cancel",
+            confirm: "Revoke contract",
+            submitting: "Revoking…",
+            done: "Contract revoked",
+            conflict: "This contract is no longer active, so it cannot be revoked.",
+            unavailable:
+              "No answer from the Clearing House. The contract may have been revoked anyway — check its status before trying again.",
+            failed: "Could not revoke this contract.",
+          },
           event: {
             registered: "Registered",
             changed: "Status changed",

@@ -69,6 +69,29 @@
           </section>
         </template>
       </div>
+
+      <!-- Always there, so an admin can see that revoking exists; disabled
+           while the contract is not active, or not loaded yet. -->
+      <SheetFooter class="border-t sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          class="text-destructive hover:text-destructive"
+          :disabled="!revokable"
+          @click="revokeOpen = true"
+        >
+          <Icon name="lucide:ban" class="size-4" />
+          {{ t("admin.revoke.action") }}
+        </Button>
+      </SheetFooter>
+
+      <!-- Not tied to canRevoke: after a 409 the contract reloads as no
+           longer active, and the dialog has to stay to say why. -->
+      <RevokeContractDialog
+        v-if="contract"
+        v-model:open="revokeOpen"
+        :contract="contract"
+        @settled="onRevokeSettled"
+      />
     </SheetContent>
   </Sheet>
 </template>
@@ -76,10 +99,11 @@
 <script setup lang="ts">
 import ContractStatusBadge from "~/components/app/admin/ContractStatusBadge.vue";
 import ContractTimeline from "~/components/app/admin/ContractTimeline.vue";
+import RevokeContractDialog from "~/components/app/admin/RevokeContractDialog.vue";
 import { AdminApiError, useAdminApi } from "~/composables/admin/useAdminApi";
 import { useAdminTime } from "~/composables/admin/useAdminTime";
 import type { AuditEventRecord, ContractRecord } from "~/types/admin.types";
-import { contractDisplayState } from "~/utils/contractState";
+import { canRevoke, contractDisplayState } from "~/utils/contractState";
 
 /**
  * Opens for whichever contract id it is given, and loads that contract and
@@ -87,7 +111,11 @@ import { contractDisplayState } from "~/utils/contractState";
  * feed can open it from an event as easily as the table does from a row.
  */
 const props = defineProps<{ jti: string | null }>();
-const emit = defineEmits<{ "update:jti": [value: string | null] }>();
+const emit = defineEmits<{
+  "update:jti": [value: string | null];
+  // The contract may have changed here, so whatever lists it should reload.
+  changed: [];
+}>();
 
 const { t } = useI18n();
 const api = useAdminApi();
@@ -100,6 +128,9 @@ const contract = ref<ContractRecord | null>(null);
 const events = ref<AuditEventRecord[]>([]);
 const loading = ref(false);
 const error = ref<AdminApiError | null>(null);
+const revokeOpen = ref(false);
+
+const revokable = computed(() => contract.value !== null && canRevoke(contract.value));
 
 const timeRows = computed(() => {
   const c = contract.value;
@@ -141,6 +172,9 @@ async function load(): Promise<void> {
 watch(
   () => props.jti,
   (jti) => {
+    // Closing the panel, or moving to another contract, closes the dialog
+    // with it: it must never stay open over a contract it was not opened for.
+    revokeOpen.value = false;
     if (!jti) return;
     if (jti !== shownJti.value) {
       // A different contract: never show the previous one's details under it.
@@ -155,5 +189,10 @@ watch(
 
 function onOpenChange(open: boolean): void {
   if (!open) emit("update:jti", null);
+}
+
+function onRevokeSettled(): void {
+  void load();
+  emit("changed");
 }
 </script>

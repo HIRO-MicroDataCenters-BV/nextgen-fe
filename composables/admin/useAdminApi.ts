@@ -28,6 +28,7 @@ export type AdminApiErrorKind =
   | "disabled" // 503: the development login is switched off here
   | "unavailable" // 502: the Clearing House is down or unreachable
   | "not_found" // 404
+  | "conflict" // 409: the contract's status no longer allows the change
   | "invalid_response" // the answer did not match its schema
   | "failed"; // anything else
 
@@ -50,6 +51,8 @@ export function classifyAdminError(status: number | undefined): AdminApiErrorKin
       return "forbidden";
     case 404:
       return "not_found";
+    case 409:
+      return "conflict";
     case 502:
       return "unavailable";
     case 503:
@@ -136,6 +139,17 @@ export function useAdminApi() {
             headers: headers(),
           }),
         auditEventListSchema,
+      ),
+
+    revokeContract: (jti: string, reason: string): Promise<ContractRecord> =>
+      request(
+        () =>
+          $fetch<ContractRecord>(`${contractPath(jti)}/revoke`, {
+            method: "POST",
+            headers: headers(),
+            body: { reason },
+          }),
+        contractRecordSchema,
       ),
 
     listEvents: (query: Record<string, string | number>): Promise<AuditEventPage> =>
