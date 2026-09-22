@@ -5,7 +5,6 @@ Web client for the **NextGen** data ecosystem: catalog management, **DCAT-AP 3.0
 Built with **[Nuxt 4](https://nuxt.com/)** and **[Vue 3](https://vuejs.org/)** (`future.compatibilityVersion: 4` in `nuxt.config.ts`).
 
 ---
-
 ## NextGen programme
 
 ### Next generation tools for genome-centric multimodal data integration in personalised cardiovascular medicine
