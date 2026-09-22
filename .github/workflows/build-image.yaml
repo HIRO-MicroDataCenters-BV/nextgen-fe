@@ -50,6 +50,7 @@ jobs:
           echo "VERSION_APP=$(cat "./VERSION_APP")" >> $GITHUB_ENV
           echo "DOCKER_IMAGES=$(cat "./DOCKER_IMAGES")" >> $GITHUB_ENV
           echo "DOCKER_TAGS=$(cat "./VERSION_DOCKER")" >> $GITHUB_ENV
+          echo "VERSION_CHART=$(cat "./VERSION_CHART")" >> $GITHUB_ENV
 
       - name: Log into registry ${{ env.REGISTRY }}
         uses: docker/login-action@v3
@@ -92,3 +93,29 @@ jobs:
         with:
           token: ${{ github.token }}
           target_dir: "./helm-charts/"
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          {
+            echo "## Chart version"
+            echo
+            echo '```'
+            echo "${VERSION_CHART}"
+            echo '```'
+            echo
+            echo "Paste that into \`version:\` in the service's \`fleet.yaml\` in **ds-gitops**."
+            echo
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo "> **Do not deploy this one.** It is a \`pull_request\` build, made from a"
+              echo "> temporary merge commit that exists on no branch. Use the \`push\` run"
+              echo "> of the same commit instead."
+              echo
+            fi
+            echo "| | |"
+            echo "|---|---|"
+            echo "| branch | \`${GITHUB_REF_NAME}\` |"
+            echo "| event | \`${GITHUB_EVENT_NAME}\` |"
+            echo "| commit | \`${GITHUB_SHA}\` |"
+            echo "| image | \`${DOCKER_IMAGES}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
