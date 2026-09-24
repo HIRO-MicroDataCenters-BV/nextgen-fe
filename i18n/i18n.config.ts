@@ -129,6 +129,57 @@ export default defineI18nConfig(() => {
           hide_password: "Hide password",
           no_account: "Don't have an account?",
           contact_admin: "Contact your administrator",
+          use_key: "Sign in with identity key",
+          use_password: "Use email and password instead",
+          key: {
+            subtitle: "Sign in to continue to the Pathfinder platform",
+            label: "Identity key",
+            privacy: "Read on this device only. Your key is never uploaded.",
+            signing_in_as: "Signing in as",
+            remove: "Remove key file",
+            steps: {
+              challenge: "Sign-in request received",
+              sign: "Signed on this device",
+              verify: "Checking your key is still valid",
+              session: "Starting your session",
+            },
+            errors: {
+              invalid_key_file: {
+                title: "This file isn't a key file",
+                description:
+                  "Choose the identity key file you were given, or ask your administrator.",
+              },
+              empty_key_file: {
+                title: "This file is empty",
+                description:
+                  "Choose the identity key file you were given, or ask your administrator.",
+              },
+              key_file_too_large: {
+                title: "This file is too large to be a key file",
+                description:
+                  "Key files are smaller than {maxSize}. Choose the identity key file you were given, or ask your administrator.",
+              },
+              key_replaced: {
+                title: "This key has been replaced",
+                description:
+                  "A newer key has replaced this one. Load the file for your current key, or ask your administrator.",
+              },
+              witnesses_unavailable: {
+                title: "Couldn't check your key right now",
+                description:
+                  "The services that confirm keys didn't respond. This is usually temporary — try again in a moment.",
+              },
+              not_available: {
+                title: "Key sign-in isn't available yet",
+                description: "Use your email and password for now.",
+              },
+              unknown: {
+                title: "Something went wrong",
+                description:
+                  "Your key wasn't accepted. Try again, or ask your administrator.",
+              },
+            },
+          },
         },
         status: {
           loading_data: "Loading data...",
