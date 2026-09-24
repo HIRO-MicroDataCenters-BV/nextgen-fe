@@ -72,6 +72,16 @@ entries:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.217.marketplace-fix.475132d5.tgz
     version: 0.1.1-dev.217.marketplace-fix.475132d5
   - apiVersion: v2
+    appVersion: 0.1.1-dev.217.keri-login.e65b0cae
+    created: "2026-09-24T07:58:46.490947087Z"
+    description: A frontend web service template for reuse.
+    digest: 761699ed2f79a6faa00b1fe3351542b721875f3836e65f13b741365a4f56b36e
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.217.keri-login.e65b0cae.tgz
+    version: 0.1.1-dev.217.keri-login.e65b0cae
+  - apiVersion: v2
     appVersion: 0.1.1-dev.217.dev-editor.9008c146
     created: "2026-09-16T08:02:25.178429667Z"
     description: A frontend web service template for reuse.
@@ -3281,4 +3291,4 @@ entries:
     urls:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
     version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
-generated: "2026-09-22T14:56:53.183693648Z"
+generated: "2026-09-24T07:58:46.490570479Z"
