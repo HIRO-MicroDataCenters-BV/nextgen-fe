@@ -171,10 +171,7 @@ import {
   createKeriLoginFlow,
   type KeriLoginErrorCode,
 } from "~/composables/auth/keriLogin";
-import {
-  createMockKeriAuthClient,
-  unavailableKeriAuthClient,
-} from "~/composables/auth/keriAuthClient";
+import { createMockKeriAuthClient } from "~/composables/auth/keriAuthClient";
 
 const emit = defineEmits<{ (e: "success"): void }>();
 
@@ -188,8 +185,11 @@ const authScope = effectScope(true);
 const { setAuthUser } = authScope.run(useAuthUser) as ReturnType<typeof useAuthUser>;
 onUnmounted(() => nextTick(() => authScope.stop()));
 
-// TODO: replace with the real KERI backend client once it exists. The mock is
-// dev-only and verifies nothing; production builds report "not available".
+// TEMP (2026-09-30): the mock client is used in EVERY build, not only in dev, so
+// people can use the portal while KERI login is being built. It verifies nothing:
+// any small text file signs in.
+// TODO: replace with the real KERI backend client once it exists. Until then,
+// `unavailableKeriAuthClient` is what production would show.
 const {
   status,
   key,
@@ -201,9 +201,7 @@ const {
   stepState,
   removeKey,
   reset,
-} = createKeriLoginFlow(
-  import.meta.dev ? createMockKeriAuthClient() : unavailableKeriAuthClient,
-);
+} = createKeriLoginFlow(createMockKeriAuthClient());
 
 const labelId = useId();
 const dragging = ref(false);
