@@ -162,13 +162,17 @@ const cards = computed(() =>
 
           <div class="flex min-w-0 flex-1 flex-col">
             <div class="flex items-center gap-2">
-              <component
-                :is="card.href ? 'a' : 'span'"
-                :href="card.href"
+              <!-- NuxtLink, not <a href>: a plain link reloads the whole app. -->
+              <NuxtLink
+                v-if="card.href"
+                :to="card.href"
                 class="truncate font-semibold text-foreground hover:underline"
               >
                 {{ card.name }}
-              </component>
+              </NuxtLink>
+              <span v-else class="truncate font-semibold text-foreground">
+                {{ card.name }}
+              </span>
               <Badge
                 v-if="card.shared"
                 variant="secondary"
@@ -217,14 +221,15 @@ const cards = computed(() =>
 
             <Button
               v-if="card.href"
-              as="a"
-              :href="card.href"
+              as-child
               variant="outline"
               size="sm"
               class="h-6 gap-1 px-2 text-xs"
             >
-              <Icon name="lucide:external-link" class="size-3.5" />
-              {{ t("action.open") }}
+              <NuxtLink :to="card.href">
+                <Icon name="lucide:external-link" class="size-3.5" />
+                {{ t("action.open") }}
+              </NuxtLink>
             </Button>
 
             <span
