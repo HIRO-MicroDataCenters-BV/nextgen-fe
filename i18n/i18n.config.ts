@@ -246,7 +246,7 @@ export default defineI18nConfig(() => {
           denied: {
             title: "Admins only",
             description:
-              "Your account is not on the admin list. Ask for it to be added to NUXT_ADMIN_EMAILS.",
+              "Your key is not on the admin list. Ask for its identifier to be added to NUXT_ADMIN_AIDS.",
           },
           disabled: {
             title: "Admin access is switched off",

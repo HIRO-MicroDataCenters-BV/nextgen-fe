@@ -31,7 +31,10 @@ export function useMenu() {
   // asked once per signed-in email — and hiding the link is only tidiness:
   // every admin request is checked on the server regardless.
   const { isAdmin, ensureChecked } = useAdminAccess();
-  watch(() => authUser.value?.email, ensureChecked, { immediate: true });
+  // aid first: with the key login the email is the same for every user.
+  watch(() => authUser.value?.aid ?? authUser.value?.email, ensureChecked, {
+    immediate: true,
+  });
 
   // App version
   const version = ref("v1.0.0");

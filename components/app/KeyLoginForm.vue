@@ -241,9 +241,12 @@ const onDrop = (event: DragEvent) => {
 
 const submit = async () => {
   if (!canSubmit.value && !canRetry.value) return;
+  // Read before signing in: the identifier is who signed in, and admin access
+  // is decided on it (server/utils/adminAuth.ts).
+  const aid = key.value?.aid;
   const profile = await signIn();
   if (!profile) return;
-  setAuthUser(profile);
+  setAuthUser({ ...profile, aid });
   emit("success");
 };
 

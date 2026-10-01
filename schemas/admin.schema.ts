@@ -63,7 +63,9 @@ export const auditEventPageSchema = z.object({
 });
 
 export const adminIdentitySchema = z.object({
-  email: z.string().min(1),
+  // Empty when the admin was recognised by key identifier alone.
+  email: z.string(),
+  aid: z.string().min(1).optional(),
   actor: z.string().min(1),
 });
 

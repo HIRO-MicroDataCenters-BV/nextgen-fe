@@ -67,7 +67,11 @@ export function useAdminApi() {
 
   function headers(): Record<string, string> {
     const email = authUser.value?.email;
-    return email ? { "x-user-email": email } : {};
+    const aid = authUser.value?.aid;
+    return {
+      ...(email ? { "x-user-email": email } : {}),
+      ...(aid ? { "x-user-aid": aid } : {}),
+    };
   }
 
   // Each caller passes a $fetch call with its concrete response type. Nuxt

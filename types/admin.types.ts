@@ -57,6 +57,8 @@ export type AuditEventPage = Page<AuditEventRecord>;
 /** Who the admin API thinks is asking. */
 export interface AdminIdentity {
   email: string;
+  /** Key identifier, when the admin was recognised by their login key. */
+  aid?: string;
   /** What gets recorded as `actor` on everything this admin does. */
   actor: string;
 }

@@ -39,6 +39,8 @@ function resolveAvatarUrl(
 export interface AuthUserProfile {
   name: string;
   email: string;
+  /** Key identifier (`E…`) from the key login; absent after the email login. */
+  aid?: string;
   /** `https?://` or `data:` URL; empty = generated avatar */
   avatar: string;
 }
@@ -162,10 +164,12 @@ export function useAuthUser() {
 
   function setAuthUser(profile: Partial<AuthUserProfile> & { email: string }) {
     const email = profile.email.trim();
+    const aid = profile.aid?.trim();
     authUser.value = {
       email,
       name: (profile.name?.trim() || email.split("@")[0] || email).trim(),
       avatar: profile.avatar?.trim() ?? "",
+      ...(aid ? { aid } : {}),
     };
   }
 

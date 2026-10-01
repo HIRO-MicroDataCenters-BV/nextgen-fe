@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEV_ACTOR_SOURCE,
   decideAdmin,
+  parseAdminAids,
   parseAdminEmails,
 } from "~/server/utils/adminAuth";
 
@@ -98,5 +99,60 @@ describe("decideAdmin", () => {
     if (!decision.ok) return;
     expect(decision.identity.actor.startsWith(`${DEV_ACTOR_SOURCE}:`)).toBe(true);
     expect(decision.identity.actor).toMatch(CLEARING_HOUSE_ACTOR_FORMAT);
+  });
+});
+
+describe("admin by key identifier", () => {
+  // The mock key login gives every user this same email, so only the key
+  // identifier can tell an admin from anyone else.
+  const SHARED_EMAIL = "researcher@pathfinder.example";
+  const ADMIN_AID = "EAdminKeyIdentifier_xxxxxxxxxxxxxxxxxxxxxxxxx";
+  const keyDev = { ...dev, allowlist: [], aidAllowlist: [ADMIN_AID] };
+
+  it("parseAdminAids trims and drops blanks, but keeps case", () => {
+    expect(parseAdminAids(" EAbc_-1, ,Exyz ")).toEqual(["EAbc_-1", "Exyz"]);
+    expect(parseAdminAids(undefined)).toEqual([]);
+  });
+
+  it("lets a listed key in, with the key as the recorded actor", () => {
+    const decision = decideAdmin({ ...keyDev, email: SHARED_EMAIL, aid: ADMIN_AID });
+    expect(decision).toEqual({
+      ok: true,
+      identity: {
+        email: SHARED_EMAIL,
+        aid: ADMIN_AID,
+        actor: `${DEV_ACTOR_SOURCE}:${ADMIN_AID}`,
+      },
+    });
+    expect(decision.ok && decision.identity.actor).toMatch(CLEARING_HOUSE_ACTOR_FORMAT);
+  });
+
+  it("is 403 for any other key, even with the shared email", () => {
+    expect(
+      decideAdmin({ ...keyDev, email: SHARED_EMAIL, aid: "EOtherKey" }),
+    ).toMatchObject({ ok: false, statusCode: 403, message: "Not an admin" });
+  });
+
+  it("matches the identifier exactly: case matters", () => {
+    expect(
+      decideAdmin({ ...keyDev, email: SHARED_EMAIL, aid: ADMIN_AID.toLowerCase() }).ok,
+    ).toBe(false);
+  });
+
+  it("still lets an allowlisted email in when the key is not listed", () => {
+    expect(
+      decideAdmin({
+        ...keyDev,
+        allowlist: ["admin@example.org"],
+        email: "admin@example.org",
+        aid: "EOtherKey",
+      }).ok,
+    ).toBe(true);
+  });
+
+  it("is still refused in a production build unless switched on", () => {
+    expect(
+      decideAdmin({ ...keyDev, production: true, email: SHARED_EMAIL, aid: ADMIN_AID }),
+    ).toMatchObject({ ok: false, statusCode: 503 });
   });
 });

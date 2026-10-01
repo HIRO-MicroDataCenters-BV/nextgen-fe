@@ -102,9 +102,10 @@ export default defineNuxtConfig({
     // literals, not process.env reads: this file is evaluated at BUILD time,
     // so reading env here would bake a developer's local .env into the
     // production image — including the opt-in below. Nitro still applies
-    // NUXT_ADMIN_EMAILS and NUXT_ALLOW_DEV_ADMIN_AUTH at runtime, so these can
+    // NUXT_ADMIN_EMAILS, NUXT_ADMIN_AIDS and NUXT_ALLOW_DEV_ADMIN_AUTH at runtime, so these can
     // only be set where the server actually runs.
     adminEmails: "", // comma-separated
+    adminAids: "", // comma-separated key identifiers (E…) — NUXT_ADMIN_AIDS
     allowDevAdminAuth: false, // "true" allows the allowlist in a production build
     public: {
       apiSearchServiceUrl: process.env.NUXT_PUBLIC_API_SEARCH_SERVICE_URL || "",
