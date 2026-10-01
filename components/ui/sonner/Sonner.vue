@@ -2,6 +2,9 @@
 import type { ToasterProps } from "vue-sonner"
 import { CircleCheckIcon, InfoIcon, Loader2Icon, OctagonXIcon, TriangleAlertIcon, XIcon } from "lucide-vue-next"
 import { Toaster as Sonner } from "vue-sonner"
+// vue-sonner 2 no longer injects its own styles; without this the toast list
+// renders unstyled, in the page flow, instead of floating over the page.
+import "vue-sonner/style.css"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<ToasterProps>()

@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { AuthUserProfile } from "./useAuthUser";
+import { useAdminAccess } from "./admin/useAdminAccess";
 
 export type UserProfile = AuthUserProfile;
 
@@ -24,7 +25,13 @@ export function useMenu() {
   const { t } = useI18n();
   const route = useRoute();
   const config = useRuntimeConfig();
-  const { user: authUserDisplay } = useAuthUser();
+  const { user: authUserDisplay, authUser } = useAuthUser();
+
+  // Admins get an Admin entry. Whether someone is one is the server's call —
+  // asked once per signed-in email — and hiding the link is only tidiness:
+  // every admin request is checked on the server regardless.
+  const { isAdmin, ensureChecked } = useAdminAccess();
+  watch(() => authUser.value?.email, ensureChecked, { immediate: true });
 
   // App version
   const version = ref("v1.0.0");
@@ -96,8 +103,21 @@ export function useMenu() {
   };
 
   // Exporting data and methods
+  const adminItem = (): MenuItem => ({
+    id: "admin",
+    key: "admin",
+    title: t("menu.admin"),
+    icon: "lucide:shield-check",
+    url: "/admin",
+    items: [],
+    isActive: route.path.startsWith("/admin"),
+  });
+
   return {
-    menu: computed(() => menuItems.value),
+    menu: computed(() => ({
+      ...menuItems.value,
+      footer: isAdmin.value ? [adminItem()] : [],
+    })),
     user: authUserDisplay,
     version,
     updateActiveState,

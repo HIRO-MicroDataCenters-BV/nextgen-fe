@@ -85,6 +85,9 @@ Set backend URLs and options via environment variables (see `nuxt.config.ts` →
 | `NUXT_PUBLIC_COG_URL` / `NUXT_PUBLIC_API_COG_URL` | COG integration |
 | `NUXT_PUBLIC_TRAINING_BUILDER_SERVICE_URL` | Training builder |
 | `NUXT_DEX_*`, `NUXT_DEX_SKIP_TLS_VERIFY` | Server-side Dex auth (not exposed to client) |
+| `NUXT_CLEARING_HOUSE_URL` | Clearing House, for the admin API (server-only; default `http://localhost:8085`) |
+| `NUXT_ADMIN_EMAILS` | Comma-separated admin emails — a development stand-in for real login (server-only) |
+| `NUXT_ALLOW_DEV_ADMIN_AUTH` | `true` to allow that stand-in in a production build, e.g. a dev-cluster demo (server-only) |
 
 ---
 

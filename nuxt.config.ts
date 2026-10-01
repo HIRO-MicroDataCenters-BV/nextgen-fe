@@ -66,7 +66,7 @@ export default defineNuxtConfig({
   dayjs: {
     locales: ["en"],
     defaultLocale: "en",
-    plugins: ["utc", "timezone", "quarterOfYear"],
+    plugins: ["utc", "timezone", "quarterOfYear", "relativeTime"],
   },
   colorMode: {
     preference: "light", // default theme on first visit
@@ -94,6 +94,18 @@ export default defineNuxtConfig({
     dexPassword: process.env.NUXT_DEX_PASSWORD || "",
     dexAuthType: process.env.NUXT_DEX_AUTH_TYPE || "local",
     skipTlsVerify: process.env.NUXT_DEX_SKIP_TLS_VERIFY !== "false", // Default to true
+    // Clearing House: reached only through server/api/admin/*, never from the
+    // browser — it has no authentication of its own.
+    clearingHouseUrl:
+      process.env.NUXT_CLEARING_HOUSE_URL,
+    // Admin access — see server/utils/adminAuth.ts. Both are deliberately
+    // literals, not process.env reads: this file is evaluated at BUILD time,
+    // so reading env here would bake a developer's local .env into the
+    // production image — including the opt-in below. Nitro still applies
+    // NUXT_ADMIN_EMAILS and NUXT_ALLOW_DEV_ADMIN_AUTH at runtime, so these can
+    // only be set where the server actually runs.
+    adminEmails: "", // comma-separated
+    allowDevAdminAuth: false, // "true" allows the allowlist in a production build
     public: {
       apiSearchServiceUrl: process.env.NUXT_PUBLIC_API_SEARCH_SERVICE_URL || "",
       apiCatalogServiceUrl:
