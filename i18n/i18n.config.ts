@@ -584,7 +584,7 @@ export default defineI18nConfig(() => {
           previous_page: "Previous page",
           next_page: "Next page",
           last_page: "Last page",
-          processed: "Procesed",
+          processed: "Proceed",
           datasets: "Datasets",
           applications: "Applications",
           save: "Save",
