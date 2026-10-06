@@ -479,7 +479,7 @@ export default defineI18nConfig(() => {
           optional: "optional",
         },
         action: {
-          processed: "Procesed",
+          proceed: "Proceed",
           datasets: "Datasets",
           applications: "Applications",
           save: "Save",
