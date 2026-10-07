@@ -56,6 +56,18 @@ export default defineNuxtConfig({
     serverBundle: {
       collections: ["lucide"],
     },
+    // Ship the icons we use inside the client JS. Without this the browser
+    // fetches them at runtime from /api/_nuxt_icon/lucide.json, one request
+    // per render pass, on every page load. The scan picks up any literal
+    // "lucide:<name>" string; `.ts` is added because menu, table-column and
+    // JSON-LD schema icons are defined there. A name built at runtime
+    // (e.g. `lucide:${x}`) would not be found — add it to `icons` instead.
+    clientBundle: {
+      scan: {
+        globInclude: ["**/*.{vue,ts}"],
+      },
+      icons: [],
+    },
     customCollections: [
       {
         prefix: "cog",

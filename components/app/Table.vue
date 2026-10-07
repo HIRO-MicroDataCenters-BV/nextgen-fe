@@ -159,6 +159,7 @@ const { table, mappedColumns, isSelectionVisible, clearSelection: clearTableSele
   columnFilters,
   columnVisibility,
   data,
+  restoreSelection: isMyCatalog,
   selectedDatasetId,
   selectedApplicationId,
   selectedDatasetName,
