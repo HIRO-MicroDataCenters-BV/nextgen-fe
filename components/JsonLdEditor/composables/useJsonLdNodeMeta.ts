@@ -30,6 +30,30 @@ const NO_CHAR_COUNT_KEYS = new Set([
   "vcard:hasURL",
 ]);
 
+/**
+ * Turn a field key into a readable label.
+ *
+ * Keys arrive in two shapes: CURIEs from DCAT-AP (`dcterms:title`) and full URIs
+ * from OCA column predicates (`http://oca.example.org/123/glycated_haemoglobin`).
+ * Splitting a URI on ":" leaves "//oca.example.org/123/...", so take the last path
+ * segment instead. Runs of capitals are acronyms (SAID, IPAQ, URL) and stay whole,
+ * but an acronym followed by a word splits before that word's capital
+ * (hasURLValue → Has URL Value). A lone trailing "s" is a plural (URLs), not a word.
+ */
+export const humanizeFieldKey = (key: string): string => {
+  const raw = key.includes("://")
+    ? (key.split("#").pop() || key).split("/").filter(Boolean).pop() || key
+    : key.split(":").pop() || key;
+
+  const spaced = raw.replace(/_/g, " ");
+  // A lower-case letter followed straight by a capital is an acronym form such
+  // as eGFR; leave it exactly as the author wrote it.
+  if (/^[a-z][A-Z]/.test(spaced)) return spaced;
+  return (spaced.charAt(0).toUpperCase() + spaced.slice(1))
+    .replace(/([A-Z]+)([A-Z](?!s(?:[A-Z\d\s]|$))[a-z])/g, "$1 $2")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+};
+
 export const useJsonLdNodeMeta = (options: UseJsonLdNodeMetaOptions) => {
   const fieldI18n = computed(
     () => jsonldFieldsEn[options.node.value.key as FieldKey] ?? null,
@@ -38,8 +62,7 @@ export const useJsonLdNodeMeta = (options: UseJsonLdNodeMetaOptions) => {
   const fieldLabel = computed(() => {
     if (fieldI18n.value?.label) return fieldI18n.value.label;
     if (options.node.value.metadata.label) return options.node.value.metadata.label;
-    const raw = options.node.value.key.split(":").pop() || options.node.value.key;
-    return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/([A-Z])/g, " $1");
+    return humanizeFieldKey(options.node.value.key);
   });
 
   const fieldDescription = computed(
