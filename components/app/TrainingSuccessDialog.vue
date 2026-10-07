@@ -25,7 +25,7 @@
             target="_blank"
             rel="noopener noreferrer"
           >
-            {{ $t("action.processed") }}
+            {{ $t("action.proceed") }}
             <Icon name="lucide:external-link" class="ml-2 h-4 w-4" />
           </a>
         </Button>
