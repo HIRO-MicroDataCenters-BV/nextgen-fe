@@ -11,6 +11,7 @@
       'field-card--nested': depth > 0,
       'field-card--required-empty': isDcatMandatory && !hasValue,
       'field-card--required-filled': isDcatMandatory && hasValue,
+      'field-card--switch': isSwitchRow,
     }"
   >
     <!-- ── Field Header ──────────────────────────────────── -->
@@ -140,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, toRef } from 'vue';
+import { computed, ref, toRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
@@ -201,6 +202,12 @@ const {
   depth: toRef(props, 'depth'),
   validationErrors: toRef(props, 'validationErrors'),
 });
+// A boolean leaf states one fact ("this column exists"), so it reads as a single
+// checkbox row instead of a label above a full-width control.
+const isSwitchRow = computed(
+  () => !hasChildren.value && props.node.type === 'boolean',
+);
+
 const {
   handleFieldUpdate,
   handleChildUpdate,

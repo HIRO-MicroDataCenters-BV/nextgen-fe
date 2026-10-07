@@ -86,9 +86,9 @@
 
     <Checkbox
       v-else-if="node.type === 'boolean'"
-      :checked="Boolean(node.value)"
+      :model-value="Boolean(node.value)"
       :disabled="readonly"
-      @update:checked="handleUpdate"
+      @update:model-value="handleUpdate"
     />
 
     <DatePickerField
