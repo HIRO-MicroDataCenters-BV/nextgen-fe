@@ -23,6 +23,8 @@ interface UseTableInstanceOptions {
   columnFilters: Ref<Array<{ id: string; value: unknown; column?: string }>>;
   columnVisibility: Ref<Record<string, boolean>>;
   data: Ref<TableRowData[]>;
+  /** Re-tick the stored training-order pick. Only My Catalog writes that store. */
+  restoreSelection: Ref<boolean>;
   selectedDatasetId: Ref<string | null>;
   selectedApplicationId: Ref<string | null>;
   selectedDatasetName: Ref<string | null>;
@@ -139,6 +141,7 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
       .toLowerCase();
 
   const findRestoredSelectionId = () => {
+    if (!options.restoreSelection.value) return null;
     const targetId =
       options.selectedType.value === "applications"
         ? options.selectedApplicationId.value
@@ -180,6 +183,7 @@ export const useTableInstance = (options: UseTableInstanceOptions) => {
     [
       () => options.selectedType.value,
       () => options.data.value,
+      () => options.restoreSelection.value,
       () => options.selectedDatasetId.value,
       () => options.selectedApplicationId.value,
       () => options.selectedDatasetName.value,

@@ -14,6 +14,19 @@
       'field-card--switch': isSwitchRow,
     }"
   >
+    <!-- ── Switch-row checkbox ──────────────────────────── -->
+    <!-- Rendered before the header, not reordered with CSS, so Tab reaches the
+         checkbox, then the help and remove buttons, in the order they appear. -->
+    <div v-if="isSwitchRow" class="field-input">
+      <JsonLdField
+        :node="node"
+        :input-id="inputId"
+        :readonly="effectiveReadonly"
+        :validation-errors="fieldErrors"
+        @update="handleFieldUpdate"
+      />
+    </div>
+
     <!-- ── Field Header ──────────────────────────────────── -->
     <div class="field-header" @click="hasChildren ? toggleExpand() : undefined">
       <!-- Inline icon (same icon as in the Add Field panel) -->
@@ -23,7 +36,10 @@
 
       <div class="field-meta">
         <div class="field-label-row">
-          <span class="field-label">{{ fieldLabel }}</span>
+          <!-- Switch rows put the checkbox beside this text, so it must be a real
+               <label> to name the checkbox and toggle it on click. -->
+          <label v-if="isSwitchRow" :for="inputId" class="field-label">{{ fieldLabel }}</label>
+          <span v-else class="field-label">{{ fieldLabel }}</span>
           <span v-if="isDcatMandatory && !hasValue" class="required-asterisk" title="This field is required">*</span>
           <span
             v-if="node.metadata.dcatApCompliance"
@@ -44,7 +60,15 @@
           <TooltipProvider v-if="fieldDescription" :delay-duration="300">
             <Tooltip>
               <TooltipTrigger as-child>
-                <button type="button" class="help-btn" tabindex="-1" @click.stop>
+                <!-- Switch rows hide the inline description, so the tooltip is
+                     the only way to reach it and the trigger must take focus. -->
+                <button
+                  type="button"
+                  class="help-btn"
+                  :tabindex="isSwitchRow ? 0 : -1"
+                  :aria-label="t('jsonld.editor.fieldHelp', { field: fieldLabel })"
+                  @click.stop
+                >
                   <Icon name="lucide:info" class="size-3" />
                 </button>
               </TooltipTrigger>
@@ -92,7 +116,7 @@
     </div>
 
     <!-- ── Single-value input ───────────────────────────── -->
-    <div v-if="!hasChildren" class="field-input">
+    <div v-if="!hasChildren && !isSwitchRow" class="field-input">
       <JsonLdField
         :node="node"
         :readonly="effectiveReadonly"
@@ -141,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, toRef } from 'vue';
+import { computed, ref, toRef, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { JsonLdNode as JsonLdNodeType, ValidationError } from '../types/editor.types';
 import JsonLdField from './JsonLdField.vue';
@@ -207,6 +231,8 @@ const {
 const isSwitchRow = computed(
   () => !hasChildren.value && props.node.type === 'boolean',
 );
+// SSR-stable ID that ties the switch-row <label> to its checkbox.
+const inputId = useId();
 
 const {
   handleFieldUpdate,

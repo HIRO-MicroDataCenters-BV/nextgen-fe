@@ -77,6 +77,7 @@ export default defineI18nConfig(() => {
             ofRequiredFields: 'of {total} required fields complete',
             collapseField: 'Collapse',
             expandField: 'Expand',
+            fieldHelp: 'About {field}',
             modeVisual: 'Visual',
             modeJson: 'JSON',
             modeToggleTitle: 'Switch between visual and JSON code view',

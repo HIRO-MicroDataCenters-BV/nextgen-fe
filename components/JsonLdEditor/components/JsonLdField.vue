@@ -86,6 +86,7 @@
 
     <Checkbox
       v-else-if="node.type === 'boolean'"
+      :id="inputId"
       :model-value="Boolean(node.value)"
       :disabled="readonly"
       @update:model-value="handleUpdate"
@@ -123,11 +124,14 @@ import { jsonLdValueToPlainString } from '@/utils/jsonld';
 
 interface Props {
   node: JsonLdNode;
+  /** ID for the control, so the parent can point a <label for> at it. */
+  inputId?: string;
   readonly?: boolean;
   validationErrors?: ValidationError[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  inputId: undefined,
   readonly: false,
   validationErrors: () => [],
 });
