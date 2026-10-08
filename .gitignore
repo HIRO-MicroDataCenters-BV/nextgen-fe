@@ -22,3 +22,6 @@ logs
 .env
 .env.*
 !.env.example
+
+# Local Claude Code tooling (launch config, session settings) — not shared.
+.claude/
