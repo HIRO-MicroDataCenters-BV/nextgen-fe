@@ -165,22 +165,17 @@
               @click="selectedJti = contract.jti"
             >
               <TableCell>
-                <!-- Same tooltip pattern as TableCardList.vue. No `title`
-                     attribute: it would add the browser's own on top. -->
-                <Tooltip>
-                  <TooltipTrigger as-child>
-                    <button
-                      type="button"
-                      class="rounded-sm font-mono text-xs underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <span class="sr-only">{{ t("admin.drawer.open") }}</span>
-                      {{ shortId(contract.jti) }}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent class="max-w-xs">
-                    <span class="font-mono text-xs">{{ contract.jti }}</span>
-                  </TooltipContent>
-                </Tooltip>
+                <!-- Nothing happens on hover, same as the Order cell beside
+                     it: no underline and no tooltip. Still a button so keyboard
+                     and screen-reader users can open the drawer; the click
+                     bubbles to the row handler. The full id is in the drawer. -->
+                <button
+                  type="button"
+                  class="rounded-sm text-left font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span class="sr-only">{{ t("admin.drawer.open") }}</span>
+                  {{ shortId(contract.jti) }}
+                </button>
               </TableCell>
               <TableCell>{{ contract.order_id }}</TableCell>
               <TableCell>{{ contract.consumer_id }}</TableCell>
