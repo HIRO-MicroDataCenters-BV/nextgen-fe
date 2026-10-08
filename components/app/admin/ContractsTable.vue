@@ -168,10 +168,12 @@
                 <!-- Nothing happens on hover, same as the Order cell beside
                      it: no underline and no tooltip. Still a button so keyboard
                      and screen-reader users can open the drawer; the click
-                     bubbles to the row handler. The full id is in the drawer. -->
+                     bubbles to the row handler. The full id is in the drawer.
+                     cursor-pointer because the UA stylesheet gives a button
+                     `cursor: default`, overriding the row's pointer. -->
                 <button
                   type="button"
-                  class="rounded-sm text-left font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  class="cursor-pointer rounded-sm text-left font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span class="sr-only">{{ t("admin.drawer.open") }}</span>
                   {{ shortId(contract.jti) }}
