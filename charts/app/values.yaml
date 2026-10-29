@@ -55,3 +55,12 @@ backend:
   trainingBuilderServiceURL: https://dashboard.cog.hiro-develop.nl/apidev
   cogURL: https://dashboard.cog.hiro-develop.nl/uidev/
   apiCogURL: https://dashboard.cog.hiro-develop.nl/apidev
+  # DKMS sign-in. Empty = sign-in off. The browser calls these directly, so
+  # they need CORS for the website (ds-login chart 0.1.7+ corsAllowedOrigins,
+  # issuer DS__CORS_ALLOWED_ORIGINS). Example for HUS:
+  #   dsLoginURL: https://ds-login.hus.nextgen.hiro-develop.nl
+  #   credentialIssuerURL: https://ds-credential-issuer.hus.nextgen.hiro-develop.nl
+  dsLoginURL: ""
+  credentialIssuerURL: ""
+  # Optional public witness for the Credentials page's check (empty = skipped).
+  dkmsWitnessURL: ""

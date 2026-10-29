@@ -132,16 +132,21 @@ export default defineI18nConfig(() => {
           contact_admin: "Contact your administrator",
           use_key: "Sign in with identity key",
           use_password: "Use email and password instead",
+          session_expired: "Your session ended. Please sign in again.",
           key: {
             subtitle: "Sign in to continue to the Pathfinder platform",
-            label: "Identity key",
+            label: "Identity key file",
             privacy: "Read on this device only. Your key is never uploaded.",
             signing_in_as: "Signing in as",
             remove: "Remove key file",
+            credential_label: "Credential",
+            credential_privacy:
+              "The grant.json your operator gave you. It's sent to sign you in; it holds no private key.",
+            credential_remove: "Remove credential file",
             steps: {
               challenge: "Sign-in request received",
               sign: "Signed on this device",
-              verify: "Checking your key is still valid",
+              verify: "Checking your key and credential",
               session: "Starting your session",
             },
             errors: {
@@ -163,7 +168,22 @@ export default defineI18nConfig(() => {
               key_replaced: {
                 title: "This key has been replaced",
                 description:
-                  "A newer key has replaced this one. Load the file for your current key, or ask your administrator.",
+                  "A newer key has replaced this one. Export your key file again after rotating, or ask your administrator.",
+              },
+              invalid_credential_file: {
+                title: "This file isn't a credential",
+                description:
+                  "Choose the grant.json your operator gave you.",
+              },
+              credential_mismatch: {
+                title: "This credential belongs to someone else",
+                description:
+                  "It was issued to another identity than your key file's. Choose your own credential.",
+              },
+              identity_not_found: {
+                title: "This identity isn't registered",
+                description:
+                  "The site's witness doesn't know this identity. Ask your administrator.",
               },
               witnesses_unavailable: {
                 title: "Couldn't check your key right now",
@@ -171,13 +191,18 @@ export default defineI18nConfig(() => {
                   "The services that confirm keys didn't respond. This is usually temporary — try again in a moment.",
               },
               not_available: {
-                title: "Key sign-in isn't available yet",
-                description: "Use your email and password for now.",
+                title: "Sign-in isn't available right now",
+                description:
+                  "The sign-in service didn't respond. Try again in a moment.",
               },
               unknown: {
                 title: "Something went wrong",
                 description:
                   "Your key wasn't accepted. Try again, or ask your administrator.",
+              },
+              credential_rejected: {
+                title: "Your credential wasn't accepted",
+                description: "It may have been revoked. Ask your operator for a new one.",
               },
             },
           },
@@ -211,6 +236,7 @@ export default defineI18nConfig(() => {
           tools:
             "Browse tools developed across the NextGen consortium. Federated tools can be deployed on the Pathfinder platform.",
           data_products: "Data Products",
+          admin: "Admin",
           available_biobanks: "Available Biobanks",
           my_catalog: "Private metadata catalog",
           new_metadata_details: "New metadata details.",
@@ -246,6 +272,7 @@ export default defineI18nConfig(() => {
           marketplace: "Marketplace",
           tools: "Tools",
           my_catalog: "My Catalog",
+          credentials: "Credentials",
           settings: "Settings",
           help: "Help",
           guest_user: "Guest",
@@ -575,6 +602,130 @@ export default defineI18nConfig(() => {
             "Related Data Product is required to submit this request.",
           related_data_product_no_options:
             "No related data products available. Please create one before proceeding.",
+        },
+        credentials: {
+          operators_only: {
+            title: "For site admins and operators only",
+            description:
+              "Issuing credentials needs the site admin or operator role. Sign in with such a credential.",
+          },
+          title: "Credentials",
+          subtitle:
+            "Issue verifiable credentials (ACDC) from this site's DKMS issuer.",
+          hub: {
+            label: "Signing issuer",
+            retry: "Retry",
+            aid_copied: "Issuer AID copied",
+            service: {
+              checking: "Checking issuer…",
+              online: "Issuer online",
+              offline: "Issuer offline",
+            },
+            witness: {
+              checking: "Checking witness…",
+              published: "Key published on witness",
+              missing: "Key not on any witness",
+              unknown: "Witness not reachable",
+              hint: "Verifiers look up the issuer's key at a DKMS witness.",
+            },
+            login: {
+              ok: "Logins can verify",
+              warn: "Logins can't verify yet",
+              idle: "Login check pending",
+              hint: "ds-login checks each credential's signature with the issuer's published key.",
+            },
+            explain_missing:
+              "Credentials are signed, but no witness has this issuer's key, so ds-login rejects them at login. The issuer needs to be incepted with witnesses.",
+            explain_unknown:
+              "The witness didn't answer, so it's unclear whether logins can verify these credentials.",
+          },
+          tabs: {
+            issue: "Issue",
+            issued: "Issued",
+          },
+          issued: {
+            empty_title: "Issue your first credential",
+            empty_body:
+              "Credentials you issue from this browser are listed here, ready to copy or download again.",
+            search: "Search name, email, AID, role or institute",
+            col_holder: "Holder",
+            stat_total: "Issued",
+            stat_today: "Issued today",
+            stat_holders: "Holders",
+            revoke: "Revoke",
+            revoke_soon: "Revoking isn't available yet: the issuer has no revocation registry.",
+            no_match: "No credentials match your search.",
+            local_note:
+              "Kept in this browser only. The issuer can't list its credentials yet.",
+          },
+          roles: {
+            researcher: {
+              label: "Researcher",
+              hint: "Finds and uses data",
+            },
+            data_provider: {
+              label: "Data provider",
+              hint: "Publishes datasets in this site's catalog",
+            },
+            operator: {
+              label: "Operator",
+              hint: "Issues and revokes researcher and data provider credentials",
+            },
+            site_admin: {
+              label: "Site admin",
+              hint: "Runs this site; may do everything",
+            },
+          },
+          form: {
+            title: "Issue a credential",
+            description:
+              "States a role for an identity, signed by this site's issuer.",
+            section_who: "Who",
+            section_what: "What it says",
+            section_advanced: "Advanced",
+            subject_aid: "Subject AID",
+            aid_placeholder: "Paste the holder's AID (44 characters)",
+            subject_aid_hint:
+              "The holder's KERI identity, from their wallet.",
+            schema_said: "Schema SAID",
+            schema_said_hint:
+              "Which kind of credential this is. The issuer does not check it yet.",
+            role: "Role",
+            invalid_role: "You may not issue this role.",
+            name: "Name",
+            email: "Email",
+            institute: "Institute",
+            submit: "Issue credential",
+            new: "Issue another",
+            required_note: "Required",
+            invalid_identifier:
+              "Must be a KERI identifier: 44 characters of A–Z, a–z, 0–9, - or _",
+          },
+          preview: {
+            label: "Preview",
+            issued_label: "Issued credential",
+            kind: "Verifiable credential · ACDC",
+            at: "at",
+            for: "for",
+            holder: "Holder",
+            sealed_by: "Sealed by {issuer}",
+            seal_pending: "The seal appears when {issuer} signs.",
+            draft: "Draft",
+            signed: "Signed",
+            org_missing: "Organisation not set",
+            hint: "Fills in as you type. Nothing is signed until you issue it.",
+          },
+          result: {
+            issued_to: "Issued to",
+            issued_by: "Issued by",
+            issued_at: "Issued at",
+            grant_json: "Show grant JSON",
+            copy: "Copy grant",
+            copied: "Grant copied to the clipboard",
+            said_copied: "SAID copied",
+            download: "Download",
+            toast: "Credential issued",
+          },
         },
         common: {
           remove: "Remove",
