@@ -132,7 +132,7 @@ describe("createCredentialIssuerClient", () => {
   });
 
   it("gives up when the issuer does not answer in time", async () => {
-    // Like the devProxy while the issuer is down: no answer until aborted.
+    // An issuer that never answers: no response until aborted.
     const fetch = vi.fn(
       (_url: string, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
@@ -160,3 +160,51 @@ describe("createCredentialIssuerClient", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("revocation", () => {
+  const SAID = "ECsb_U1eT2pCZYcMMxtsydsqXCHtkEzzab6Hhut6JnxT";
+
+  it("asks the public status endpoint", async () => {
+    const fetch = vi.fn(async () =>
+      jsonResponse(200, { said: SAID, status: "not_revoked", revoked_at: null }),
+    );
+    const client = createCredentialIssuerClient({ baseUrl: "https://issuer.example/", fetch });
+
+    await expect(client.getCredentialStatus(SAID)).resolves.toMatchObject({
+      status: "not_revoked",
+    });
+    const [url] = fetch.mock.calls[0] as unknown as [string];
+    expect(url).toBe(`https://issuer.example/credential-status?said=${SAID}`);
+  });
+
+  it("POSTs the reason with the session token", async () => {
+    const fetch = vi.fn(async () =>
+      jsonResponse(200, { said: SAID, status: "revoked", already_revoked: false }),
+    );
+    const client = createCredentialIssuerClient({
+      baseUrl: "/issuer",
+      getToken: () => "jwt",
+      fetch,
+    });
+
+    await client.revokeCredential(SAID, "Left the project");
+
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(`/issuer/credentials/${SAID}/revoke`);
+    expect(init.method).toBe("POST");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer jwt" });
+    expect(JSON.parse(init.body as string)).toEqual({ reason: "Left the project" });
+  });
+
+  it("shows the issuer's reason when a role may not revoke", async () => {
+    const fetch = vi.fn(async () =>
+      jsonResponse(403, { detail: "role 'operator' may not revoke a site_admin credential" }),
+    );
+    const client = createCredentialIssuerClient({ baseUrl: "/issuer", fetch });
+
+    const error = await client.revokeCredential(SAID, "").catch((e: unknown) => e);
+    expect((error as CredentialIssuerError).status).toBe(403);
+    expect((error as CredentialIssuerError).message).toContain("may not revoke");
+  });
+});
+

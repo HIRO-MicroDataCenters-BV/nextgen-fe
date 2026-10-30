@@ -57,3 +57,21 @@ export interface IssueCredentialResponse {
   subject_aid: string;
   grant: IpexGrant;
 }
+
+/** GET /credential-status?said=… (public; ds-login asks it before each login) */
+export interface CredentialStatusResponse {
+  said: string;
+  status: "revoked" | "not_revoked";
+  revoked_at?: string | null;
+}
+
+/** POST /credentials/{said}/revoke response */
+export interface RevokeCredentialResponse {
+  said: string;
+  status: "revoked";
+  revoked_at: string;
+  revoked_by: string;
+  reason: string;
+  already_revoked: boolean;
+  tel_anchored: boolean;
+}

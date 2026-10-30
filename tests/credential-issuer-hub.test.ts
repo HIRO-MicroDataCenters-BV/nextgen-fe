@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   addIssuedEntry,
+  countByState,
   entriesForIssuer,
+  filterIssued,
   summarizeIssued,
   toIssuedEntry,
   type IssuedEntry,
@@ -141,3 +143,29 @@ describe("issued history", () => {
     });
   });
 });
+
+describe("issued list filter", () => {
+  const entries = [
+    entry("EVALID", { name: "Riley", role: "researcher" }),
+    entry("EREVOKED", { name: "Dana", role: "data_provider" }),
+    entry("ECHECKING", { name: "Ollie", role: "operator" }),
+  ];
+  const states = { EVALID: "valid", EREVOKED: "revoked", ECHECKING: "checking" } as const;
+
+  it("filters by status, then by search text", () => {
+    expect(filterIssued(entries, states, "all", "").map((e) => e.said)).toEqual([
+      "EVALID",
+      "EREVOKED",
+      "ECHECKING",
+    ]);
+    expect(filterIssued(entries, states, "valid", "").map((e) => e.said)).toEqual(["EVALID"]);
+    expect(filterIssued(entries, states, "revoked", "").map((e) => e.said)).toEqual(["EREVOKED"]);
+    expect(filterIssued(entries, states, "all", "  oll ").map((e) => e.said)).toEqual(["ECHECKING"]);
+    expect(filterIssued(entries, states, "valid", "dana")).toEqual([]);
+  });
+
+  it("counts each status", () => {
+    expect(countByState(entries, states)).toEqual({ all: 3, valid: 1, revoked: 1 });
+  });
+});
+

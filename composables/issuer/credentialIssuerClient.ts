@@ -1,7 +1,9 @@
 import type {
+  CredentialStatusResponse,
   IssueCredentialRequest,
   IssueCredentialResponse,
   IssuerInfo,
+  RevokeCredentialResponse,
 } from "~/types/issuer.types";
 
 /**
@@ -9,8 +11,8 @@ import type {
  * be unit-tested with a fake `fetch`; `useCredentialIssuer` wires it to the
  * runtime config.
  *
- * Locally `baseUrl` is "/issuer", which the Nuxt devProxy forwards to the
- * issuer container (see nuxt.config.ts).
+ * `baseUrl` is the issuer's public address; the browser calls it directly
+ * (the issuer allows every website, CORS "*").
  */
 
 /**
@@ -89,8 +91,8 @@ export function createCredentialIssuerClient(options: {
   /** The signed-in operator's ds-login JWT; minting needs `issuer:write`. */
   getToken?: () => string | null;
   fetch?: FetchLike;
-  /** Give up after this long. The Nuxt devProxy hangs (no error) while the
-   *  issuer container is down, so without a limit the page waits forever. */
+  /** Give up after this long. An issuer that is down or unreachable can
+   *  leave the request hanging; without a limit the page waits forever. */
   timeoutMs?: number;
 }) {
   const doFetch = options.fetch ?? ((input, init) => fetch(input, init));
@@ -123,7 +125,7 @@ export function createCredentialIssuerClient(options: {
         response.status === 401
           ? "Not signed in, or your session expired. Sign in again."
           : response.status === 403
-            ? "Your role may not issue credentials (operators only)."
+            ? "Your role may not do this (site admins and operators only)."
             : `Credential issuer answered ${response.status}.`;
       throw new CredentialIssuerError(readIssuerError(body, fallback), response.status);
     }
@@ -141,6 +143,24 @@ export function createCredentialIssuerClient(options: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       }),
+
+    /** Revoked or not, from the issuer's own revocation list (public). */
+    getCredentialStatus: (said: string) =>
+      request<CredentialStatusResponse>(
+        `/credential-status?said=${encodeURIComponent(said)}`,
+      ),
+
+    /** Revoke a credential. The issuer allows it for the roles the caller
+     *  may issue (site_admin: all; operator: data_provider, researcher). */
+    revokeCredential: (said: string, reason: string) =>
+      request<RevokeCredentialResponse>(
+        `/credentials/${encodeURIComponent(said)}/revoke`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        },
+      ),
   };
 }
 

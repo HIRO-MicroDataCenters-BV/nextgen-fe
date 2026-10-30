@@ -65,3 +65,41 @@ export const summarizeIssued = (entries: IssuedEntry[], now = new Date()) => {
     holders: new Set(entries.map((item) => item.subjectAid)).size,
   };
 };
+
+/** Where a credential stands, as far as the issuer's revocation list says. */
+export type CredentialState = "checking" | "valid" | "revoked" | "unknown";
+export type StatusFilter = "all" | "valid" | "revoked";
+
+const matchesQuery = (entry: IssuedEntry, q: string) =>
+  [
+    entry.subjectAid,
+    entry.said,
+    entry.role,
+    entry.institute ?? entry.org ?? "",
+    entry.name ?? "",
+    entry.email ?? "",
+  ].some((value) => value.toLowerCase().includes(q));
+
+/** The list as shown: status filter first, then the search text. */
+export const filterIssued = (
+  entries: IssuedEntry[],
+  states: Record<string, CredentialState>,
+  filter: StatusFilter,
+  query: string,
+): IssuedEntry[] => {
+  const q = query.trim().toLowerCase();
+  return entries.filter(
+    (entry) =>
+      (filter === "all" || states[entry.said] === filter) &&
+      (!q || matchesQuery(entry, q)),
+  );
+};
+
+export const countByState = (
+  entries: IssuedEntry[],
+  states: Record<string, CredentialState>,
+) => ({
+  all: entries.length,
+  valid: entries.filter((entry) => states[entry.said] === "valid").length,
+  revoked: entries.filter((entry) => states[entry.said] === "revoked").length,
+});

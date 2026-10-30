@@ -613,13 +613,16 @@ export default defineI18nConfig(() => {
           subtitle:
             "Issue verifiable credentials (ACDC) from this site's DKMS issuer.",
           hub: {
-            label: "Signing issuer",
+            label: "Signed by:",
+            site_issuer: "{site} issuer",
+            explain:
+              "Every credential here is signed with this identity. ds-login only accepts credentials from it.",
             retry: "Retry",
             aid_copied: "Issuer AID copied",
             service: {
-              checking: "Checking issuer…",
-              online: "Issuer online",
-              offline: "Issuer offline",
+              checking: "Checking…",
+              online: "Online",
+              offline: "Offline",
             },
             witness: {
               checking: "Checking witness…",
@@ -639,24 +642,38 @@ export default defineI18nConfig(() => {
             explain_unknown:
               "The witness didn't answer, so it's unclear whether logins can verify these credentials.",
           },
-          tabs: {
-            issue: "Issue",
-            issued: "Issued",
-          },
+          issue_button: "Issue credential",
           issued: {
-            empty_title: "Issue your first credential",
-            empty_body:
-              "Credentials you issue from this browser are listed here, ready to copy or download again.",
             search: "Search name, email, AID, role or institute",
+            filter_label: "Show credentials",
+            filter: {
+              all: "All",
+              valid: "Valid",
+              revoked: "Revoked",
+            },
             col_holder: "Holder",
-            stat_total: "Issued",
-            stat_today: "Issued today",
-            stat_holders: "Holders",
+            col_status: "Status",
+            state: {
+              checking: "Checking…",
+              valid: "Valid",
+              revoked: "Revoked",
+              unknown: "Status unknown",
+            },
             revoke: "Revoke",
-            revoke_soon: "Revoking isn't available yet: the issuer has no revocation registry.",
-            no_match: "No credentials match your search.",
+            no_match: "No credentials match.",
+            none: "No credentials issued from this browser yet.",
             local_note:
-              "Kept in this browser only. The issuer can't list its credentials yet.",
+              "The list is kept in this browser; the status comes from the issuer.",
+          },
+          revoke: {
+            title: "Revoke this credential?",
+            description:
+              "{name} can no longer sign in as {role} with it. This can't be undone; issue a new credential to give the role back.",
+            reason: "Reason (optional)",
+            reason_placeholder: "Left the project",
+            cancel: "Cancel",
+            confirm: "Revoke",
+            done: "Credential revoked",
           },
           roles: {
             researcher: {
