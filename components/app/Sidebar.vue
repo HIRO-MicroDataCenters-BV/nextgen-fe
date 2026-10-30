@@ -165,6 +165,25 @@ function handleUserLogout() {
           </template>
         </SidebarMenu>
       </SidebarGroup>
+
+      <SidebarGroup v-if="menu.admin.length">
+        <SidebarGroupLabel>{{ t("subtitle.admin") }}</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem v-for="item in menu.admin" :key="item.id">
+            <SidebarMenuButton as-child :tooltip="item.title">
+              <NuxtLink
+                :href="item.url"
+                exact-active-class="bg-sidebar-accent text-sidebar-accent-foreground"
+              >
+                <span class="text-lg">
+                  <Icon :name="item.icon" />
+                </span>
+                <span>{{ item.title }}</span>
+              </NuxtLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
     </SidebarContent>
     <SidebarFooter>
       <SidebarMenu class="gap-2">

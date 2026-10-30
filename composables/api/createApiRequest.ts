@@ -18,7 +18,8 @@ interface CreateApiRequestOptions {
   t: (key: string) => string;
 }
 
-const getHeaders = (isFormData = false) => {
+/** `token`: the ds-login JWT, sent as a Bearer token when signed in. */
+const getHeaders = (isFormData = false, token?: string | null) => {
   const headers: {
     "Content-Type"?: string;
     Authorization?: string;
@@ -29,6 +30,9 @@ const getHeaders = (isFormData = false) => {
 
   if (!isFormData) {
     headers["Content-Type"] = "application/json";
+  }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   return headers;
@@ -66,7 +70,7 @@ export const createApiRequest = (options: CreateApiRequestOptions) => {
 
     const fetchOptions: RequestInit = {
       method,
-      headers: getHeaders(isFormData),
+      headers: getHeaders(isFormData, options.token.value),
       signal: controller.signal,
       ...(method !== "DELETE" &&
         method !== "GET" && {

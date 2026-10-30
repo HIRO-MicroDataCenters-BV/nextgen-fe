@@ -42,6 +42,7 @@ const sectionIcon = computed<string | null>(() => {
   if (section === "tools") return "lucide:blocks";
   if (section === "my_catalog") return "lucide:library-big";
   if (section === "home") return "lucide:home";
+  if (section === "credentials") return "lucide:badge-check";
   return null;
 });
 

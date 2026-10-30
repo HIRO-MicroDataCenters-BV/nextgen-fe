@@ -41,6 +41,36 @@ export interface AuthUserProfile {
   email: string;
   /** `https?://` or `data:` URL; empty = generated avatar */
   avatar: string;
+  /** From the ds-login token (KERI sign-in); absent for older sessions. */
+  role?: string;
+  institute?: string;
+  /** The KERI identifier (AID) that signed in. */
+  aid?: string;
+}
+
+/** localStorage key of the ds-login JWT; services get it as a Bearer token. */
+export const ACCESS_TOKEN_KEY = "access_token";
+
+/**
+ * Seconds-since-epoch expiry of a JWT, read without verifying it (the services
+ * verify). `null` when the token is missing or unreadable.
+ */
+export function tokenExpiry(token: string | null | undefined): number | null {
+  const payload = token?.split(".")[1];
+  if (!payload) return null;
+  try {
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    return typeof exp === "number" ? exp : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `token` is a JWT that has not expired yet (`now` in seconds). */
+export function isTokenValid(token: string | null | undefined, now = Date.now() / 1000): boolean {
+  const exp = tokenExpiry(token);
+  return exp !== null && exp > now;
 }
 
 /**
@@ -110,11 +140,15 @@ export function useAuthUser() {
   const { t } = useI18n();
   // Use the JSON serializer explicitly: with a `null` default, useLocalStorage would
   // otherwise pick the pass-through serializer and persist the profile as "[object Object]".
+  // flush: "sync" writes storage at once. The default waits for a watcher, and
+  // logging out unmounts the component that owns it before it runs — the token
+  // then stayed in localStorage after logout.
   const authUser = useLocalStorage<AuthUserProfile | null>(AUTH_USER_KEY, null, {
     serializer: StorageSerializers.object,
+    flush: "sync",
   });
 
-  const token = useLocalStorage<string | null>("access_token", null);
+  const token = useLocalStorage<string | null>(ACCESS_TOKEN_KEY, null, { flush: "sync" });
 
   const user = computed(() => {
     const s = authUser.value;
@@ -166,6 +200,9 @@ export function useAuthUser() {
       email,
       name: (profile.name?.trim() || email.split("@")[0] || email).trim(),
       avatar: profile.avatar?.trim() ?? "",
+      ...(profile.role ? { role: profile.role } : {}),
+      ...(profile.institute ? { institute: profile.institute } : {}),
+      ...(profile.aid ? { aid: profile.aid } : {}),
     };
   }
 
@@ -174,9 +211,12 @@ export function useAuthUser() {
     token.value = null;
   }
 
+  const role = computed(() => authUser.value?.role ?? null);
+
   return {
     user,
     authUser,
+    role,
     isSignedIn,
     setAuthUser,
     logout,

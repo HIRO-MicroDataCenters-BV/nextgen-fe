@@ -120,6 +120,17 @@ export default defineNuxtConfig({
       apiCheckoutServiceUrl:
         process.env.NUXT_PUBLIC_API_CHECKOUT_SERVICE_URL ||
         "https://ds-checkout.marketplace.nextgen.hiro-develop.nl",
+      // DKMS credential issuer (page /credentials). The browser calls it
+      // directly, like catalog and search (the issuer allows every website).
+      apiCredentialIssuerUrl:
+        process.env.NUXT_PUBLIC_API_CREDENTIAL_ISSUER_URL || "",
+      // Optional public DKMS witness: the page checks the issuer's key is
+      // published there. Empty = check skipped.
+      dkmsWitnessUrl: process.env.NUXT_PUBLIC_DKMS_WITNESS_URL || "",
+      // ds-login. When set, sign-in is the real KERI key-file login (key file
+      // + credential, signed in the browser, then sent to ds-login directly);
+      // when empty, sign-in is off.
+      dsLoginUrl: process.env.NUXT_PUBLIC_DS_LOGIN_URL || "",
     },
   },
   vite: {

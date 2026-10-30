@@ -59,6 +59,21 @@ spec:
               value: "{{ .Values.backend.cogURL }}"
             - name: NUXT_PUBLIC_API_COG_URL
               value: "{{ .Values.backend.apiCogURL }}"
+            {{- with .Values.backend.dsLoginURL }}
+            # DKMS key-file sign-in: the browser calls ds-login directly.
+            - name: NUXT_PUBLIC_DS_LOGIN_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.credentialIssuerURL }}
+            # Credentials page (site_admin / operator): the browser calls the issuer.
+            - name: NUXT_PUBLIC_API_CREDENTIAL_ISSUER_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.dkmsWitnessURL }}
+            # Optional: a public DKMS witness the Credentials page checks.
+            - name: NUXT_PUBLIC_DKMS_WITNESS_URL
+              value: {{ . | quote }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
