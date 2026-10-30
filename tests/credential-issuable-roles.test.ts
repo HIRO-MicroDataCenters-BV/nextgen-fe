@@ -4,7 +4,7 @@ import {
   grantClaims,
   issuableRoles,
 } from "~/composables/issuer/credentialIssuerClient";
-import { toIssuedEntry } from "~/composables/issuer/issuedHistory";
+import { issuedAtOf } from "~/composables/issuer/issuedList";
 
 describe("which roles the signed-in user may issue (same rule as the issuer)", () => {
   it.each([
@@ -29,13 +29,11 @@ describe("credential claims in both ACDC shapes", () => {
     expect(grantClaims(keripy).role).toBe("operator");
   });
 
-  it("the issued list gets role/name from dkms-bin credentials, and a date though they have no dt", () => {
+  it("a fresh dkms-bin credential gets a date though it has no dt", () => {
     const now = new Date("2026-10-29T09:00:00Z");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const entry = toIssuedEntry({ said: "E1", issuer_aid: "EI", subject_aid: "EH", grant: dkms as any }, now);
-    expect(entry).toMatchObject({ role: "researcher", institute: "hus", name: "Riley", email: "r@x" });
-    expect(entry.issuedAt).toBe(now.toISOString());
+    expect(issuedAtOf({ said: "E1", issuer_aid: "EI", subject_aid: "EH", grant: dkms as any }, now)).toBe(now.toISOString());
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(toIssuedEntry({ said: "E1", issuer_aid: "EI", subject_aid: "EH", grant: keripy as any }).issuedAt).toBe("2026-10-29T08:00:00Z");
+    expect(issuedAtOf({ said: "E1", issuer_aid: "EI", subject_aid: "EH", grant: keripy as any })).toBe("2026-10-29T08:00:00Z");
   });
 });

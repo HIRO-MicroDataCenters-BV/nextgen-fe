@@ -60,49 +60,58 @@
             </TableCell>
             <TableCell>
               <Badge variant="secondary">{{ roleLabel(entry.role) }}</Badge>
-              <span class="ml-1.5 text-xs text-muted-foreground">
-                @{{ instituteOf(entry) }}
+              <span v-if="entry.institute" class="ml-1.5 text-xs text-muted-foreground">
+                @{{ entry.institute }}
               </span>
             </TableCell>
             <TableCell>
               <span
                 class="inline-flex items-center gap-1.5 text-sm"
-                :class="stateTone[stateOf(entry)]"
+                :class="stateTone[entry.state]"
+                :title="revokedHint(entry)"
               >
-                <Icon :name="stateIcon[stateOf(entry)]" class="size-4" />
-                {{ t(`credentials.issued.state.${stateOf(entry)}`) }}
+                <Icon :name="stateIcon[entry.state]" class="size-4" />
+                {{ t(`credentials.issued.state.${entry.state}`) }}
               </span>
             </TableCell>
             <TableCell class="text-muted-foreground">
-              {{ dayjs(entry.issuedAt).format("D MMM, HH:mm") }}
+              <div>{{ dayjs(entry.issuedAt).format("D MMM, HH:mm") }}</div>
+              <div class="text-xs" :title="entry.issuedBy">
+                {{ t("credentials.issued.by", { who: issuer(entry.issuedBy) }) }}
+              </div>
             </TableCell>
             <TableCell class="font-mono text-xs" :title="entry.said">
               {{ shortId(entry.said) }}
             </TableCell>
             <TableCell>
               <div class="flex justify-end gap-1">
+                <!-- A disabled button gets no hover, so the hint sits on a wrapper -->
+                <span class="flex gap-1" :title="entry.hasGrant ? undefined : t('credentials.issued.no_grant')">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    class="size-8"
+                    :disabled="!entry.hasGrant"
+                    :aria-label="t('credentials.result.copy')"
+                    :title="entry.hasGrant ? t('credentials.result.copy') : undefined"
+                    @click="emit('copy', entry)"
+                  >
+                    <Icon name="lucide:copy" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    class="size-8"
+                    :disabled="!entry.hasGrant"
+                    :aria-label="t('credentials.result.download')"
+                    :title="entry.hasGrant ? t('credentials.result.download') : undefined"
+                    @click="emit('download', entry)"
+                  >
+                    <Icon name="lucide:download" />
+                  </Button>
+                </span>
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  class="size-8"
-                  :aria-label="t('credentials.result.copy')"
-                  :title="t('credentials.result.copy')"
-                  @click="emit('copy', JSON.stringify(entry.grant, null, 2))"
-                >
-                  <Icon name="lucide:copy" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  class="size-8"
-                  :aria-label="t('credentials.result.download')"
-                  :title="t('credentials.result.download')"
-                  @click="downloadGrantFile(entry.said, entry.grant)"
-                >
-                  <Icon name="lucide:download" />
-                </Button>
-                <Button
-                  v-if="stateOf(entry) !== 'revoked' && canRevoke(entry.role)"
+                  v-if="entry.state !== 'revoked' && canRevoke(entry.role)"
                   size="icon"
                   variant="ghost"
                   class="size-8 text-destructive hover:text-destructive"
@@ -117,7 +126,10 @@
           </TableRow>
           <TableRow v-if="!filtered.length">
             <TableCell colspan="6" class="py-8 text-center text-muted-foreground">
-              {{ entries.length ? t("credentials.issued.no_match") : t("credentials.issued.none") }}
+              <span v-if="error" class="text-destructive">{{ error }}</span>
+              <span v-else-if="loading">{{ t("credentials.issued.loading") }}</span>
+              <span v-else-if="entries.length">{{ t("credentials.issued.no_match") }}</span>
+              <span v-else>{{ t("credentials.issued.none") }}</span>
             </TableCell>
           </TableRow>
         </TableBody>
@@ -126,34 +138,30 @@
 
     <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
       <Icon name="lucide:info" class="size-3.5" />
-      {{ t("credentials.issued.local_note") }}
+      {{ t("credentials.issued.source_note") }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  downloadGrantFile,
-  humanizeRole,
-  shortId,
-} from "~/composables/issuer/format";
+import { humanizeRole, shortId } from "~/composables/issuer/format";
 import {
   countByState,
   filterIssued,
-  type CredentialState,
   type IssuedEntry,
   type StatusFilter,
-} from "~/composables/issuer/issuedHistory";
+} from "~/composables/issuer/issuedList";
 
 const props = defineProps<{
   entries: IssuedEntry[];
-  /** Revocation state per credential SAID, from the issuer. */
-  states: Record<string, CredentialState>;
   /** Whether the signed-in user may revoke a credential with this role. */
   canRevoke: (role: string) => boolean;
+  loading?: boolean;
+  error?: string | null;
 }>();
 const emit = defineEmits<{
-  copy: [text: string];
+  copy: [entry: IssuedEntry];
+  download: [entry: IssuedEntry];
   revoke: [entry: IssuedEntry];
 }>();
 
@@ -165,29 +173,29 @@ const roleLabel = (role: string) =>
     ? t(`credentials.roles.${role}.label`)
     : humanizeRole(role);
 
-// Older entries stored the institute as "org".
-const instituteOf = (entry: IssuedEntry) => entry.institute ?? entry.org ?? "";
+const issuer = (who: string) => (who === "bootstrap" ? t("credentials.issued.bootstrap") : shortId(who));
 
-const stateOf = (entry: IssuedEntry): CredentialState =>
-  props.states[entry.said] ?? "checking";
-const stateTone: Record<CredentialState, string> = {
+const revokedHint = (entry: IssuedEntry) =>
+  entry.state === "revoked"
+    ? t("credentials.issued.revoked_hint", {
+        when: entry.revokedAt ? dayjs(entry.revokedAt).format("D MMM, HH:mm") : "—",
+        who: issuer(entry.revokedBy ?? ""),
+        reason: entry.revokeReason || t("credentials.issued.no_reason"),
+      })
+    : undefined;
+
+const stateTone: Record<IssuedEntry["state"], string> = {
   valid: "text-emerald-600 dark:text-emerald-400",
   revoked: "text-destructive",
-  checking: "text-muted-foreground",
-  unknown: "text-amber-600 dark:text-amber-400",
 };
-const stateIcon: Record<CredentialState, string> = {
+const stateIcon: Record<IssuedEntry["state"], string> = {
   valid: "lucide:circle-check",
   revoked: "lucide:ban",
-  checking: "lucide:loader-circle",
-  unknown: "lucide:circle-help",
 };
 
 const filterOptions: StatusFilter[] = ["all", "valid", "revoked"];
 const filter = ref<StatusFilter>("all");
 const query = ref("");
-const counts = computed(() => countByState(props.entries, props.states));
-const filtered = computed(() =>
-  filterIssued(props.entries, props.states, filter.value, query.value),
-);
+const counts = computed(() => countByState(props.entries));
+const filtered = computed(() => filterIssued(props.entries, filter.value, query.value));
 </script>

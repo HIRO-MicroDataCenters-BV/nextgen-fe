@@ -58,11 +58,30 @@ export interface IssueCredentialResponse {
   grant: IpexGrant;
 }
 
-/** GET /credential-status?said=… (public; ds-login asks it before each login) */
-export interface CredentialStatusResponse {
+/** GET /credentials: one credential this issuer issued */
+export interface CredentialSummary {
   said: string;
-  status: "revoked" | "not_revoked";
+  subject_aid: string;
+  role: string;
+  /** name, email and institute are empty for credentials issued before 30 Oct 2026 */
+  institute: string;
+  name: string;
+  email: string;
+  issued_at: string;
+  /** AID of whoever issued it, or "bootstrap" */
+  issued_by: string;
+  status: "valid" | "revoked";
   revoked_at?: string | null;
+  revoked_by?: string | null;
+  revoke_reason?: string | null;
+  /** Whether GET /credentials/{said} can return the grant */
+  has_grant: boolean;
+}
+
+/** GET /credentials/{said}: one credential with its grant (null if issued
+ *  before the issuer stored grants) */
+export interface CredentialDetail extends CredentialSummary {
+  grant: IpexGrant | null;
 }
 
 /** POST /credentials/{said}/revoke response */
