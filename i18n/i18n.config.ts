@@ -643,6 +643,10 @@ export default defineI18nConfig(() => {
               "The witness didn't answer, so it's unclear whether logins can verify these credentials.",
           },
           issue_button: "Issue credential",
+          issue_unavailable: {
+            checking: "Checking the issuer…",
+            offline: "The issuer is offline, so nothing can be issued. Use Retry.",
+          },
           issued: {
             search: "Search name, email, AID, role or institute",
             filter_label: "Show credentials",
@@ -654,16 +658,20 @@ export default defineI18nConfig(() => {
             col_holder: "Holder",
             col_status: "Status",
             state: {
-              checking: "Checking…",
               valid: "Valid",
               revoked: "Revoked",
-              unknown: "Status unknown",
             },
+            by: "by {who}",
+            bootstrap: "first-admin setup",
+            revoked_hint: "Revoked {when} by {who}: {reason}",
+            no_reason: "no reason given",
+            no_grant: "Issued before the issuer kept grants, so it can't be copied or downloaded again.",
+            loading: "Loading credentials…",
             revoke: "Revoke",
             no_match: "No credentials match.",
-            none: "No credentials issued from this browser yet.",
-            local_note:
-              "The list is kept in this browser; the status comes from the issuer.",
+            none: "No credentials issued yet.",
+            source_note:
+              "From the issuer: every site admin sees the same list; operators see the data provider and researcher credentials.",
           },
           revoke: {
             title: "Revoke this credential?",

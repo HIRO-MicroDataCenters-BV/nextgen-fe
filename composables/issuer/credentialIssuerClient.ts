@@ -1,5 +1,6 @@
 import type {
-  CredentialStatusResponse,
+  CredentialDetail,
+  CredentialSummary,
   IssueCredentialRequest,
   IssueCredentialResponse,
   IssuerInfo,
@@ -144,11 +145,13 @@ export function createCredentialIssuerClient(options: {
         body: JSON.stringify(body),
       }),
 
-    /** Revoked or not, from the issuer's own revocation list (public). */
-    getCredentialStatus: (said: string) =>
-      request<CredentialStatusResponse>(
-        `/credential-status?said=${encodeURIComponent(said)}`,
-      ),
+    /** Everything this issuer issued, newest first, with revocation state.
+     *  The issuer shows each caller what it may manage (issuer:read). */
+    listCredentials: () => request<CredentialSummary[]>("/credentials"),
+
+    /** One credential with its grant, for copy and download. */
+    getCredential: (said: string) =>
+      request<CredentialDetail>(`/credentials/${encodeURIComponent(said)}`),
 
     /** Revoke a credential. The issuer allows it for the roles the caller
      *  may issue (site_admin: all; operator: data_provider, researcher). */

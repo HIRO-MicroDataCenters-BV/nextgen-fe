@@ -25,17 +25,23 @@
             @retry="loadIssuer"
             @copy="copyText($event, t('credentials.hub.aid_copied'))"
           />
-          <Button @click="issueOpen = true">
-            <Icon name="lucide:plus" />
-            {{ t("credentials.issue_button") }}
-          </Button>
+          <!-- Issuing needs the issuer: off while it is being checked or offline.
+               The wrapper carries the hint, as a disabled button gets no hover. -->
+          <span :title="issuerState === 'online' ? undefined : t(`credentials.issue_unavailable.${issuerState}`)">
+            <Button :disabled="issuerState !== 'online'" @click="issueOpen = true">
+              <Icon name="lucide:plus" />
+              {{ t("credentials.issue_button") }}
+            </Button>
+          </span>
         </div>
 
         <AppCredentialsIssuedList
-          :entries="issuedEntries"
-          :states="states"
+          :entries="entries"
+          :loading="listLoading"
+          :error="listError"
           :can-revoke="canRevoke"
-          @copy="copyText($event, t('credentials.result.copied'))"
+          @copy="copyGrant"
+          @download="downloadGrant"
           @revoke="askRevoke"
         />
       </template>
@@ -99,30 +105,19 @@
 </template>
 
 <script setup lang="ts">
-import { StorageSerializers } from "@vueuse/core";
 import {
   CredentialIssuerError,
   canIssueCredentials,
   issuableRoles,
 } from "~/composables/issuer/credentialIssuerClient";
-import { shortId } from "~/composables/issuer/format";
-import {
-  ISSUED_HISTORY_KEY,
-  addIssuedEntry,
-  entriesForIssuer,
-  toIssuedEntry,
-  type CredentialState,
-  type IssuedEntry,
-} from "~/composables/issuer/issuedHistory";
+import { downloadGrantFile, shortId } from "~/composables/issuer/format";
+import { fromSummary, type IssuedEntry } from "~/composables/issuer/issuedList";
 import { useCredentialIssuer } from "~/composables/issuer/useCredentialIssuer";
 import {
   checkWitness,
   type WitnessStatus,
 } from "~/composables/issuer/witnessClient";
-import type {
-  IssueCredentialResponse,
-  IssuerInfo,
-} from "~/types/issuer.types";
+import type { IssuerInfo } from "~/types/issuer.types";
 
 const { t } = useI18n();
 const config = useRuntimeConfig();
@@ -151,6 +146,7 @@ const loadIssuer = async () => {
       e instanceof CredentialIssuerError ? e.message : String(e);
     return;
   }
+  loadList();
   if (!config.public.dkmsWitnessUrl) return;
   witnessStatus.value = await checkWitness({
     witnessUrl: config.public.dkmsWitnessUrl,
@@ -161,40 +157,44 @@ onMounted(() => {
   if (canIssueCredentials(role.value)) loadIssuer();
 });
 
-// ── Issued history (this browser only, until the issuer can list) ────
-const history = useLocalStorage<IssuedEntry[]>(ISSUED_HISTORY_KEY, [], {
-  serializer: StorageSerializers.object,
-});
-const issuedEntries = computed(() =>
-  issuer.value ? entriesForIssuer(history.value, issuer.value.issuer_aid) : [],
-);
+// ── Issued credentials, from the issuer (everyone sees the same list) ─
+const entries = ref<IssuedEntry[]>([]);
+const listLoading = ref(false);
+const listError = ref<string | null>(null);
 
-const onIssued = (credential: IssueCredentialResponse) => {
-  history.value = addIssuedEntry(history.value, toIssuedEntry(credential));
-};
-
-// ── Revocation state, from the issuer's public revocation list ───────
-const states = ref<Record<string, CredentialState>>({});
-const loadState = async (said: string) => {
-  states.value = { ...states.value, [said]: "checking" };
-  let state: CredentialState = "unknown";
+const loadList = async () => {
+  listLoading.value = true;
+  listError.value = null;
   try {
-    const answer = await issuerClient.getCredentialStatus(said);
-    state = answer.status === "revoked" ? "revoked" : "valid";
-  } catch {
-    // Keep "unknown": the list still shows, the status just isn't confirmed.
+    entries.value = (await issuerClient.listCredentials()).map(fromSummary);
+  } catch (e) {
+    listError.value = e instanceof CredentialIssuerError ? e.message : String(e);
+  } finally {
+    listLoading.value = false;
   }
-  states.value = { ...states.value, [said]: state };
 };
-watch(
-  issuedEntries,
-  (entries) => {
-    for (const entry of entries) {
-      if (!(entry.said in states.value)) loadState(entry.said);
-    }
-  },
-  { immediate: true },
-);
+
+const onIssued = () => loadList();
+
+// The list leaves the grant out; fetch it when it is copied or downloaded.
+const grantOf = async (entry: IssuedEntry) => {
+  try {
+    const { grant } = await issuerClient.getCredential(entry.said);
+    if (grant) return grant;
+    toaster.show("error", t("credentials.issued.no_grant"));
+  } catch (e) {
+    toaster.show("error", e instanceof CredentialIssuerError ? e.message : String(e));
+  }
+  return null;
+};
+const copyGrant = async (entry: IssuedEntry) => {
+  const grant = await grantOf(entry);
+  if (grant) await copyText(JSON.stringify(grant, null, 2), t("credentials.result.copied"));
+};
+const downloadGrant = async (entry: IssuedEntry) => {
+  const grant = await grantOf(entry);
+  if (grant) downloadGrantFile(entry.said, grant);
+};
 
 // The issuer lets each role revoke what it may issue.
 const canRevoke = (credentialRole: string) =>
@@ -220,8 +220,8 @@ const confirmRevoke = async () => {
   revokeError.value = null;
   try {
     await issuerClient.revokeCredential(entry.said, revokeReason.value.trim());
-    states.value = { ...states.value, [entry.said]: "revoked" };
     toaster.show("info", t("credentials.revoke.done"));
+    loadList();
     revoking.value = false;
     revokeTarget.value = null;
   } catch (e) {

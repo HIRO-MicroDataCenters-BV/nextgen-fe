@@ -161,20 +161,30 @@ describe("createCredentialIssuerClient", () => {
   });
 });
 
-describe("revocation", () => {
+describe("listing and revocation", () => {
   const SAID = "ECsb_U1eT2pCZYcMMxtsydsqXCHtkEzzab6Hhut6JnxT";
 
-  it("asks the public status endpoint", async () => {
-    const fetch = vi.fn(async () =>
-      jsonResponse(200, { said: SAID, status: "not_revoked", revoked_at: null }),
-    );
-    const client = createCredentialIssuerClient({ baseUrl: "https://issuer.example/", fetch });
-
-    await expect(client.getCredentialStatus(SAID)).resolves.toMatchObject({
-      status: "not_revoked",
+  it("lists what the issuer issued, with the session token", async () => {
+    const fetch = vi.fn(async () => jsonResponse(200, [{ said: SAID, status: "valid" }]));
+    const client = createCredentialIssuerClient({
+      baseUrl: "https://issuer.example/",
+      getToken: () => "jwt",
+      fetch,
     });
+
+    await expect(client.listCredentials()).resolves.toEqual([{ said: SAID, status: "valid" }]);
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://issuer.example/credentials");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer jwt" });
+  });
+
+  it("fetches one credential with its grant", async () => {
+    const fetch = vi.fn(async () => jsonResponse(200, { said: SAID, grant: { acdc: {} } }));
+    const client = createCredentialIssuerClient({ baseUrl: "/issuer", fetch });
+
+    await expect(client.getCredential(SAID)).resolves.toMatchObject({ grant: { acdc: {} } });
     const [url] = fetch.mock.calls[0] as unknown as [string];
-    expect(url).toBe(`https://issuer.example/credential-status?said=${SAID}`);
+    expect(url).toBe(`/issuer/credentials/${SAID}`);
   });
 
   it("POSTs the reason with the session token", async () => {

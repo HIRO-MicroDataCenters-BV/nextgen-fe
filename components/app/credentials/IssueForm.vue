@@ -320,7 +320,7 @@ import {
   humanizeRole,
   shortId,
 } from "~/composables/issuer/format";
-import { toIssuedEntry } from "~/composables/issuer/issuedHistory";
+import { issuedAtOf as issuedAtOfGrant } from "~/composables/issuer/issuedList";
 import { useCredentialIssuer } from "~/composables/issuer/useCredentialIssuer";
 import type {
   IssueCredentialResponse,
@@ -477,7 +477,7 @@ const previewRoleLabel = computed(
 const previewInstitute = computed(() => String(issuedClaims.value.institute ?? site.value));
 const previewName = computed(() => String(issuedClaims.value.name ?? form.name.trim()));
 const issuedAtOf = (credential: IssueCredentialResponse) =>
-  toIssuedEntry(credential).issuedAt;
+  issuedAtOfGrant(credential);
 const previewSubject = computed(
   () => issued.value?.subject_aid ?? form.subjectAid.trim(),
 );

@@ -1,18 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  addIssuedEntry,
   countByState,
-  entriesForIssuer,
   filterIssued,
-  summarizeIssued,
-  toIssuedEntry,
+  fromSummary,
+  issuedAtOf,
   type IssuedEntry,
-} from "~/composables/issuer/issuedHistory";
+} from "~/composables/issuer/issuedList";
 import { checkWitness } from "~/composables/issuer/witnessClient";
-import type { IssueCredentialResponse } from "~/types/issuer.types";
+import type { CredentialSummary, IssueCredentialResponse } from "~/types/issuer.types";
 
 const ISSUER = "EHnYLZTcuf7RwNe0irrMcbP08-mabVFAYWXo1N9ye62h";
-const OTHER_ISSUER = "EOtherIssuerAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const HOLDER = "EKt4aUZ2nK2-JXz6o6Oe8k6PvA8Fk-4ZzWbGdL0z6RqA";
 
 const response = (status: number, body = "") =>
@@ -59,113 +56,85 @@ describe("checkWitness", () => {
 
 const entry = (said: string, overrides: Partial<IssuedEntry> = {}): IssuedEntry => ({
   said,
-  issuerAid: ISSUER,
   subjectAid: HOLDER,
-  role: "data-provider",
-  institute: "HIRO",
+  role: "researcher",
+  institute: "hus",
   name: "Rahul Sharma",
   email: "rahul@example.org",
-  issuedAt: "2026-10-15T09:00:00+00:00",
-  grant: {} as IssuedEntry["grant"],
+  issuedAt: "2026-10-30T09:00:00+00:00",
+  issuedBy: "EAdmin",
+  state: "valid",
+  revokedAt: null,
+  revokedBy: null,
+  revokeReason: null,
+  hasGrant: true,
   ...overrides,
 });
 
-describe("issued history", () => {
-  it("maps an issuer response to an entry", () => {
-    const issued = {
+describe("issued list from the issuer", () => {
+  it("maps the issuer's summary", () => {
+    const summary: CredentialSummary = {
       said: "ESAID",
-      issuer_aid: ISSUER,
       subject_aid: HOLDER,
-      grant: {
-        acdc: {
-          a: {
-            dt: "2026-10-15T10:00:00+00:00",
-            role: "catalog_owner",
-            institute: "UVA",
-            name: "Ada",
-            email: "ada@uva.nl",
-          },
-        },
-      },
-    } as unknown as IssueCredentialResponse;
-
-    expect(toIssuedEntry(issued)).toMatchObject({
+      role: "operator",
+      institute: "hus",
+      name: "Ollie",
+      email: "ollie@hus.nl",
+      issued_at: "2026-10-30T09:00:00+00:00",
+      issued_by: "bootstrap",
+      status: "revoked",
+      revoked_at: "2026-10-30T10:00:00+00:00",
+      revoked_by: "EAdmin",
+      revoke_reason: "left",
+      has_grant: false,
+    };
+    expect(fromSummary(summary)).toEqual({
       said: "ESAID",
-      issuerAid: ISSUER,
       subjectAid: HOLDER,
-      role: "catalog_owner",
-      institute: "UVA",
-      name: "Ada",
-      email: "ada@uva.nl",
-      issuedAt: "2026-10-15T10:00:00+00:00",
+      role: "operator",
+      institute: "hus",
+      name: "Ollie",
+      email: "ollie@hus.nl",
+      issuedAt: "2026-10-30T09:00:00+00:00",
+      issuedBy: "bootstrap",
+      state: "revoked",
+      revokedAt: "2026-10-30T10:00:00+00:00",
+      revokedBy: "EAdmin",
+      revokeReason: "left",
+      hasGrant: false,
     });
   });
 
-  it("reads the institute of a credential issued before the rename", () => {
-    const issued = {
-      said: "EOLD",
+  it("dates a fresh credential by its dt, or now when it has none", () => {
+    const withDt = {
+      said: "E1",
       issuer_aid: ISSUER,
       subject_aid: HOLDER,
-      grant: { acdc: { a: { dt: "2026-10-15T10:00:00+00:00", role: "operator", org: "HIRO" } } },
+      grant: { acdc: { a: { dt: "2026-10-15T10:00:00+00:00", role: "researcher" } } },
     } as unknown as IssueCredentialResponse;
-
-    expect(toIssuedEntry(issued)).toMatchObject({ institute: "HIRO", name: "", email: "" });
-  });
-
-  it("adds newest first without duplicates and keeps the limit", () => {
-    let history: IssuedEntry[] = [];
-    history = addIssuedEntry(history, entry("E1"));
-    history = addIssuedEntry(history, entry("E2"));
-    history = addIssuedEntry(history, entry("E1"));
-    expect(history.map((item) => item.said)).toEqual(["E1", "E2"]);
-
-    expect(addIssuedEntry(history, entry("E3"), 2).map((i) => i.said)).toEqual([
-      "E3",
-      "E1",
-    ]);
-  });
-
-  it("keeps each issuer's records apart", () => {
-    const history = [entry("E1"), entry("E2", { issuerAid: OTHER_ISSUER })];
-    expect(entriesForIssuer(history, ISSUER).map((i) => i.said)).toEqual(["E1"]);
-  });
-
-  it("summarizes totals, today and distinct holders", () => {
-    const history = [
-      entry("E1"),
-      entry("E2", { subjectAid: "EOtherHolder" }),
-      entry("E3", { issuedAt: "2026-10-14T09:00:00+00:00" }),
-    ];
-    expect(summarizeIssued(history, new Date("2026-10-15T12:00:00Z"))).toEqual({
-      total: 3,
-      today: 2,
-      holders: 2,
-    });
+    expect(issuedAtOf(withDt)).toBe("2026-10-15T10:00:00+00:00");
+    const now = new Date("2026-10-30T09:00:00Z");
+    const without = { ...withDt, grant: { acdc: { a: { a: { role: "researcher" } } } } } as unknown as IssueCredentialResponse;
+    expect(issuedAtOf(without, now)).toBe(now.toISOString());
   });
 });
 
 describe("issued list filter", () => {
   const entries = [
     entry("EVALID", { name: "Riley", role: "researcher" }),
-    entry("EREVOKED", { name: "Dana", role: "data_provider" }),
-    entry("ECHECKING", { name: "Ollie", role: "operator" }),
+    entry("EREVOKED", { name: "Dana", role: "data_provider", state: "revoked" }),
+    entry("EOTHER", { name: "Ollie", role: "operator" }),
   ];
-  const states = { EVALID: "valid", EREVOKED: "revoked", ECHECKING: "checking" } as const;
 
   it("filters by status, then by search text", () => {
-    expect(filterIssued(entries, states, "all", "").map((e) => e.said)).toEqual([
-      "EVALID",
-      "EREVOKED",
-      "ECHECKING",
-    ]);
-    expect(filterIssued(entries, states, "valid", "").map((e) => e.said)).toEqual(["EVALID"]);
-    expect(filterIssued(entries, states, "revoked", "").map((e) => e.said)).toEqual(["EREVOKED"]);
-    expect(filterIssued(entries, states, "all", "  oll ").map((e) => e.said)).toEqual(["ECHECKING"]);
-    expect(filterIssued(entries, states, "valid", "dana")).toEqual([]);
+    expect(filterIssued(entries, "all", "").map((e) => e.said)).toEqual(["EVALID", "EREVOKED", "EOTHER"]);
+    expect(filterIssued(entries, "valid", "").map((e) => e.said)).toEqual(["EVALID", "EOTHER"]);
+    expect(filterIssued(entries, "revoked", "").map((e) => e.said)).toEqual(["EREVOKED"]);
+    expect(filterIssued(entries, "all", "  oll ").map((e) => e.said)).toEqual(["EOTHER"]);
+    expect(filterIssued(entries, "revoked", "riley")).toEqual([]);
   });
 
   it("counts each status", () => {
-    expect(countByState(entries, states)).toEqual({ all: 3, valid: 1, revoked: 1 });
+    expect(countByState(entries)).toEqual({ all: 3, valid: 2, revoked: 1 });
   });
 });
-
