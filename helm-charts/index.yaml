@@ -72,6 +72,16 @@ entries:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.240.feature-dkms.89d5183e.tgz
     version: 0.1.1-dev.240.feature-dkms.89d5183e
   - apiVersion: v2
+    appVersion: 0.1.1-dev.240.dev-editor.d8781557
+    created: "2026-10-30T09:00:45.592699942Z"
+    description: A frontend web service template for reuse.
+    digest: 8a9a406f2d359f50ed87fda66884ce44a1595dea66b7411693ae160af20543a7
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.240.dev-editor.d8781557.tgz
+    version: 0.1.1-dev.240.dev-editor.d8781557
+  - apiVersion: v2
     appVersion: 0.1.1-dev.239.dkms.3331b05d
     created: "2026-10-30T08:40:34.626474204Z"
     description: A frontend web service template for reuse.
@@ -3591,4 +3601,4 @@ entries:
     urls:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
     version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
-generated: "2026-10-30T08:44:41.021602356Z"
+generated: "2026-10-30T09:00:45.592007695Z"
