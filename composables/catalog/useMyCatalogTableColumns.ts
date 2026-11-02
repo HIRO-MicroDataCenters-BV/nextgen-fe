@@ -41,7 +41,7 @@ export const useMyCatalogTableColumns = (tableRef: TableRef) => {
         const raw = row.getValue("issued") as string;
         if (!raw || !String(raw).trim()) return "—";
         const d = dayjs(raw);
-        return d.isValid() ? d.format("MMM, DD YYYY") : "—";
+        return d.isValid() ? d.format("D MMM YYYY") : "—";
       },
     },
     {
@@ -62,6 +62,7 @@ export const useMyCatalogTableColumns = (tableRef: TableRef) => {
             {
               key: isShared ? "unshare_dataset" : "share_dataset",
               label: isShared ? "unshare_dataset" : "share_dataset",
+              icon: isShared ? "lucide:link-2-off" : "lucide:share-2",
               hasConfirmation: true,
               action: () =>
                 isShared
@@ -71,6 +72,7 @@ export const useMyCatalogTableColumns = (tableRef: TableRef) => {
             {
               key: "edit_dataset",
               label: "edit_dataset",
+              icon: "lucide:pencil",
               action: () => {
                 router.push(`/my_catalog/${id}/edit`);
               },
@@ -78,6 +80,7 @@ export const useMyCatalogTableColumns = (tableRef: TableRef) => {
             {
               key: "delete_dataset",
               label: "delete_dataset",
+              icon: "lucide:trash-2",
               hasConfirmation: true,
               action: () => deleteDataset(id, { showToast: false }),
             },

@@ -34,7 +34,7 @@ export const useMarketplaceTableColumns = (baseUrl: string) => {
       id: "biobank",
       icon: "lucide:users",
       header: () => t("column.biobank"),
-      cell: ({ row }) => row.getValue("biobank"),
+      cell: ({ row }) => siteShortName(String(row.getValue("biobank") ?? "")),
     },
     {
       id: "issued",
@@ -44,7 +44,7 @@ export const useMarketplaceTableColumns = (baseUrl: string) => {
         const raw = row.getValue("issued") as string;
         if (!raw || !String(raw).trim()) return "—";
         const d = dayjs(raw);
-        return d.isValid() ? d.format("MMM, DD YYYY") : "—";
+        return d.isValid() ? d.format("D MMM YYYY") : "—";
       },
     },
   ];

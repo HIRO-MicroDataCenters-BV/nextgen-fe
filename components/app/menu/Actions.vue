@@ -6,6 +6,8 @@ interface Item {
   // (returning undefined) are treated as success.
   action: () => unknown;
   hasConfirmation?: boolean;
+  // Lucide icon name shown before the label, e.g. "lucide:pencil".
+  icon?: string;
 }
 
 type ConfirmStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -105,9 +107,13 @@ onUnmounted(clearSuccessTimer);
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuLabel>{{ $t('title.actions') }}</DropdownMenuLabel>
+      <DropdownMenuSeparator />
 
-      <template v-for="item in props.items" :key="item.key">
+      <template v-for="(item, index) in props.items" :key="item.key">
+        <!-- Keep Delete apart from the other actions, so it isn't hit by accident. -->
+        <DropdownMenuSeparator v-if="index > 0 && item.key.includes('delete')" />
         <DropdownMenuItem
+          :variant="item.key.includes('delete') ? 'destructive' : 'default'"
           @click="
             () => {
               if (item.hasConfirmation) {
@@ -118,6 +124,7 @@ onUnmounted(clearSuccessTimer);
             }
           "
         >
+          <Icon v-if="item.icon" :name="item.icon" />
           {{ t(`action.${item.key}`) }}
         </DropdownMenuItem>
       </template>
