@@ -52,19 +52,56 @@ export interface AuthUserProfile {
 export const ACCESS_TOKEN_KEY = "access_token";
 
 /**
+ * The claims of a JWT, read without verifying it (the services verify). UTF-8
+ * aware, so names like "Päivi" survive. `null` when missing or unreadable.
+ */
+export function tokenClaims(token: string | null | undefined): Record<string, unknown> | null {
+  const payload = token?.split(".")[1];
+  if (!payload) return null;
+  try {
+    const binary = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const json = new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
+    const claims = JSON.parse(json) as unknown;
+    return claims && typeof claims === "object" ? (claims as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Seconds-since-epoch expiry of a JWT, read without verifying it (the services
  * verify). `null` when the token is missing or unreadable.
  */
 export function tokenExpiry(token: string | null | undefined): number | null {
-  const payload = token?.split(".")[1];
-  if (!payload) return null;
-  try {
-    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
-    return typeof exp === "number" ? exp : null;
-  } catch {
-    return null;
-  }
+  const exp = tokenClaims(token)?.exp;
+  return typeof exp === "number" ? exp : null;
+}
+
+/** What the ds-login token says about the signed-in user (the My account page). */
+export interface AccountInfo {
+  name: string;
+  email: string;
+  role: string;
+  institute: string;
+  /** The KERI identifier (AID) that signed in. */
+  aid: string;
+  /** SAID of the credential that granted the role; empty for older tokens. */
+  credentialSaid: string;
+}
+
+/** Reads the account from a ds-login JWT; `null` without a readable token. */
+export function accountFromToken(token: string | null | undefined): AccountInfo | null {
+  const c = tokenClaims(token);
+  if (!c) return null;
+  const text = (v: unknown) => (typeof v === "string" ? v : "");
+  return {
+    name: text(c.name),
+    email: text(c.email),
+    role: text(c.role),
+    institute: text(c.institute),
+    aid: text(c.sub),
+    credentialSaid: text(c.credential_said),
+  };
 }
 
 /** True when `token` is a JWT that has not expired yet (`now` in seconds). */

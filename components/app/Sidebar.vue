@@ -232,6 +232,14 @@ function handleUserLogout() {
             >
               <DropdownMenuItem
                 class="cursor-pointer"
+                @click="navigateTo('/account')"
+              >
+                <Icon class="mr-2 size-4" name="lucide:user-round" />
+                {{ t("menu.account") }}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                class="cursor-pointer"
                 @click="handleUserLogout"
               >
                 <Icon class="mr-2 size-4" name="lucide:log-out" />

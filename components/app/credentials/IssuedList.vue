@@ -135,11 +135,6 @@
         </TableBody>
       </Table>
     </div>
-
-    <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <Icon name="lucide:info" class="size-3.5" />
-      {{ t("credentials.issued.source_note") }}
-    </p>
   </div>
 </template>
 

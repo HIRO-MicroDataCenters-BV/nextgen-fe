@@ -276,6 +276,7 @@ export default defineI18nConfig(() => {
           settings: "Settings",
           help: "Help",
           guest_user: "Guest",
+          account: "My account",
           logout: "Logout",
           theme: "Theme",
           light_mode: "Light mode",
@@ -603,6 +604,26 @@ export default defineI18nConfig(() => {
           related_data_product_no_options:
             "No related data products available. Please create one before proceeding.",
         },
+        account: {
+          title: "My account",
+          subtitle: "Who you are signed in as, from your credential.",
+          no_token: {
+            title: "No sign-in details",
+            description: "Sign in with your key file and credential to see your account.",
+          },
+          identity: {
+            title: "Identity",
+            description: "Send your AID to the site admin when you need a new credential.",
+            aid: "AID (your KERI identifier)",
+            credential: "Credential ID (SAID)",
+            copy_aid: "Copy AID",
+            copy_credential: "Copy credential ID",
+            aid_copied: "AID copied",
+            credential_copied: "Credential ID copied",
+          },
+          change_note:
+            "Name, email and role are signed into your credential. To change them, ask your site admin for a new one.",
+        },
         credentials: {
           operators_only: {
             title: "For site admins and operators only",
@@ -670,8 +691,6 @@ export default defineI18nConfig(() => {
             revoke: "Revoke",
             no_match: "No credentials match.",
             none: "No credentials issued yet.",
-            source_note:
-              "From the issuer: every site admin sees the same list; operators see the data provider and researcher credentials.",
           },
           revoke: {
             title: "Revoke this credential?",
