@@ -47,13 +47,11 @@
       </template>
     </div>
 
-    <!-- Issue form in a side panel. Clicks outside don't close it, so a
-         half-filled form isn't lost by accident. -->
+    <!-- Issue form in a side panel; a click outside it closes it, like Esc. -->
     <Sheet v-model:open="issueOpen">
       <SheetContent
         side="right"
         class="w-full gap-0 overflow-y-auto sm:max-w-2xl"
-        @interact-outside="(event: Event) => event.preventDefault()"
       >
         <SheetHeader class="sr-only">
           <SheetTitle>{{ t("credentials.form.title") }}</SheetTitle>
@@ -193,7 +191,7 @@ const copyGrant = async (entry: IssuedEntry) => {
 };
 const downloadGrant = async (entry: IssuedEntry) => {
   const grant = await grantOf(entry);
-  if (grant) downloadGrantFile(entry.said, grant);
+  if (grant) downloadGrantFile(entry.said, grant, entry.name);
 };
 
 // The issuer lets each role revoke what it may issue.
