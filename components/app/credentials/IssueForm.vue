@@ -288,7 +288,7 @@
             <Icon name="lucide:copy" />
             {{ t("credentials.result.copy") }}
           </Button>
-          <Button size="sm" variant="outline" class="flex-1" @click="downloadGrantFile(issued.said, issued.grant)">
+          <Button size="sm" variant="outline" class="flex-1" @click="downloadGrantFile(issued.said, issued.grant, previewName)">
             <Icon name="lucide:download" />
             {{ t("credentials.result.download") }}
           </Button>
