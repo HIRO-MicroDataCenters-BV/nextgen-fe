@@ -30,9 +30,15 @@ interface TableCardListProps {
   // cards and toolbar stay aligned). Supplied by AppTable.
   contentClass?: string;
   isLoading?: boolean;
+  // Mark shared items with an icon (off on Marketplace: everything is shared).
+  showShared?: boolean;
 }
 
-const props = defineProps<TableCardListProps>();
+const props = withDefaults(defineProps<TableCardListProps>(), {
+  itemHrefBase: undefined,
+  contentClass: undefined,
+  showShared: true,
+});
 const emit = defineEmits<{ (e: "create"): void }>();
 const { t } = useI18n();
 
@@ -47,13 +53,41 @@ const palette = [
   "bg-cyan-500",
 ] as const;
 
-// Stable accent per dataset id: the same item keeps the same color across pages
-// and sessions (vs a position-based color that changed as you paginated).
-const pillClass = (id: string) => {
-  const s = String(id);
+const hashOf = (value: string) => {
+  const s = String(value);
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return palette[h % palette.length];
+  return h;
+};
+
+// Stable accent per dataset id: the same item keeps the same color across pages
+// and sessions (vs a position-based color that changed as you paginated).
+const pillClass = (id: string) => palette[hashOf(id) % palette.length];
+
+// Tinted badge per site, so items from the same biobank are easy to spot. No
+// blue here: blue is the "shared" icon's color. Known sites get a fixed slot
+// (a hash of so few short names collides, e.g. ki and uva); others are hashed.
+const biobankSlot: Record<string, number> = {
+  hus: 0,
+  uva: 1,
+  ki: 2,
+  umcu: 3,
+  tum: 4,
+  supsi: 5,
+};
+const biobankPalette = [
+  "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300",
+  "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300",
+  "border-transparent bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300",
+  "border-transparent bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300",
+  "border-transparent bg-cyan-100 text-cyan-800 dark:bg-cyan-500/20 dark:text-cyan-300",
+  "border-transparent bg-orange-100 text-orange-800 dark:bg-orange-500/20 dark:text-orange-300",
+] as const;
+const biobankClass = (site: string) => {
+  const key = site.trim().toLowerCase();
+  return biobankPalette[
+    (biobankSlot[key] ?? hashOf(key)) % biobankPalette.length
+  ];
 };
 
 const hrefFor = (row: Row<TableRowData>) =>
@@ -81,6 +115,26 @@ const clampText = (text: string, max = 80) => {
   return (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trimEnd() + "…";
 };
 
+// Which site (catalog) the item comes from. Only Marketplace has a biobank
+// column; on My Catalog every item is the local site's, so no badge there.
+const biobankCellFor = (row: Row<TableRowData>) => {
+  const cell = cellById(row, "biobank");
+  return cell && String(cell.getValue() ?? "").trim() ? cell : undefined;
+};
+
+// Full title on hover, but only when the title is cut off with an ellipsis;
+// a title that fits needs no tooltip. The tooltip still handles the delay; we
+// only veto opening it.
+const openTitleId = ref<string | null>(null);
+let titleEl: HTMLElement | null = null;
+const trackTitle = (e: Event) => {
+  titleEl = e.currentTarget as HTMLElement;
+};
+const onTitleOpen = (open: boolean, id: string) => {
+  const cutOff = !!titleEl && titleEl.scrollWidth > titleEl.clientWidth;
+  openTitleId.value = open && cutOff ? id : null;
+};
+
 const cards = computed(() =>
   props.table.getRowModel().rows.map((row) => {
     const fullSubtitle = subtitleFull(row);
@@ -93,7 +147,12 @@ const cards = computed(() =>
       subtitle: snippet,
       subtitleFull: fullSubtitle,
       subtitleTruncated: snippet !== fullSubtitle,
-      shared: !!(row.original as Record<string, unknown>).isShared,
+      shared:
+        props.showShared &&
+        !!(row.original as Record<string, unknown>).isShared,
+      biobankCell: biobankCellFor(row),
+      biobankClass: biobankClass(String(row.original.biobank ?? "")),
+      biobankFull: siteFullName(String(row.original.biobank ?? "")),
       issuedCell: cellById(row, "issued"),
       actionsCell: cellById(row, "actions"),
     };
@@ -162,25 +221,52 @@ const cards = computed(() =>
 
           <div class="flex min-w-0 flex-1 flex-col">
             <div class="flex items-center gap-2">
-              <!-- NuxtLink, not <a href>: a plain link reloads the whole app. -->
-              <NuxtLink
-                v-if="card.href"
-                :to="card.href"
-                class="truncate font-semibold text-foreground hover:underline"
-              >
-                {{ card.name }}
-              </NuxtLink>
-              <span v-else class="truncate font-semibold text-foreground">
-                {{ card.name }}
-              </span>
-              <Badge
-                v-if="card.shared"
-                variant="secondary"
-                class="shrink-0 gap-1 font-normal text-muted-foreground"
-              >
-                <Icon name="lucide:users" class="size-3" />
-                {{ t("hint.shared") }}
-              </Badge>
+              <TooltipProvider :delay-duration="600">
+                <Tooltip
+                  :open="openTitleId === card.row.id"
+                  @update:open="(v: boolean) => onTitleOpen(v, card.row.id)"
+                >
+                  <TooltipTrigger as-child>
+                    <!-- NuxtLink, not <a href>: a plain link reloads the whole app. -->
+                    <NuxtLink
+                      v-if="card.href"
+                      :to="card.href"
+                      class="truncate font-semibold text-foreground hover:underline"
+                      @pointerenter="trackTitle"
+                      @focus="trackTitle"
+                    >
+                      {{ card.name }}
+                    </NuxtLink>
+                    <span
+                      v-else
+                      class="cursor-default truncate font-semibold text-foreground"
+                      @pointerenter="trackTitle"
+                    >
+                      {{ card.name }}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent class="max-w-xs">
+                    {{ card.name }}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider v-if="card.shared" :delay-duration="200">
+                <Tooltip>
+                  <TooltipTrigger as-child>
+                    <span
+                      class="inline-flex shrink-0 cursor-default"
+                      role="img"
+                      :aria-label="t('hint.shared')"
+                    >
+                      <Icon
+                        name="lucide:users"
+                        class="size-3.5 text-blue-600 dark:text-blue-400"
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{{ t("hint.shared") }}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             <template v-if="card.subtitle">
               <TooltipProvider
@@ -210,7 +296,28 @@ const cards = computed(() =>
           </div>
 
           <div class="flex shrink-0 items-center gap-2">
-            <Badge variant="secondary" class="gap-1 font-normal">
+            <TooltipProvider v-if="card.biobankCell" :delay-duration="200">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <Badge
+                    variant="secondary"
+                    :class="
+                      cn('cursor-default gap-1 rounded-md font-normal', card.biobankClass)
+                    "
+                  >
+                    <Icon name="lucide:building-2" class="size-3" />
+                    <FlexRender
+                      :render="card.biobankCell.column.columnDef.cell"
+                      :props="card.biobankCell.getContext()"
+                    />
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {{ card.biobankFull || t("column.biobank") }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Badge variant="secondary" class="gap-1 rounded-md font-normal">
               <Icon name="lucide:calendar" class="size-3" />
               <FlexRender
                 v-if="card.issuedCell"

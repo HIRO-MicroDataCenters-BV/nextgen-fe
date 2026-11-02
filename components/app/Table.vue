@@ -30,6 +30,9 @@ interface TableProps {
   itemHrefBase?: string;
   contentClass?: string;
   defaultView?: "table" | "card";
+  // Card view: mark shared items with an icon. Off on Marketplace, where every
+  // item is shared, so the icon would say nothing.
+  showShared?: boolean;
 }
 
 const props = withDefaults(defineProps<TableProps>(), {
@@ -43,6 +46,7 @@ const props = withDefaults(defineProps<TableProps>(), {
   itemHrefBase: undefined,
   contentClass: "mx-auto w-full max-w-[calc(840px+16px)] px-8",
   defaultView: "table",
+  showShared: true,
 });
 
 const { dataSource, columns, pageSize, title, hasSourceHeader, selectionMode } =
@@ -307,6 +311,7 @@ defineExpose({ fetchData, getSelectedRaw });
       :can-create="hasSourceHeader"
       :content-class="contentClass"
       :is-loading="isLoading"
+      :show-shared="showShared"
       @create="handleCreate"
     />
     <template v-else>

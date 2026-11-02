@@ -12,6 +12,7 @@
       :item-href-base="'/marketplace'"
       :content-class="'mx-auto w-full max-w-[1600px] px-8'"
       :default-view="'card'"
+      :show-shared="false"
       @pass-to-training="handlePassToTraining"
     />
     <TrainingSuccessDialog
