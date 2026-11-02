@@ -22,6 +22,16 @@ entries:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.248.feature-admin-ke.8a1fb900.tgz
     version: 0.1.1-dev.248.feature-admin-ke.8a1fb900
   - apiVersion: v2
+    appVersion: 0.1.1-dev.248.feat-card-bioban.b7fc5cfe
+    created: "2026-11-02T13:15:30.904052989Z"
+    description: A frontend web service template for reuse.
+    digest: 4225c36e1baefd3711986f79bd57868baae16ba0f1eea23b5372360edc923870
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.248.feat-card-bioban.b7fc5cfe.tgz
+    version: 0.1.1-dev.248.feat-card-bioban.b7fc5cfe
+  - apiVersion: v2
     appVersion: 0.1.1-dev.247.feature-admin-ke.dd85d31d
     created: "2026-10-08T06:39:56.335825509Z"
     description: A frontend web service template for reuse.
@@ -3681,4 +3691,4 @@ entries:
     urls:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
     version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
-generated: "2026-11-02T09:37:21.064783715Z"
+generated: "2026-11-02T13:15:30.903502392Z"
