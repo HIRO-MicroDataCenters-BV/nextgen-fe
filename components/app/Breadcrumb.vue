@@ -44,6 +44,7 @@ const sectionIcon = computed<string | null>(() => {
   if (section === "home") return "lucide:home";
   if (section === "credentials") return "lucide:badge-check";
   if (section === "account") return "lucide:user-round";
+  if (section === "admin") return "lucide:scroll-text";
   return null;
 });
 
@@ -66,6 +67,8 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
       label = t("breadcrumb.tools", "Tools");
     } else if (segment.toLowerCase() === "account") {
       label = t("menu.account");
+    } else if (segment.toLowerCase() === "admin") {
+      label = t("menu.contracts");
     } else if (segment.toLowerCase() === "create") {
       label = t("breadcrumb.create", "Create");
     } else if (segment.toLowerCase() === "edit") {

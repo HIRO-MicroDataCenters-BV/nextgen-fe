@@ -64,3 +64,8 @@ backend:
   credentialIssuerURL: ""
   # Optional public witness for the Credentials page's check (empty = skipped).
   dkmsWitnessURL: ""
+  # Contracts page (site_admin only). The browser calls the Clearing House
+  # directly, so it needs a public address (empty = page not set up). Example
+  # for HUS:
+  #   clearingHouseURL: https://ds-clearing-house.hus.nextgen.hiro-develop.nl
+  clearingHouseURL: ""
