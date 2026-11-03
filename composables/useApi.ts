@@ -366,6 +366,9 @@ export const useApi = () => {
           status: string;
         }>("/api/marketplace/checkout", {
           method: "POST",
+          // Passed on to checkout, which reads who is ordering from the
+          // sign-in token to name them in the order's contract.
+          headers: token.value ? { Authorization: `Bearer ${token.value}` } : {},
           body: { datasets, application: application ?? null },
         });
         return response;

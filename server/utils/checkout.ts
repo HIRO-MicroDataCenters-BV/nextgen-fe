@@ -2,6 +2,11 @@ export class CheckoutService {
   async processCheckout(
     datasets: Array<Record<string, unknown>>,
     application?: Record<string, unknown> | null,
+    /**
+     * The browser's `Authorization: Bearer <ds-login JWT>`, passed on as is:
+     * checkout reads who is ordering from it for the order's contracts.
+     */
+    authorization?: string,
   ) {
     if (!datasets || !Array.isArray(datasets) || datasets.length === 0) {
       throw createError({
@@ -65,6 +70,7 @@ export class CheckoutService {
         expires_in_seconds: number;
       }>(checkoutUrl, {
         method: "POST",
+        headers: authorization ? { Authorization: authorization } : {},
         body: {
           data: payload,
         },

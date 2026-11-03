@@ -1,4 +1,8 @@
 export default defineEventHandler(async (event) => {
     const body = await readBody(event);
-    return await checkoutService.processCheckout(body.datasets, body.application);
+    return await checkoutService.processCheckout(
+        body.datasets,
+        body.application,
+        getHeader(event, "authorization"),
+    );
 });
