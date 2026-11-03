@@ -22,6 +22,16 @@ entries:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.250.feature-clearing.599f4eab.tgz
     version: 0.1.1-dev.250.feature-clearing.599f4eab
   - apiVersion: v2
+    appVersion: 0.1.1-dev.250.dev-editor.64eb671c
+    created: "2026-11-03T05:43:29.168403084Z"
+    description: A frontend web service template for reuse.
+    digest: 72cecaaa1429b0d0eb914fca5c7bc270dd432b5ea2f6c66ec81e2a8ebcd1dcbd
+    name: app
+    type: application
+    urls:
+    - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.1-dev.250.dev-editor.64eb671c.tgz
+    version: 0.1.1-dev.250.dev-editor.64eb671c
+  - apiVersion: v2
     appVersion: 0.1.1-dev.249.clearing-house-a.6ca4313f
     created: "2026-11-03T05:30:03.22660726Z"
     description: A frontend web service template for reuse.
@@ -3731,4 +3741,4 @@ entries:
     urls:
     - https://HIRO-MicroDataCenters-BV.github.io/nextgen-fe/helm-charts/app-0.1.0-dev.3.fix-helm-chart.26c57c6e.tgz
     version: 0.1.0-dev.3.fix-helm-chart.26c57c6e
-generated: "2026-11-03T05:30:03.226155826Z"
+generated: "2026-11-03T05:43:29.167069309Z"
