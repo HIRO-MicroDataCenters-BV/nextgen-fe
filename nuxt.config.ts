@@ -78,7 +78,7 @@ export default defineNuxtConfig({
   dayjs: {
     locales: ["en"],
     defaultLocale: "en",
-    plugins: ["utc", "timezone", "quarterOfYear"],
+    plugins: ["utc", "timezone", "quarterOfYear", "relativeTime"],
   },
   colorMode: {
     preference: "light", // default theme on first visit
@@ -124,6 +124,9 @@ export default defineNuxtConfig({
       // directly, like catalog and search (the issuer allows every website).
       apiCredentialIssuerUrl:
         process.env.NUXT_PUBLIC_API_CREDENTIAL_ISSUER_URL || "",
+      // Clearing House (page /admin, "Contracts", site_admin only). The
+      // browser calls it directly, like the issuer. Empty = page not set up.
+      apiClearingHouseUrl: process.env.NUXT_PUBLIC_API_CLEARING_HOUSE_URL || "",
       // Optional public DKMS witness: the page checks the issuer's key is
       // published there. Empty = check skipped.
       dkmsWitnessUrl: process.env.NUXT_PUBLIC_DKMS_WITNESS_URL || "",

@@ -84,6 +84,7 @@ Set backend URLs and options via environment variables (see `nuxt.config.ts` →
 | `NUXT_PUBLIC_COG_URL` / `NUXT_PUBLIC_API_COG_URL` | COG integration |
 | `NUXT_PUBLIC_TRAINING_BUILDER_SERVICE_URL` | Training builder |
 | `NUXT_DEX_*`, `NUXT_DEX_SKIP_TLS_VERIFY` | Server-side Dex auth (not exposed to client) |
+| `NUXT_PUBLIC_API_CLEARING_HOUSE_URL` | Clearing House for the Contracts page (site_admin only); the browser calls it directly. Empty = page not set up |
 
 ---
 

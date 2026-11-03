@@ -74,6 +74,11 @@ spec:
             - name: NUXT_PUBLIC_DKMS_WITNESS_URL
               value: {{ . | quote }}
             {{- end }}
+            {{- with .Values.backend.clearingHouseURL }}
+            # Contracts page (site_admin): the browser calls the Clearing House.
+            - name: NUXT_PUBLIC_API_CLEARING_HOUSE_URL
+              value: {{ . | quote }}
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

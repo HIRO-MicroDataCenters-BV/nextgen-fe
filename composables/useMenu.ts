@@ -81,6 +81,15 @@ export function useMenu() {
         items: [],
         isActive: route.path === "/credentials",
       },
+      {
+        // The Clearing House's contracts (pages/admin). site_admin only.
+        id: "contracts",
+        title: t("menu.contracts"),
+        icon: "lucide:scroll-text",
+        url: "/admin",
+        items: [],
+        isActive: route.path.startsWith("/admin"),
+      },
     ],
     footer: [],
   });
@@ -110,11 +119,16 @@ export function useMenu() {
 
   // Exporting data and methods
   return {
-    // Admin pages only for roles that may issue credentials (site_admin,
-    // operator — role from the ds-login token).
+    // Admin pages by role from the ds-login token: Credentials for roles that
+    // may issue credentials (site_admin, operator), Contracts for site_admin.
+    // Hiding a link is only tidiness: the services check every request.
     menu: computed(() => ({
       ...menuItems.value,
-      admin: canIssueCredentials(role.value) ? menuItems.value.admin : [],
+      admin: menuItems.value.admin.filter((item) =>
+        item.id === "contracts"
+          ? role.value === "site_admin"
+          : canIssueCredentials(role.value),
+      ),
     })),
     user: authUserDisplay,
     version,
