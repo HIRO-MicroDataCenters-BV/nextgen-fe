@@ -808,7 +808,7 @@ export default defineI18nConfig(() => {
           roles: {
             researcher: {
               label: "Researcher",
-              hint: "Finds and uses data",
+              hint: "Finds, uses and publishes data",
             },
             data_provider: {
               label: "Data provider",
