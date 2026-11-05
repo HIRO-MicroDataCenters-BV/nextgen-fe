@@ -840,6 +840,7 @@ export default defineI18nConfig(() => {
             role: "Role",
             invalid_role: "You may not issue this role.",
             name: "Name",
+            name_placeholder: "Full name",
             email: "Email",
             institute: "Institute",
             submit: "Issue credential",
