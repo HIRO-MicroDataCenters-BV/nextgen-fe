@@ -47,7 +47,7 @@
                 <Input
                   id="holder-name"
                   v-model="form.name"
-                  placeholder="Rahul Sharma"
+                  :placeholder="t('credentials.form.name_placeholder')"
                   autocomplete="off"
                 />
                 <FieldError v-if="errors.name">{{ errors.name }}</FieldError>
